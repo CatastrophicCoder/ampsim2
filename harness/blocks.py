@@ -24,6 +24,7 @@ class Block:
     engine_block: str = ''        # ampwav --block id
     output_load: float = 0.0      # ohms, for power metrics (0 = none)
     recorded: tuple = ()          # Vrec_<name> sources: need recordings from another run (M4)
+    linear: bool = False          # scored with the linear-block tolerances (VERIFICATION §7)
 
     @property
     def path(self):
@@ -55,7 +56,7 @@ BLOCKS = {
     'b4': Block(
         id='b4', title='B4 ToneStackMaster', testbench='b4.cir', input_node='j3s', output_node='y',
         probes=('k2b', 'tt', 'tw', 'nd', 'ne', 'mw'),
-        levels={'nominal': 1.0}, engine_block='b4'),
+        levels={'nominal': 1.0}, engine_block='b4', linear=True),
     'b56': Block(
         id='b56', title='B56+B7 phase inverter, power stage, supply (instantaneous NFB)', testbench='b56.cir',
         input_node='j4s', output_node='out',

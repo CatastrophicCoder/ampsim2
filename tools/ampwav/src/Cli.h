@@ -19,6 +19,15 @@ struct NodeDump {
     std::string path;
 };
 
+/// Linear ramp of one knob's target rotation (the engine smooths it as for any setParams call).
+struct KnobRamp {
+    std::string knob;
+    double start = 0.0;     // s
+    double duration = 0.0;  // s
+    double from = 0.0;
+    double to = 0.0;
+};
+
 struct Options {
     std::string block = "full";
     std::string inPath;
@@ -26,6 +35,7 @@ struct Options {
     std::optional<double> rate;  // must equal the input file's rate when given (no resampling, D-007)
     amp2203::Params params;
     std::vector<NodeDump> dumps;
+    std::vector<KnobRamp> ramps;  // --knob-ramp; params are then set every sample
     std::string statsPath;       // optional JSON with timing and Newton statistics
     Units units = Units::Volts;
     int blockSize = 512;

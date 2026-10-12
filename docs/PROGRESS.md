@@ -168,8 +168,8 @@ Notes:
   reference in exact rationals (Q11, D-026)
 - [x] Adaptor sanity tests (series/parallel equivalence, losslessness, reflection-free up-port)
 - [x] `ToneStackMaster` block with smoothing and rate-limited updates (D-027)
-- [ ] Magnitude (5×5×5×3 settings) and time-domain checks; knob-jump test
-- [ ] M1 report
+- [x] Magnitude (5×5×5×3 settings) and time-domain checks; knob-jump test
+- [x] M1 report: `harness/reports/M1/20261013_M1_report.md` — awaiting owner review
 Plan (2026-10-13; follows SPEC §7 M1, WDF_DESIGN §2, §5, §6 and VERIFICATION §6–7):
 
 Step 1 — MNA scattering builder
@@ -224,6 +224,13 @@ Notes:
   tapers and knob smoother, ampwav `--block b4`, `amp2203_bench b4`. First SPICE comparison (PIPE,
   1 kHz 1 V): ESR −90.3 dB, best lag 0, DC exact. Cost: 31.7 ns/sample static, 7.3 µs per matrix
   update, 262 ns/sample with knobs moving (D-027). Catch2: 21 tests.
+- 2026-10-13 Step 3 done: `python -m harness.tonestack_check [--tran]` (375-setting magnitude: worst
+  0.018 / 0.078 dB; 9 log sweeps: worst ESR −78.5 dB, lag 0; R_th4 vs the testbench formula 2e-16),
+  `python -m harness.knob_jump` (worst ESR −46.1 dB with all four knobs; −88 to −92 dB with an update
+  every sample, so the residual is the 32-sample staircase), `compare --block b4 --milestone M1`
+  (17 PASS, 0 FAIL). ampwav `--knob-ramp`; `spice.op` reads device parameters (v(@dev[param])).
+  B4 is scored with the linear-block ESR limit (`Block.linear`).
+- 2026-10-13 Step 4: M1 report written. M1 stops here for review.
 
 ## M2 — B12: V1a and V1b with a joint triode root
 - [ ] 12AX7 model + Wright omega grid current + Jacobian; device unit tests

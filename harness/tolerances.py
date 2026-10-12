@@ -24,6 +24,9 @@ TOLERANCES = {
 # the testbench DC sanity check (added with the block testbenches in M0 step 4).
 SCORED = {
     'M0': {},
+    # M1: B4 ToneStackMaster (SPEC §7 M1). The 375-setting magnitude sweep and the knob-jump test run in
+    # harness/tonestack_check.py and harness/knob_jump.py with the same tolerances.
+    'M1': {'b4': {'linear_mag_db_20_10k', 'linear_mag_db_10k_20k', 'linear_esr_db', 'dc_rel_error'}},
 }
 
 

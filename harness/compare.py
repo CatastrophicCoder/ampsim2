@@ -66,7 +66,8 @@ def analyse(block, signals, spice_res, engine_res, report):
         row = {'id': sig.id, 'kind': sig.kind, 'peak_ref': float(np.max(np.abs(ref_ac)))}
         row['esr'] = metrics.esr_db(ref_ac, y_ac)
         row['lag'], row['lag_esr'] = metrics.best_lag(ref_ac, y_ac)
-        report.add('total_esr_db' if block.id == 'full' else 'nonlinear_esr_db', sig.id, row['esr'], ' dB')
+        esr_check = 'total_esr_db' if block.id == 'full' else 'linear_esr_db' if block.linear else 'nonlinear_esr_db'
+        report.add(esr_check, sig.id, row['esr'], ' dB')
         if sig.kind == 'SIN':
             f0 = sig.meta['freq']
             h_ref, h = metrics.harmonics(ref, f0), metrics.harmonics(y, f0)

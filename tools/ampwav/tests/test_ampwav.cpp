@@ -194,3 +194,18 @@ TEST_CASE("CLI end to end: full-scale units apply the engine calibration", "[amp
     const amp2203::EngineConfig cfg;
     REQUIRE_THAT(out.samples[0], WithinAbs(0.5 * cfg.inputVoltsPerFullScale / cfg.outputVoltsPerFullScale, 1e-15));
 }
+
+TEST_CASE("CLI: knob ramps", "[ampwav]") {
+    std::string err;
+    auto o = parse({"--block", "b4", "--in", "i.wav", "--out", "o.wav", "--knob-ramp", "treble=0.02,0.01,0,1"}, err);
+    REQUIRE(o);
+    REQUIRE(o->ramps.size() == 1);
+    REQUIRE(o->ramps[0].knob == "treble");
+    REQUIRE(o->ramps[0].start == 0.02);
+    REQUIRE(o->ramps[0].duration == 0.01);
+    REQUIRE(o->ramps[0].to == 1.0);
+    for (const char* bad : {"treble=0.02,0.01,0", "treble=0.02,0.01,0,2", "nope=0,0.01,0,1", "treble=a,b,c,d"}) {
+        INFO(bad);
+        REQUIRE_FALSE(parse({"--block", "b4", "--in", "i.wav", "--out", "o.wav", "--knob-ramp", bad}, err));
+    }
+}

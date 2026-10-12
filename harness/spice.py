@@ -205,7 +205,8 @@ def op(testbench_text, knobs, nodes):
         save = f'save all {" ".join(dev)}\n' if dev else ''
         _, raws = _run(text, f'{save}op\nwrite op.raw')
         raw = raws['op.raw']
-        name = lambda v: f'i({v.lower()})' if v.startswith('@') else v.lower()  # noqa: E731 (raw naming)
+        # raw naming: device currents are i(@dev[i]), other device quantities v(@dev[param])
+        name = lambda v: (f'i({v.lower()})' if f'i({v.lower()})' in raw else f'v({v.lower()})') if v.startswith('@') else v.lower()  # noqa: E731,E501
         missing = [v for v in vecs if name(v) not in raw]
         if missing:
             raise SpiceError(f'op: vectors not found: {missing}')

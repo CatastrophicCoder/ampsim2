@@ -61,6 +61,8 @@ python -m harness.partition --junction j2                  # SPICE partition err
 python -m harness.device_sweeps                            # tests/data device DC sweep CSVs (--check)
 python -m harness.ot_fit                                   # OT fit to the 1750U datasheet (--check: netlist)
 python -m harness.mna --fixtures                           # R-type S fixtures for the C++ cross-check (--check)
+python -m harness.tonestack_check --tran                   # M1: B4 magnitude (375 settings), sweeps, R_th4
+python -m harness.knob_jump                                # M1: knob-jump test vs SPICE (D-025)
 python -m harness.render_spice --block <id> --preset <id>  # SPICE reference (cached in harness/cache/)
 python -m harness.run_engine --block <id> --preset <id>
 python -m harness.compare --block <id> --preset <id> --milestone M<n>   # renders + runs + report

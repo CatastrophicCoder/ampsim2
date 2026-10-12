@@ -62,6 +62,7 @@ void printUsage(std::ostream& os) {
     os << "usage: ampwav --block <id> --in in.wav --out out.wav [--rate Hz]\n"
           "              [--param name=value ...] [--dump-node node=file.wav ...]\n"
           "              [--units volts|fs] [--block-size N] [--stats stats.json] [--list-nodes]\n"
+          "              [--knob-ramp knob=start,duration,from,to ...]\n"
           "\n"
           "  --block       full, b12, b3 .. b7, b56 (M0: every block except full is a pass-through)\n"
           "  --in          mono WAV; 64-bit float is read bit-exact, other formats via 32-bit float\n"
@@ -73,7 +74,9 @@ void printUsage(std::ostream& os) {
           "                fs: full-scale samples as in the plugin (full amp only)\n"
           "  --block-size  samples per process() call when no nodes are dumped (default 512)\n"
           "  --stats       write timing and Newton statistics as JSON\n"
-          "  --list-nodes  print the probe names of the block and exit\n";
+          "  --list-nodes  print the probe names of the block and exit\n"
+          "  --knob-ramp   ramp a knob's target rotation linearly (times in s); the engine smooths it.\n"
+          "                Params are then set every sample (knob-jump test, VERIFICATION §7)\n";
 }
 
 std::optional<Options> parseArgs(const std::vector<std::string>& args, std::string& error) {
@@ -143,6 +146,28 @@ std::optional<Options> parseArgs(const std::vector<std::string>& args, std::stri
                 return std::nullopt;
             }
             *k = x;
+        } else if (a == "--knob-ramp") {
+            if (!value(v)) return std::nullopt;
+            KnobRamp r;
+            std::string spec;
+            double vals[4] = {};
+            bool ok = splitPair(v, r.knob, spec);
+            for (int k = 0; ok && k < 4; ++k) {
+                const auto comma = spec.find(',');
+                ok = parseDouble(spec.substr(0, comma), vals[k]) && (k == 3) == (comma == std::string::npos);
+                spec = comma == std::string::npos ? "" : spec.substr(comma + 1);
+            }
+            amp2203::Params dummy;
+            if (!ok || !knob(dummy, r.knob) || vals[1] < 0.0 || vals[2] < 0.0 || vals[2] > 1.0 || vals[3] < 0.0 ||
+                vals[3] > 1.0) {
+                error = "--knob-ramp expects knob=start,duration,from,to (rotations in 0..1), got '" + v + "'";
+                return std::nullopt;
+            }
+            r.start = vals[0];
+            r.duration = vals[1];
+            r.from = vals[2];
+            r.to = vals[3];
+            o.ramps.push_back(r);
         } else if (a == "--dump-node") {
             if (!value(v)) return std::nullopt;
             NodeDump d;
@@ -231,8 +256,29 @@ int run(const Options& o, std::ostream& log) {
     const size_t total = y.size();
     std::vector<std::vector<double>> dumps(o.dumps.size(), std::vector<double>(total));
 
+    // knob ramps: the target of each ramped knob at sample n (before the ramp: `from`)
+    auto paramsAt = [&](size_t n) {
+        amp2203::Params p = o.params;
+        const double t = static_cast<double>(n) / rate;
+        for (const auto& r : o.ramps) {
+            const double u = r.duration > 0.0 ? std::clamp((t - r.start) / r.duration, 0.0, 1.0)
+                                              : (t >= r.start ? 1.0 : 0.0);
+            *knob(p, r.knob) = r.from + (r.to - r.from) * u;
+        }
+        return p;
+    };
+    if (!o.ramps.empty())
+        runner->setParams(paramsAt(0));
+
     const auto t0 = std::chrono::steady_clock::now();
-    if (dumps.empty()) {
+    if (!o.ramps.empty()) {
+        for (size_t n = 0; n < total; ++n) {
+            runner->setParams(paramsAt(n));
+            runner->processVolts(y.data() + n, 1);
+            for (size_t k = 0; k < dumps.size(); ++k)
+                dumps[k][n] = *dumpSrc[k];
+        }
+    } else if (dumps.empty()) {
         for (size_t pos = 0; pos < total; pos += static_cast<size_t>(o.blockSize)) {
             const auto n = static_cast<int>(std::min(static_cast<size_t>(o.blockSize), total - pos));
             runner->processVolts(y.data() + pos, n);
