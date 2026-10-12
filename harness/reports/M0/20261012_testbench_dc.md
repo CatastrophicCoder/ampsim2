@@ -15,7 +15,7 @@
 
 ## Deviations above tolerance
 
-- **b6 / out**: 3.98e-02 — Partition effect, not a transcription error: in F, R22 (B5) injects v(nG)/100 kΩ ≈ 135 µA into node out, giving 135 µA × (16 Ω ‖ 0.3 Ω) ≈ 40 µV. B6 does not contain R22 (SPEC §4.2), so out = 0 V there.
+- **b6 / out**: 3.98e-02 — Accepted known partition effect (DECISIONS D-015), not a transcription error: in F, R22 (B5) injects v(nG)/100 kΩ ≈ 135 µA into node out, giving 135 µA × (16 Ω ‖ 0.3 Ω) ≈ 40 µV. B6 does not contain R22 (SPEC §4.2), so out = 0 V there.
 - **b6 / sl**: 3.98e-02 — Same cause as out (sl is out through the secondary inductance, DC short).
 
 ## Per-node values
@@ -137,7 +137,7 @@
 | nor | -46.3631 | -46.3631 | 6.28e-15 |  |
 | nrv | -3.63636 | -3.63636 | 2.44e-16 |  |
 | nscr | 486.828 | 486.828 | 1.82e-10 |  |
-| out | 3.98094e-05 | 0 | 3.98e-02 | Partition effect, not a transcription error: in F, R22 (B5) injects v(nG)/100 kΩ ≈ 135 µA into node out, giving 135 µA × (16 Ω ‖ 0.3 Ω) ≈ 40 µV. B6 does not contain R22 (SPEC §4.2), so out = 0 V there. |
+| out | 3.98094e-05 | 0 | 3.98e-02 | Accepted known partition effect (DECISIONS D-015), not a transcription error: in F, R22 (B5) injects v(nG)/100 kΩ ≈ 135 µA into node out, giving 135 µA × (16 Ω ‖ 0.3 Ω) ≈ 40 µV. B6 does not contain R22 (SPEC §4.2), so out = 0 V there. |
 | p3a | 271.512 | 271.512 | 4.48e-10 |  |
 | p3b | 262.884 | 262.884 | 7.94e-10 |  |
 | pa | 485.673 | 485.673 | 4.09e-10 |  |

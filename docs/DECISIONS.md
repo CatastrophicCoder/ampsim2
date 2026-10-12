@@ -138,7 +138,7 @@ Alternatives: Full-scale samples everywhere (the harness would have to know each
 Consequences: SPICE renders and engine outputs are directly comparable without scaling.
 
 ## D-014 SPICE transient setup: sample-aligned input, sweep tail, configurable RELTOL
-Date: 2026-10-12 · Status: accepted (RELTOL value: open, see PROGRESS.md Q4)
+Date: 2026-10-12 · Status: accepted (RELTOL 1e-6: owner decision 2026-10-12, PROGRESS.md Q4)
 Context: M0 step 3 measurements (ngspice 47):
 - An XSPICE filesource creates no breakpoints, so ngspice's internal steps drift off the 384 kHz grid
   and the input is interpolated twice (filesource, then `option interp`). The circuit input was
@@ -160,8 +160,8 @@ Decision:
 - Sweeps (SWP-lo/hi) carry 50 ms of silence after the 2 s sweep; the magnitude response is the per-bin
   ratio Y/X, complex-interpolated, without smoothing (error 1.3e-4 dB on the known filter).
 - RELTOL for reference transients is one harness setting, `harness/config.py: SPICE_RELTOL`, part of
-  the cache key. It stays at the ngspice default until the owner decides (Q4). op and ac are
-  unaffected.
+  the cache key. Owner decision (Q4): RELTOL = 1e-6, about 16 dB below the strictest time-domain
+  tolerance (−60 dB) at `y`, at about 5x the run time of the default. op and ac are unaffected.
 Alternatives: PWL input (too slow); inline PWL chunks; accepting the input low-pass (would appear as
 engine error at high frequencies).
 Consequences: Breakpoints cost about 1.6x run time on the full amp. Harness unit tests cover the input
@@ -189,5 +189,7 @@ Decision (`harness/testbench_gen.py`, generated files in `harness/testbenches/`)
 - R_th1/2/3/5a/5b come from `harness/junctions.py` (M0 step 5). Unmeasured values are written as
   `PENDING` placeholders and transient runs refuse such a testbench.
 Consequences: DC sanity check results in `harness/reports/M0/20261012_testbench_dc.md`: b1–b5open
-match F to ≤ 1.2e-9 relative. b6 differs at out/sl by 40 µV because R22 (B5) is not in B6; see
-PROGRESS.md Q5.
+match F to ≤ 1.2e-9 relative. b6 differs at out/sl by 40 µV because R22 (B5) is not in B6. Owner
+decision (Q5, 2026-10-12): accepted as a known partition effect. The check, its 1 mV floor and the
+testbench stay unchanged; the DC report keeps listing it as FAIL with the explanation, and any other
+deviation remains a failure.

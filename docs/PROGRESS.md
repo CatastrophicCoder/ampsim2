@@ -11,7 +11,7 @@ Legend: [ ] todo · [~] in progress · [x] done · [!] blocked (see note)
 - [x] `ampwav` CLI (pass-through engine), 64-bit float WAV I/O
 - [x] `harness/signals.py`, `render_spice.py`, `run_engine.py`, `compare.py`
 - [~] Block testbenches B1–B4, B56(+B7), B5-open, B6, full; DC sanity check vs F (≤ 0.5 %) — generated;
-  R_th pending step 5; b6 DC deviation at out/sl awaiting owner (Q5)
+  R_th pending step 5; b6 DC deviation at out/sl accepted as known (Q5)
 - [ ] Junction Thevenin resistances measured and entered in CIRCUIT.md §4
 - [ ] Device DC sweep CSVs generated into `tests/data/`
 - [ ] CI workflow (macOS): build + tests
@@ -106,8 +106,8 @@ Notes:
   Findings, all in DECISIONS D-014: (1) filesource input drifted off the sample grid, a 1.35e-3
   low-pass at 5 kHz; fixed with per-sample breakpoints (input now exact). (2) The reference's own
   accuracy at ngspice's default RELTOL is about −35 dB at `y` and −46 dB at `out` on the full amp at
-  5 kHz, i.e. worse than the −40 dB block-exact tolerance; RELTOL is now a harness setting, still at
-  the default, pending Q4. (3) Octave smoothing biased the sweep magnitude; replaced by per-bin Y/X
+  5 kHz, i.e. worse than the −40 dB block-exact tolerance; RELTOL is now a harness setting (set to
+  1e-6 after Q4). (3) Octave smoothing biased the sweep magnitude; replaced by per-bin Y/X
   with a 50 ms sweep tail. Also observed: on the full amp at default knobs the 10 mV SWP-lo is not
   small-signal (about 1 dB compression around 3–15 kHz; 0.18 dB at 1 mV); this only affects INFO
   magnitude plots for `full`, the scored magnitude check is B4's.
@@ -115,9 +115,11 @@ Notes:
   b1, b2, b3, b4, b56 (+B7), b5open, b6 and full (DECISIONS D-015); `python -m harness.dc_check`
   writes `harness/reports/M0/20261012_testbench_dc.md`. b1–b5open match F within 1.2e-9 relative at
   every node. b6 FAILs at out/sl: 0 V vs 39.8 µV in F (4 % against the 1 mV floor), because R22's
-  135 µA NFB current into out belongs to B5 (Q5). R_th1/2/3/5a/5b are PENDING placeholders until
+  135 µA NFB current into out belongs to B5 (Q5: accepted as known by the owner). R_th1/2/3/5a/5b are PENDING placeholders until
   step 5, and transient runs refuse those testbenches. `compare` now runs on b1; b5open/b6 need
   B56 recordings (M4) and say so. 21 harness tests pass.
+- 2026-10-12 Owner decisions: Q4 RELTOL = 1e-6 (`harness/config.py`; cached renders re-render because
+  RELTOL is part of the cache key); Q5 b6 out/sl deviation accepted as a known partition effect.
 
 ## M1 — B4 tone stack + master
 - [ ] MNA scattering builder (C++) + numpy reference + cross-check test
@@ -172,7 +174,8 @@ _(Claude Code: add questions here and also ask them in the session.)_
 - Q1 (M0): git init + baseline commit? — Answered 2026-10-12: yes; repo-local author CatastrophicCoder.
 - Q2 (M0): install ngspice? — Answered 2026-10-12: yes; ngspice 47 installed via Homebrew.
 - Q3 (M0): build the JUCE plugin in CI? — Answered 2026-10-12: no, plugin OFF in CI.
-- Q4 (M0): ngspice RELTOL for reference transients (`harness/config.py: SPICE_RELTOL`). Measurements
-  in DECISIONS D-014; open.
+- Q4 (M0): ngspice RELTOL for reference transients (`harness/config.py: SPICE_RELTOL`)? — Answered
+  2026-10-12: 1e-6 (DECISIONS D-014).
 - Q5 (M0): b6 testbench DC at out/sl is 0 V vs 39.8 µV in F (R22's NFB current is in B5, not B6).
-  Accept as a known partition deviation, or change the check / testbench? Open.
+  Accept as a known partition deviation, or change the check / testbench? — Answered 2026-10-12:
+  accept as known; check and testbench unchanged, report keeps the explained FAIL (DECISIONS D-015).

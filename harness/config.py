@@ -16,10 +16,11 @@ RENDER_DIR = HARNESS / 'renders'
 REPORT_DIR = HARNESS / 'reports'
 AMPWAV = ROOT / 'build' / 'tools' / 'ampwav' / 'ampwav'
 
-# ngspice transient relative tolerance for reference renders. None = ngspice default (1e-3), which is
-# what reference/spice/spice_tools.py uses. Tighter values make the reference more accurate and slower;
-# see docs/PROGRESS.md (M0 step 3 notes) for measurements. Part of the render cache key.
-SPICE_RELTOL = None
+# ngspice transient relative tolerance for reference renders (owner decision, DECISIONS D-014 / PROGRESS
+# Q4). 1e-6 gives about -87 dB at `out` and -76 dB at `y` vs a 1e-7 run on the full amp, at about 5x
+# the run time of the ngspice default (1e-3, used by reference/spice/spice_tools.py). op and ac are
+# unaffected. Part of the render cache key; None = ngspice default.
+SPICE_RELTOL = 1e-6
 
 # engine parameter name -> netlist .param name (SPEC §6, jcm800_2203.cir)
 KNOBS = {
