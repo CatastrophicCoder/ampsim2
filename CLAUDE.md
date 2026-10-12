@@ -58,6 +58,7 @@ python -m harness.testbench_gen                            # regenerate harness/
 python -m harness.dc_check                                 # testbench DC vs full netlist (M0 sanity)
 python -m harness.rth_measure                              # junction R_th (AC injection + DC), report
 python -m harness.partition --junction j2                  # SPICE partition error of one junction
+python -m harness.device_sweeps                            # tests/data device DC sweep CSVs (--check)
 python -m harness.render_spice --block <id> --preset <id>  # SPICE reference (cached in harness/cache/)
 python -m harness.run_engine --block <id> --preset <id>
 python -m harness.compare --block <id> --preset <id> --milestone M<n>   # renders + runs + report

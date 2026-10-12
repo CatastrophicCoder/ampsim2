@@ -14,7 +14,7 @@ Legend: [ ] todo · [~] in progress · [x] done · [!] blocked (see note)
   DC deviation at out/sl accepted as known (Q5)
 - [x] Junction Thevenin resistances measured and entered in CIRCUIT.md §4 — B1+B2 merged into B12
   (Q6a); |Z(1 kHz)| in junctions.py (Q6b); J5 provisional until M4
-- [ ] Device DC sweep CSVs generated into `tests/data/`
+- [x] Device DC sweep CSVs generated into `tests/data/`
 - [ ] CI workflow (macOS): build + tests
 - [ ] M0 report: `harness/reports/M0/...`
 Plan (2026-10-12; follows SPEC §7 M0 and VERIFICATION §1–8, no deviations intended):
@@ -138,6 +138,13 @@ Notes:
   56.93 k; J5 provisional); testbenches regenerated, none PENDING. Q7: `metrics.ac_part` (signal minus
   its own value at t = 0) before ESR, best lag and sweep response in `compare` and `partition`
   (VERIFICATION §6, D-018). 27 harness tests pass; `compare --block b12` runs end to end.
+- 2026-10-12 Step 6 done: `python -m harness.device_sweeps` writes tests/data/12ax7_plate.csv (567
+  rows), 12ax7_grid.csv (8), el34_plate.csv (1464), el34_grid.csv (5) from single-tube ngspice DC
+  sweeps (DECISIONS D-019). A harness test recomputes every row from the WDF_DESIGN §3 equations
+  (Koren, Wright-omega grid diode) to 1e-7 relative / 1e-13 A; this found three SPICE details, now in
+  WDF_DESIGN §3: ngspice's Vt constants (25.8649170 mV), tubes.lib's 1.5707963 for π/2 in the EL34
+  screen current, and ngspice's reverse-bias diode form below −3·Vt (≤ 5e-11 A, not replicated). The
+  1 GΩ Rcp is removed from `ip` (kept as `ip_terminal`). 31 harness tests pass.
 
 ## M1 — B4 tone stack + master
 - [ ] MNA scattering builder (C++) + numpy reference + cross-check test

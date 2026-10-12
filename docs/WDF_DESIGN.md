@@ -64,8 +64,12 @@ to cathode. Closed form with the Wright omega function ω (ω(z) = W(e^z)):
 Ig(Vgk)   = (n·Vt / Rs) · ω(z) − Is,     z = ln(Is·Rs / (n·Vt)) + (Vgk + Is·Rs) / (n·Vt)
 dIg/dVgk  = 1 / (Rs + n·Vt / (Ig + Is))
 ```
-Is = 1e−9 A, n = 1, Vt = 25.865 mV (27 °C, ngspice default). The SPICE 1 GΩ resistors (Re1, Rcp) are
-omitted. Port currents: i_G = Ig, i_P = Ip.
+Is = 1e−9 A, n = 1, Vt = k·T/q = 25.8649170 mV (27 °C, ngspice default, with ngspice's constants
+k = 1.38064852e−23, q = 1.6021766208e−19). The SPICE 1 GΩ resistors (Re1, Rcp) are omitted. Port
+currents: i_G = Ig, i_P = Ip.
+SPICE detail not replicated (D-019): below −3·n·Vt across the junction, ngspice's diode uses the
+reverse-bias form −Is·(1 + (3·n·Vt / (e·Vd))³) instead of the exponential; the difference is at most
+5e−11 A (at −3·Vt), far below the 1 nA device tolerance.
 
 ### 3.2 Pentode (EL34, with the repository screen modification), ports G1 = (g, k), G2 = (s, k), P = (p, k)
 
@@ -75,7 +79,7 @@ u    = kp · (1/mu + Vgk / Vs')
 E1   = Vs' · softplus(u) / kp
 F    = E1 > 0 ? 2 · E1^ex : 0
 Ip   = (F / kg1) · atan(Vpk / kvb)
-Is   = F · ( 1/kg2 + (π/2 − atan(max(Vpk, 0) / kvb)) / kg1 )
+Is   = F · ( 1/kg2 + (1.5707963 − atan(max(Vpk, 0) / kvb)) / kg1 )    (tubes.lib's literal for π/2)
 Ig   = diode as in 3.1 with Rs = 1000 Ω + 1 Ω
 
 ∂E1/∂Vgk = sigmoid(u)

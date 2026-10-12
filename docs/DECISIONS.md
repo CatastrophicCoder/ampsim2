@@ -258,3 +258,23 @@ mean (hides the average bias shift); raw voltages.
 Consequences: All committed testbenches are free of PENDING junctions, so every non-recorded block can
 be rendered in transient. Harmonics already removed the mean of their analysis window (unchanged);
 power into the load still uses the raw output voltage.
+
+## D-019 Device DC sweep tables
+Date: 2026-10-12 · Status: accepted
+Context: VERIFICATION §5.1 defines the 12AX7 and EL34 DC sweeps for the device unit tests (M2, M4).
+It leaves the plate and screen voltages of the EL34 grid-current sweep open, and the engine model
+(WDF_DESIGN §3) omits tubes.lib's 1 GΩ Rcp, whose current (up to 0.6 µA at 600 V) exceeds the 1 nA
+tolerance near cutoff.
+Decision:
+- `harness/device_sweeps.py` runs one ngspice DC sweep per curve on a single tube with ideal sources on
+  every electrode (cathode at ground) and tight DC options (reltol 1e-12, abstol 1e-18, vntol 1e-12,
+  gmin 1e-18). Tables in `tests/data/` (committed, `--check` for freshness): voltages, then `ip`
+  (terminal current − Vpk / 1 GΩ, what the engine must match), `is`, `ig`, and `ip_terminal`.
+- EL34 grid-current sweep at Vpk = Vsk = 400 V (the model's grid current does not depend on them; only
+  the ip/is columns do).
+- A harness test recomputes every row from the WDF_DESIGN §3 equations to 1e-7 relative / 1e-13 A. It
+  established three SPICE details, written into WDF_DESIGN §3: Vt from ngspice's constants
+  (25.8649170 mV); tubes.lib's 1.5707963 for π/2 in the screen current (1.4e-7 relative); ngspice's
+  reverse-bias diode form below −3·Vt (≤ 5e-11 A, not replicated in the engine).
+Consequences: The C++ device tests (M2: 12AX7, M4: EL34) read these tables with the VERIFICATION §5.1
+tolerance (0.1 % or 1 nA).
