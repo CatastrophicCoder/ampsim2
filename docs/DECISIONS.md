@@ -216,3 +216,22 @@ Decision:
   (Preamp Volume 0.2 / 0.6 / 1.0). J5 cannot be studied this way before M4 (it needs B56 recordings).
 Consequences: Results in CIRCUIT.md §4 and `harness/reports/M0/20261012_partition_j1.md`. No constant
 R_th1 gives better than −11 dB (CLEAN) / −17.6 dB (DEFAULT) worst sine ESR at p1b.
+
+## D-017 Merge B1 and B2 into B12 (joint 4-port root)
+Date: 2026-10-12 · Status: accepted (owner decision, PROGRESS.md Q6a)
+Context: D-016's SPICE study of J1 (V1a plate → V1b input network) gave a worst sine ESR at p1b of
+−8.7 to −22.6 dB for every constant R_th1 (DC 74.8 kΩ, |Z(1 kHz)| 39.3 kΩ, Re Z 37.9 kΩ) at Preamp
+Volume 0.2 / 0.6 / 1.0, with up to 2.3 dB small-signal magnitude error. V1a's output impedance has no
+flat region in the audio band (cathode bypass C1, plate capacitances), and B2's input impedance falls
+to 54–177 kΩ at 10 kHz (C5, C4, V1b Miller). Options presented: constant R_th1 (|Z| or DC), SPEC §4.1
+upgrade (a) (a fitted Z(f) network), upgrade (b) (merge).
+Decision: upgrade (b). B1 and B2 become one block B12 (`StageV1aV1b`): V1a and V1b solved together by
+a 4-port triode root (like B3), the coupling and Preamp Volume network inside the same tree, p1a an
+internal node. There is no J1. The harness partition entry is `B12`, its testbench `b12.cir` (guitar
+input, output p1b), ampwav block id `b12`; b1/b2 testbenches and block ids are removed. J2 is measured
+on b12. `harness/partition.py` now studies J2 (b12 → b3 vs `b123`, B12 and B3 joined).
+Consequences: No J1 partition error by construction. One 4-unknown Newton solve per sample instead of
+two 2-unknown solves (cost measured in M2). SPEC §7: M2 is now B12 (triode model, multiport Newton, the
+4-port tree); M3 is B3 and the preamp cascade. Tolerances unchanged; the M2 block-exact checks are
+scored at p1b. V1a cannot be checked block-exact on its own in the engine; the triode model keeps its
+device unit tests (VERIFICATION §5.1). The J1 study is reproducible at commit 4838919.

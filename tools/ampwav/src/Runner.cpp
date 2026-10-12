@@ -61,7 +61,7 @@ std::string lower(std::string_view s) {
 }  // namespace
 
 const std::vector<std::string>& blockIds() {
-    static const std::vector<std::string> ids = {"full", "b1", "b2", "b3", "b4", "b5", "b6", "b7", "b56"};
+    static const std::vector<std::string> ids = {"full", "b12", "b3", "b4", "b5", "b6", "b7", "b56"};
     return ids;
 }
 

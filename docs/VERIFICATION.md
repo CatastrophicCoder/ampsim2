@@ -27,7 +27,7 @@ Feedback and supply exceptions:
 - For isolated unit verification, two open-loop testbenches exist: **B5-open** (R22 driven by the
   recorded speaker voltage from the B56 run, as an ideal source) and **B6** (driven by the recorded
   PI open-circuit outputs). Supply node voltages in these are the recorded B56 supply waveforms.
-- Blocks B1–B4 in P use the supply node voltages from the corresponding F run as ideal recorded
+- Blocks B12, B3 and B4 in P use the supply node voltages from the corresponding F run as ideal recorded
   sources (or constants from the DC table for M1–M2).
 
 ## 2. Testbench construction
@@ -68,8 +68,7 @@ DI recordings are not included in the repository by default (owner provides them
 Block input amplitudes (volts peak at the junction source):
 | Block | Small | Nominal | Hot | Overdrive |
 |---|---|---|---|---|
-| B1 (guitar input) | 0.01 | 0.1 | 0.5 | 2.0 |
-| B2 (J1 source) | 0.1 | 1 | 10 | 30 |
+| B12 (guitar input) | 0.01 | 0.1 | 0.5 | 2.0 |
 | B3 (J2 source) | 0.1 | 1 | 10 | 50 |
 | B4 (J3 source, linear) | — | 1 | — | — |
 | B56 (J4 source) | 0.1 | 1 | 5 | 20 |

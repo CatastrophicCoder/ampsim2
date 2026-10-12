@@ -50,11 +50,11 @@ class TestGeneratedTestbenches(unittest.TestCase):
                 self.assertLessEqual(err, 0.005, f'{name} {node}: F {vf} vs {vt}')
 
     def test_pending_testbench_is_refused_for_transient(self):
-        text = (config.TESTBENCH_DIR / 'b2.cir').read_text()
+        text = (config.TESTBENCH_DIR / 'b3.cir').read_text()
         if spice.PENDING_MARK not in text:
             self.skipTest('R_th already measured')
         with self.assertRaises(spice.SpiceError):
-            spice.tran(text, {}, signals.sine(1000.0, 1.0, seconds=0.001).x, ['p1b'])
+            spice.tran(text, {}, signals.sine(1000.0, 1.0, seconds=0.001).x, ['k2b'])
 
 
 @unittest.skipUnless(HAS_NGSPICE, 'ngspice not installed')

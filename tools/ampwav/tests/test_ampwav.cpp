@@ -87,11 +87,11 @@ TEST_CASE("WAV: stereo input is rejected", "[ampwav]") {
 
 TEST_CASE("CLI: valid command line", "[ampwav]") {
     std::string err;
-    const auto o = parse({"--block", "B1", "--in", "i.wav", "--out", "o.wav", "--rate", "384000", "--param",
+    const auto o = parse({"--block", "B12", "--in", "i.wav", "--out", "o.wav", "--rate", "384000", "--param",
                           "preampVolume=0.8", "--param", "presence=1", "--dump-node", "out=d.wav"},
                          err);
     REQUIRE(o);
-    REQUIRE(o->block == "B1");
+    REQUIRE(o->block == "B12");
     REQUIRE(o->rate == 384000.0);
     REQUIRE(o->params.preampVolume == 0.8);
     REQUIRE(o->params.presence == 1.0);
@@ -140,7 +140,7 @@ TEST_CASE("CLI end to end: output, node dump and stats", "[ampwav]") {
     std::string err;
     REQUIRE(ampwav::writeMonoWavF64(dir.file("in.wav"), 384000.0, x, err));
 
-    for (const char* block : {"full", "b2"}) {
+    for (const char* block : {"full", "b12"}) {
         INFO("block " << block);
         const auto o = parse({"--block", block, "--in", dir.file("in.wav"), "--out", dir.file("out.wav"), "--rate",
                               "384000", "--dump-node", "in=" + dir.file("node_in.wav"), "--stats",

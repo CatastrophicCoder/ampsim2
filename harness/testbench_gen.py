@@ -28,8 +28,7 @@ from .spice import PENDING_MARK
 
 # Partition of the reference netlist (SPEC §4.2). Every element belongs to exactly one block.
 PARTITION = {
-    'B1': 'Vin R2 R3 X1a R1 C1 R4',
-    'B2': 'C3 R5 C4 C5 RVR1a RVR1b X1b R6 R7',
+    'B12': 'Vin R2 R3 X1a R1 C1 R4 C3 R5 C4 C5 RVR1a RVR1b X1b R6 R7',   # V1a + V1b, joint root (D-017)
     'B3': 'C7 R10 C8 R11 X2a R9 R12 X2b R13',
     'B4': 'C10 R15 C11 C12 RVR3a RVR3b RVR5 RVR4a RVR4b RVR2a RVR2b',
     'B5': 'C9 R17 R16 R19 C15 R20 R23 C17 RVR6 R22 X3a X3b R18 R21',
@@ -103,13 +102,9 @@ def _g(v):
 def _specs(v, i_pre):
     rth = lambda k: f'{{rth_{k}}}'  # noqa: E731
     return [
-        Spec('b1', ('B1',), ['B1 InputStageV1a. Input: guitar source at node in. Output: p1a (open).',
-                             'Supply bpA: constant from F op.'],
+        Spec('b12', ('B12',), ['B12 StageV1aV1b (V1a and V1b, joint root). Input: guitar source at node in.',
+                               'Output: p1b (open). Supply bpA: constant from F op.'],
              [('supply', f'Vsup_bpA bpA 0 DC {_g(v["bpa"])}')]),
-        Spec('b2', ('B2',), ['B2 StageV1b. Input: J1 Thevenin source (v_oc(p1a), R_th1) into node p1a.',
-                             'Output: p1b (open). Supply bpA: constant from F op.'],
-             [('J1', f'Vin j1s 0 DC {_g(v["p1a"])} AC 1'), ('J1', f'Rth_j1 j1s p1a {rth("j1")}'),
-              ('supply', f'Vsup_bpA bpA 0 DC {_g(v["bpa"])}')], ('j1',)),
         Spec('b3', ('B3',), ['B3 StageV2aV2b. Input: J2 Thevenin source (v_oc(p1b), R_th2) into node p1b.',
                              'Output: k2b (open). Supply bpX: constant from F op.'],
              [('J2', f'Vin j2s 0 DC {_g(v["p1b"])} AC 1'), ('J2', f'Rth_j2 j2s p1b {rth("j2")}'),
@@ -117,11 +112,12 @@ def _specs(v, i_pre):
         Spec('b4', ('B4',), ['B4 ToneStackMaster. Input: J3 Thevenin source (v_oc(k2b), R_th3) into node k2b.',
                              'Output: y (open, master wiper).'],
              [('J3', f'Vin j3s 0 DC {_g(v["k2b"])} AC 1'), ('J3', f'Rth_j3 j3s k2b {rth("j3")}')], ('j3',)),
-        Spec('b12', ('B1', 'B2'),
-             ['Junction reference for J1: B1 and B2 joined directly (no J-Thevenin source), for the SPICE',
-              'partition-error study of J1 (harness/partition.py). Input: guitar source at node in.',
-              'Output: p1b (open). Supply bpA: constant from F op.'],
-             [('supply', f'Vsup_bpA bpA 0 DC {_g(v["bpa"])}')]),
+        Spec('b123', ('B12', 'B3'),
+             ['Junction reference for J2: B12 and B3 joined directly (no J-Thevenin source), for the SPICE',
+              'partition-error study of J2 (harness/partition.py). Input: guitar source at node in.',
+              'Output: k2b (open). Supplies bpA, bpX: constant from F op.'],
+             [('supply', f'Vsup_bpA bpA 0 DC {_g(v["bpa"])}'),
+              ('supply', f'Vsup_bpX bpX 0 DC {_g(v["bpx"])}')]),
         Spec('b56', ('B5', 'B6', 'B7'),
              ['B56+B7: phase inverter, power stage and supply with instantaneous NFB (VERIFICATION §1).',
               'Input: J4 Thevenin source (v_oc(y), R_th4) into node y; R_th4 = DC formula (WDF_DESIGN §6).',

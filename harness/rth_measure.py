@@ -35,8 +35,7 @@ class Junction:
 
 
 JUNCTIONS = (
-    Junction('j1', 'J1', 'b1', 'p1a'),
-    Junction('j2', 'J2', 'b2', 'p1b'),
+    Junction('j2', 'J2', 'b12', 'p1b'),
     Junction('j3', 'J3', 'b3', 'k2b'),
     Junction('j5a', 'J5a (R_thA)', 'b5open', 'p3a', ('p3b',)),
     Junction('j5b', 'J5b (R_thB)', 'b5open', 'p3b', ('p3a',)),
@@ -148,7 +147,7 @@ def write_report(results, fd, spread, sens):
         'testbench, block input AC-grounded, linearised at the DC operating point. DC = 1 mHz point of the '
         f'sweep (capacitors effectively open), cross-checked by a ±{I_FD * 1e6:g} µA finite difference of '
         'two DC operating points.',
-        '- Upstream junctions inside a testbench (Rth_j1 in b2, Rth_j2 in b3) use the junctions.py value, '
+        '- Upstream junctions inside a testbench (Rth_j2 in b3) use the junctions.py value, '
         'or the DC value measured here while it is unset.', '',
         '| Junction | Node | Testbench | R_th DC | DC (op finite diff.) | Z @ 1 kHz | Re Z @ 1 kHz |',
         '|---|---|---|---|---|---|---|']

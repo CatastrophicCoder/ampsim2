@@ -11,7 +11,9 @@ Node names below are the netlist's. "gnd" is node 0.
 
 ## 1. Blocks and components
 
-### B1 — Input stage, V1a
+### B12 — Input stage V1a and Preamp Volume network V1b (one block, joint root; DECISIONS D-017)
+
+V1a part:
 | Ref | Value | Between | Notes |
 |---|---|---|---|
 | Vin | — | in – gnd | Guitar source (ideal in v1; optional pickup model later) |
@@ -22,13 +24,12 @@ Node names below are the netlist's. "gnd" is node 0.
 | C1 | 0.68 µF | k1a – gnd | Full cathode bypass |
 | R4 | 100 kΩ | bpA – p1a | Plate load; bpA from supply B7 |
 
-Output junction J1: open-circuit plate voltage `v_oc(p1a)` and `R_th1` (to be measured in M0; expected
-roughly R4 ‖ r_p, a few tens of kΩ).
+There is no junction between V1a and V1b: p1a is an internal node of B12 (the J1 junction was
+measured and removed in M0; see §4 and DECISIONS D-017).
 
-### B2 — Preamp Volume network, V1b
+V1b part:
 | Ref | Value | Between | Notes |
 |---|---|---|---|
-| (J1) | v_oc(p1a), R_th1 | → C3 | Thevenin source |
 | C3 | 0.022 µF | p1a – nA | Coupling |
 | R5 | 470 kΩ | nA – vtop | |
 | C4 | 470 pF | nA – vtop | Bright cap across R5 |
@@ -154,7 +155,7 @@ SPICE vs engine) in M4.
 
 ---
 
-## 4. Junction Thevenin resistances (fill in during M0)
+## 4. Junction Thevenin resistances (measured in M0)
 
 Measured with `python -m harness.rth_measure` (DECISIONS D-016; report
 `harness/reports/M0/20261012_junctions.md`), default parameters, upstream block testbench with the output
@@ -163,19 +164,27 @@ open and the input AC-grounded. The value used by the testbenches and the engine
 
 | Junction | Node | R_th (DC small-signal) | Z @ 1 kHz | Spread over presets (\|Z\| @ 1 kHz) | Method / notes |
 |---|---|---|---|---|---|
-| J1 | p1a | 74.79 kΩ | 39.25 kΩ ∠−15.1° | none | C1 bypasses the cathode above ~100 Hz; \|Z\| falls to 31 kΩ at 10 kHz (plate capacitances). No flat region in the audio band |
-| J2 | p1b | 90.11 kΩ | 89.76 kΩ ∠−0.9° | 88.5–90.1 kΩ (Preamp Volume, Miller) | R6 unbypassed; flat to ~5 kHz |
+| (J1) | p1a | 74.79 kΩ | 39.25 kΩ ∠−15.1° | none | Removed: B1 and B2 merged into B12 (D-017). C1 bypasses the cathode above ~100 Hz; \|Z\| falls to 31 kΩ at 10 kHz. Measured at commit 4838919 |
+| J2 | p1b | 90.11 kΩ | 89.73 kΩ ∠−1.0° | 88.4–90.1 kΩ (Preamp Volume, Miller) | Measured on B12. R6 unbypassed; flat to ~1 kHz, 85.6 kΩ at 10 kHz |
 | J3 | k2b | 359.9 Ω | 359.9 Ω ∠+0.1° | none | Cathode follower; flat |
 | J4 | y | R_VR2b ‖ (R_VR2a + R_VR3b + R_VR5 + R_VR4) (knob-dependent) | — | — | DC, J3 shorted, caps open; reactive part ignored (DECISIONS D-015) |
 | J5a | p3a | 41.40 kΩ | 58.06 kΩ ∠−0.9° | 56.2–58.1 kΩ (Master) | LTP: DC value only below ~1 Hz; 57–59 kΩ flat 10 Hz–5 kHz. Transimpedance to p3b 25.5 kΩ @ 1 kHz (0.44 of self) |
 | J5b | p3b | 45.51 kΩ | 56.93 kΩ ∠+0.4° | 56.9–59.1 kΩ (Master) | As J5a; transimpedance to p3a 32.1 kΩ @ 1 kHz (0.56 of self) |
 
-J1 partition error (SPICE, `python -m harness.partition --junction j1`, report
-`harness/reports/M0/20261012_partition_j1.md`): the b1 → b2 chain vs B1+B2 joined (b12), at p1b. Worst
+J1 partition error (SPICE, harness/partition.py at commit 4838919, report
+`harness/reports/M0/20261012_partition_j1.md`): the b1 → b2 chain vs B1+B2 joined, at p1b. Worst
 sine ESR with R_th1 = DC / \|Z(1 kHz)\| / Re Z(1 kHz): CLEAN −8.7 / −11.2 / −11.2 dB, DEFAULT −14.8 / −17.6 /
 −17.6 dB, DRIVE −22.6 / −19.3 / −19.1 dB. Cause: B2's input impedance at p1a falls to 54 kΩ (CLEAN) /
 177 kΩ (DEFAULT) at 10 kHz (C5 bright cap, C4, V1b Miller), so J1's frequency-dependent output impedance
-matters; no constant R_th1 represents it.
+matters; no constant R_th1 represents it. Owner decision: merge B1 and B2 into B12 (DECISIONS
+D-017).
+
+J2 partition error (`python -m harness.partition --junction j2`, report
+`harness/reports/M0/20261012_partition_j2.md`): the b12 → b3 chain vs B12+B3 joined (b123), at k2b. The
+three candidates differ by < 0.4 % and give the same result within 0.1 dB. Worst ESR (always a 2 V or
+0.5 V 5 kHz sine): CLEAN −30.6 dB, DEFAULT −27.0 dB, DRIVE −26.2 dB; small-signal magnitude error
+≤ 0.18 dB (20 Hz–20 kHz); harmonics 2–5 within 1.4–3.2 dB. At the loaded junction node p1b the worst is
+−19.4 dB (DRIVE, 2 V, 5 kHz), where V2a grid current loads V1b at large swing.
 
 ---
 

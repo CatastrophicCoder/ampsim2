@@ -1,7 +1,7 @@
 """Test signals at 384 kHz (VERIFICATION.md §3). All signals start at 0 V so that SPICE and the engine
 both start from the DC operating point.
 
-    python -m harness.signals --levels b1 --out harness/renders/signals   # writes the WAVs
+    python -m harness.signals --levels b12 --out harness/renders/signals   # writes the WAVs
 """
 import argparse
 from dataclasses import dataclass, field

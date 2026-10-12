@@ -111,7 +111,7 @@ b_k    = 2·v_k − a_k                                      (reflected waves af
 Port maps:
 | Block | N | Ports |
 |---|---|---|
-| B1, B2 | 2 | (Vgk, Vpk) of the triode |
+| B12 | 4 | V1a (g1a−k1a, p1a−k1a), V1b (w1−k1b, p1b−k1b) |
 | B3 | 4 | V2a (g2a−k2a, p2a−k2a), V2b (p2a−k2b, bpX−k2b) |
 | B5 | 4 | V3a (g3a−k3, p3a−k3), V3b (g3b−k3, p3b−k3) |
 | B6 | 6 | side A (g−k, s−k, p−k), side B (g−k, s−k, p−k); cathodes at ground |
@@ -136,7 +136,7 @@ lookup tables for E1/softplus/omega, better predictors (linear extrapolation fro
 ## 5. R-type adaptors: scattering matrix from the circuit
 
 R-type adaptors are needed where the topology is not series/parallel decomposable: the tone stack (B4)
-and every block whose nonlinear root has several ports sharing nodes (B1, B2, B3, B5, B6).
+and every block whose nonlinear root has several ports sharing nodes (B12, B3, B5, B6).
 
 ### 5.1 Definition-based computation (reference implementation)
 For an adaptor with N ports, model each port n as a Thevenin source (voltage a_n in series with R_n)

@@ -37,20 +37,20 @@ if __name__ == '__main__':
 @unittest.skipUnless(HAS_NGSPICE, 'ngspice not installed')
 class TestPartitionStudy(unittest.TestCase):
     def test_small_signal_partition_error_matches_thevenin_prediction(self):
-        # The chained AC error of the J1 study must equal |Z_in + Z_th| / |Z_in + R| from the separately
+        # The chained AC error of the J2 study must equal |Z_in + Z_th| / |Z_in + R| from the separately
         # measured upstream output impedance Z_th and downstream input impedance Z_in
         import numpy as np
         from harness import partition, spice, testbench_gen
-        st = partition.STUDIES['j1']
-        r = rth_measure.measure()['j1']
-        fz, zth = r['f'], r['z']['p1a']
+        st = partition.STUDIES['j2']
+        r = rth_measure.measure()[st.junction]
+        fz, zth = r['f'], r['z'][st.up_node]
         rth = dict(RTH)
-        rth['j1'] = 1e12
-        fi, zin = spice.impedance(testbench_gen.generate(rth)['b2.cir'], {}, 'p1a')
+        rth[st.junction] = 1e12
+        fi, zin = spice.impedance(testbench_gen.generate(rth)[f'{st.downstream}.cir'], {}, st.up_node)
         cands = partition.candidates(st)
         f, err = partition._ac(st, partition._texts(st, cands), {}, cands)
         interp = lambda fx, z: np.interp(np.log(f), np.log(fx), z.real) + 1j * np.interp(np.log(f), np.log(fx), z.imag)  # noqa: E731
-        zt, zi = interp(fz, zth), interp(fi, zin['p1a'])
+        zt, zi = interp(fz, zth), interp(fi, zin[st.up_node])
         for c, R in cands.items():
             pred = 20 * np.log10(np.abs((zi + zt) / (zi + R)))
             self.assertLess(np.max(np.abs(err[c] - pred)), 0.01, c)

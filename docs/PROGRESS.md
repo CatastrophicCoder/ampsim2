@@ -10,10 +10,10 @@ Legend: [ ] todo · [~] in progress · [x] done · [!] blocked (see note)
 - [x] Top-level CMake, pinned FetchContent (chowdsp_wdf, Catch2, JUCE, Eigen if used); targets build
 - [x] `ampwav` CLI (pass-through engine), 64-bit float WAV I/O
 - [x] `harness/signals.py`, `render_spice.py`, `run_engine.py`, `compare.py`
-- [~] Block testbenches B1–B4, B56(+B7), B5-open, B6, full; DC sanity check vs F (≤ 0.5 %) — generated;
+- [~] Block testbenches B12, B3, B4, B56(+B7), B5-open, B6, full; DC sanity check vs F (≤ 0.5 %) — generated;
   R_th pending step 5; b6 DC deviation at out/sl accepted as known (Q5)
-- [~] Junction Thevenin resistances measured and entered in CIRCUIT.md §4 — measured; value basis and
-  J1 handling awaiting owner (Q6)
+- [~] Junction Thevenin resistances measured and entered in CIRCUIT.md §4 — measured; B1+B2 merged
+  into B12 (Q6a); value basis awaiting owner (Q6b)
 - [ ] Device DC sweep CSVs generated into `tests/data/`
 - [ ] CI workflow (macOS): build + tests
 - [ ] M0 report: `harness/reports/M0/...`
@@ -60,7 +60,7 @@ Step 4 — Testbenches (`harness/testbenches/`, generated and committed)
 - DC sanity check: every internal node of every testbench within 0.5 % of F. The result goes in the M0
   report.
 
-Step 5 — Junction resistances: measure R_th1, R_th2, R_th3, R_thA and R_thB with a 1 kHz AC current
+Step 5 — Junction resistances: measure R_th1 (later removed, D-017), R_th2, R_th3, R_thA and R_thB with a 1 kHz AC current
   injected at the open-circuited output node (input AC-grounded), plus the DC small-signal value.
   Enter the results in CIRCUIT.md §4.
 
@@ -127,6 +127,13 @@ Notes:
   J1 partition error in SPICE (b1 → b2 chain vs b12 = B1+B2 joined): worst sine ESR at p1b −11 dB
   (CLEAN) to −17.6 dB (DEFAULT) for the best constant R_th1, caused by B2's input impedance falling to
   54–177 kΩ at 10 kHz. 25 harness tests pass. Open: Q6 (R_th basis, J1 handling), Q7 (ESR and DC).
+- 2026-10-12 Q6a: B1 and B2 merged into B12 (`StageV1aV1b`, joint 4-port root; DECISIONS D-017).
+  Partition, testbenches (b12 replaces b1/b2; b123 = B12+B3 joined, the J2 reference), block registry,
+  ampwav block ids, SPEC §3.2/§4.2/§7 (M2 is now B12, M3 is B3 + cascade), CIRCUIT §1/§4,
+  VERIFICATION §1/§4 and WDF_DESIGN §4/§5 updated. J2 re-measured on b12 (90.11 k DC / 89.73 k at
+  1 kHz). `harness.partition` now studies J2 (b12 → b3 vs b123): the three R_th2 candidates give the
+  same result within 0.1 dB; worst ESR at k2b −30.6 / −27.0 / −26.2 dB (CLEAN / DEFAULT / DRIVE, all
+  from 0.5–2 V 5 kHz sines), small-signal error ≤ 0.18 dB (CIRCUIT.md §4).
 
 ## M1 — B4 tone stack + master
 - [ ] MNA scattering builder (C++) + numpy reference + cross-check test
@@ -137,19 +144,18 @@ Notes:
 Plan:
 Notes:
 
-## M2 — B1 V1a with triode root
+## M2 — B12: V1a and V1b with a joint triode root
 - [ ] 12AX7 model + Wright omega grid current + Jacobian; device unit tests
-- [ ] Generic multiport Newton root
-- [ ] `InputStageV1a` tree, DC initialisation
+- [ ] Generic multiport Newton root (first user N = 4)
+- [ ] `StageV1aV1b` tree (Preamp Volume inside), DC initialisation
 - [ ] Block-exact checks, Newton statistics
 - [ ] M2 report
 Plan:
 Notes:
 
-## M3 — B2, B3, preamp cascade
-- [ ] `StageV1b`
+## M3 — B3, preamp cascade
 - [ ] `StageV2aV2b` (joint 4-port root)
-- [ ] Cascade B1→B4, node dumps
+- [ ] Cascade B12→B4, node dumps
 - [ ] Block-exact and partition reports; junction upgrades if needed (DECISIONS entries)
 - [ ] M3 report
 Plan:
@@ -186,8 +192,10 @@ _(Claude Code: add questions here and also ask them in the session.)_
 - Q5 (M0): b6 testbench DC at out/sl is 0 V vs 39.8 µV in F (R22's NFB current is in B5, not B6).
   Accept as a known partition deviation, or change the check / testbench? — Answered 2026-10-12:
   accept as known; check and testbench unchanged, report keeps the explained FAIL (DECISIONS D-015).
-- Q6 (M0): which R_th goes into junctions.py, and how to handle J1 (partition error, CIRCUIT.md §4)?
-  Open.
+- Q6a (M0): how to handle J1 (partition error, CIRCUIT.md §4)? — Answered 2026-10-12: merge B1 and
+  B2 into one block B12 with a joint 4-port root (DECISIONS D-017).
+- Q6b (M0): which R_th basis (DC, |Z(1 kHz)|, Re Z(1 kHz)) goes into junctions.py for J2, J3, J5
+  (J5 provisional until M4)? Open.
 - Q7 (M0): `metrics.esr_db` uses raw node voltages; at plate nodes (~250 V DC) the DC term dominates
   Σy² and makes ESR look better than it is (`compare` scores b1 at p1a, b2 at p1b). Compute ESR on the
   signal minus the DC operating point? Open.

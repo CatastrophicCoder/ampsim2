@@ -134,7 +134,7 @@ public:
 
 Each signal block (section 4) is also a class with the same `prepare / reset / process` shape and its
 own parameter setters, so that the CLI and tests can run a single block in isolation:
-`InputStageV1a`, `StageV1b`, `StageV2aV2b`, `ToneStackMaster`, `PhaseInverter`, `PowerStage`,
+`StageV1aV1b`, `StageV2aV2b`, `ToneStackMaster`, `PhaseInverter`, `PowerStage`,
 `Supply`. `Amp2203` composes them.
 
 ### 3.3 Units and signal levels
@@ -202,8 +202,7 @@ exceeds tolerance, upgrade it in this order: (a) add the reactive part of the so
 
 | # | Block | Contents | Nonlinear root | Output |
 |---|---|---|---|---|
-| B1 | `InputStageV1a` | Input source, R2, R3, V1a, R1‖C1, R4 to supply node `bpA` | Triode 2-port (Vgk, Vpk) | `v_oc(p1a)`, `R_th1` |
-| B2 | `StageV1b` | J1 source, C3, R5‖C4, C5, VR1 (Preamp Volume), V1b, R6, R7 | Triode 2-port | `v_oc(p1b)`, `R_th2` |
+| B12 | `StageV1aV1b` | Input source, R2, R3, V1a, R1‖C1, R4, C3, R5‖C4, C5, VR1 (Preamp Volume), V1b, R6, R7; plate loads to supply node `bpA` | Joint 4-port (two triodes) | `v_oc(p1b)`, `R_th2` |
 | B3 | `StageV2aV2b` | J2 source, C7, R10‖C8, R11, V2a, R9, R12, V2b (direct-coupled cathode follower), R13 | Joint 4-port (two triodes) | `v_oc(k2b)`, `R_th3` |
 | B4 | `ToneStackMaster` | J3 source, C10, R15, C11, C12, VR3 Treble, VR5 Bass, VR4 Middle, VR2 Master (linear) | none (R-type adaptor, linear) | `v_oc(y)`, `R_th4` (master-dependent) |
 | B5 | `PhaseInverter` | J4 source, C9, R17, R16, R19, C15, R20, R23, C17, VR6 Presence, R22 (NFB, delayed), V3a, V3b, R18, R21 | Joint 4-port (two triodes) | `v_oc(p3a)`, `v_oc(p3b)`, `R_thA`, `R_thB` |
@@ -211,9 +210,12 @@ exceeds tolerance, upgrade it in this order: (a) add the reactive part of the so
 | B7 | `Supply` | Source resistance, C23, choke, C22, R29, C21b, R8, C21a | none (small linear state-space) | `v(ct)`, `v(nScr)`, `v(bpX)`, `v(bpA)` |
 
 Notes per block (details in `CIRCUIT.md` / `WDF_DESIGN.md`):
-- **Triode stages (B1, B2):** the cathode network is shared between the grid and plate ports, so the
-  linear part is connected to the 2-port root through an R-type adaptor whose scattering matrix is
-  derived with the MNA method. Include the inter-electrode capacitances from `tubes.lib`
+- **B12 joint root (V1a + V1b):** originally two blocks (B1 V1a, B2 V1b) joined by J1. M0 measured the
+  J1 partition error in SPICE at −8.7 to −22.6 dB ESR at p1b for any constant R_th1, because B2's input
+  impedance falls to 54–177 kΩ at 10 kHz while V1a's output impedance varies from 75 kΩ to 31 kΩ, so
+  the two stages are solved together (4 unknowns; DECISIONS D-017). Each triode's cathode network is
+  shared between its grid and plate ports, so the linear part is connected to the 4-port root through
+  an R-type adaptor whose scattering matrix is derived with the MNA method. Include the inter-electrode capacitances from `tubes.lib`
   (Cgk 2.3 pF, Cgp 2.4 pF, Cpk 0.9 pF) in the linear network for parity with SPICE; Cgp (Miller) is
   audible on V1a with its 68 kΩ grid stopper.
 - **B3 joint root:** V2a's plate is V2b's grid with no coupling capacitor, and V2b grid current flows
@@ -314,10 +316,10 @@ Tasks:
    For M0 the engine is a pass-through so the pipeline can be tested.
 3. Harness (Python): signal generator, SPICE renderer for block testbenches and the full amp,
    engine runner, comparison and report (see `VERIFICATION.md`).
-4. Block SPICE testbenches for B1–B7 under `harness/testbenches/`, built from the reference netlist
+4. Block SPICE testbenches for B12 and B3–B7 under `harness/testbenches/`, built from the reference netlist
    with the same partition and junction models as section 4 (J-Thevenin sources), plus a "full"
    testbench equal to the reference netlist.
-5. Measure and record the junction Thevenin resistances `R_th1`, `R_th2`, `R_th3`, `R_thA`, `R_thB` in
+5. Measure and record the junction Thevenin resistances `R_th2`, `R_th3`, `R_thA`, `R_thB` in
    SPICE (AC current injection at the open-circuited output node at 1 kHz, input AC-grounded, plus the
    DC small-signal value). Put the numbers in `CIRCUIT.md` §4.
 6. A minimal GitHub Actions workflow (macOS runner): configure, build engine + tests + CLI, run tests.
@@ -341,28 +343,29 @@ Acceptance:
 - Time-domain ESR vs SPICE for a log sweep: ≤ −60 dB.
 - Knob-jump test passes (6.2). Cost per sample and per matrix update reported in the M1 report.
 
-### M2 — B1 V1a with triode root
+### M2 — B12: V1a and V1b with a joint triode root
 Tasks:
 1. Triode model (12AX7) with analytic Jacobian and Wright-omega grid current (`engine/src/devices/`).
 2. Multiport-root Newton solver (generic over port count, fixed max iterations, warm start, step
-   limiting), see `WDF_DESIGN.md` §4.
-3. `InputStageV1a` tree: R-type adaptor connecting grid, plate and cathode networks to the 2-port
-   root; supply node `bpA` as an ideal source (constant for M2, from the SPICE operating point).
+   limiting), see `WDF_DESIGN.md` §4. B12 is its first user with N = 4; B3 reuses it in M3.
+3. `StageV1aV1b` tree: R-type adaptor connecting the grid, plate and cathode networks of V1a and V1b
+   and the coupling / Preamp Volume network (C3, R5‖C4, C5, VR1) to the 4-port root; supply node `bpA`
+   as an ideal source (constant for M2, from the SPICE operating point). Preamp Volume inside the tree.
 4. DC initialisation per 3.6.
 Acceptance:
 - Device unit tests (`VERIFICATION.md` §5.1) pass.
-- DC: `v(p1a)` and `v(k1a)` within 0.5 % of SPICE.
-- Block-exact ESR (vs B1 testbench) ≤ −40 dB for sines at 0.01/0.1/0.5 V peak (100 Hz, 1 kHz, 5 kHz),
-  ≤ −30 dB at 2 V peak (grid current region); harmonics 2–5 within 0.5 dB where above −80 dBc.
+- DC: `v(p1a)`, `v(k1a)`, `v(p1b)` and `v(k1b)` within 0.5 % of SPICE.
+- Block-exact ESR (vs B12 testbench, at `p1b`) ≤ −40 dB for sines at 0.01/0.1/0.5 V peak (100 Hz,
+  1 kHz, 5 kHz), ≤ −30 dB at 2 V peak (grid current region); harmonics 2–5 within 0.5 dB where above
+  −80 dBc. Default parameters; Preamp Volume 0.2 and 1.0 are also reported.
 - Newton: median iterations ≤ 3, max ≤ configured limit, zero failures across the signal set.
 
-### M3 — B2 and B3, preamp cascade
+### M3 — B3, preamp cascade
 Tasks:
-1. `StageV1b` (B2) with Preamp Volume pot inside the tree.
-2. `StageV2aV2b` (B3) with a joint 4-port root.
-3. Cascade B1→B2→B3→B4; dump intermediate nodes.
+1. `StageV2aV2b` (B3) with a joint 4-port root.
+2. Cascade B12→B3→B4; dump intermediate nodes.
 Acceptance:
-- Block-exact targets as in M2 for B2 and B3 (B3 at its own nominal and overdrive levels as defined in
+- Block-exact targets as in M2 for B3 (at its own nominal and overdrive levels as defined in
   `VERIFICATION.md`).
 - Partition report: cascade vs full-netlist SPICE at node `y` (master wiper, with the PI load present in
   SPICE) for the standard signal set at Preamp Volume ∈ {0.2, 0.6, 1.0}. Target ESR ≤ −26 dB on sines and

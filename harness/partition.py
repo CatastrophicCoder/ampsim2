@@ -1,9 +1,11 @@
 """SPICE partition-error study for one junction (VERIFICATION §1: P chained vs a reference at the same
-node). For J1: the P chain b1 -> b2 (b2's J1 source driven by b1's open-circuit p1a, through each
-candidate R_th1) is compared with b12, where B1 and B2 are joined directly. Both have the same constant
-supply, so the difference is the J1 junction alone. Writes harness/reports/M0/<YYYYMMDD>_partition_j1.md.
+node). For J2: the P chain b12 -> b3 (b3's J2 source driven by b12's open-circuit p1b, through each
+candidate R_th2) is compared with b123, where B12 and B3 are joined directly. Both have the same constant
+supplies, so the difference is the J2 junction alone. Writes
+harness/reports/M0/<YYYYMMDD>_partition_<junction>.md. (The J1 study of 2026-10-12, which led to merging
+B1 and B2, ran at commit 4838919; DECISIONS D-016, D-017.)
 
-    python -m harness.partition --junction j1
+    python -m harness.partition --junction j2
 """
 import argparse
 import datetime
@@ -37,7 +39,7 @@ class Study:
 
 
 STUDIES = {
-    'j1': Study('j1', 'b1', 'p1a', 'in', 'b2', 'j1s', 'p1b', 'b12', 'b1', ('CLEAN', 'DEFAULT', 'DRIVE')),
+    'j2': Study('j2', 'b12', 'p1b', 'in', 'b3', 'j2s', 'k2b', 'b123', 'b12', ('CLEAN', 'DEFAULT', 'DRIVE')),
 }
 BANDS = ((20.0, 10000.0), (10000.0, 20000.0))
 
@@ -183,7 +185,7 @@ def write_report(study, res):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('--junction', default='j1', choices=sorted(STUDIES))
+    ap.add_argument('--junction', default='j2', choices=sorted(STUDIES))
     ap.add_argument('--jobs', type=int)
     a = ap.parse_args()
     study = STUDIES[a.junction]

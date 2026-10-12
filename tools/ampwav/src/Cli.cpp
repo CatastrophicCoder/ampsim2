@@ -63,7 +63,7 @@ void printUsage(std::ostream& os) {
           "              [--param name=value ...] [--dump-node node=file.wav ...]\n"
           "              [--units volts|fs] [--block-size N] [--stats stats.json] [--list-nodes]\n"
           "\n"
-          "  --block       full, b1 .. b7, b56 (M0: every block except full is a pass-through)\n"
+          "  --block       full, b12, b3 .. b7, b56 (M0: every block except full is a pass-through)\n"
           "  --in          mono WAV; 64-bit float is read bit-exact, other formats via 32-bit float\n"
           "  --out         written as mono 64-bit float WAV at the input rate\n"
           "  --rate        engine rate; must equal the input file's rate (no resampling)\n"

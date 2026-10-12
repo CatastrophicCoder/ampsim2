@@ -8,7 +8,7 @@ from . import config, netlist
 FULL_DC_NODES = ('ct', 'nscr', 'bpx', 'bpa', 'nbias', 'p1a', 'k1a', 'p1b', 'k1b', 'p2a', 'k2a', 'k2b',
                  'p3a', 'p3b', 'k3', 'nf', 'ng')
 # testbench-only helper nodes (junction source terminals) that F does not have
-HELPER_NODES = ('j1s', 'j2s', 'j3s', 'j4s', 'j5a', 'j5b')
+HELPER_NODES = ('j2s', 'j3s', 'j4s', 'j5a', 'j5b')
 
 
 @dataclass(frozen=True)
@@ -44,14 +44,10 @@ BLOCKS = {
         dc_nodes=FULL_DC_NODES,
         levels={'small': 0.01, 'nominal': 0.1, 'hot': 0.5, 'overdrive': 2.0},
         engine_block='full', output_load=16.0),
-    'b1': Block(
-        id='b1', title='B1 InputStageV1a', testbench='b1.cir', input_node='in', output_node='p1a',
-        probes=('g1a', 'k1a'),
-        levels={'small': 0.01, 'nominal': 0.1, 'hot': 0.5, 'overdrive': 2.0}, engine_block='b1'),
-    'b2': Block(
-        id='b2', title='B2 StageV1b', testbench='b2.cir', input_node='j1s', output_node='p1b',
-        probes=('p1a', 'na', 'vtop', 'w1', 'k1b'),
-        levels={'small': 0.1, 'nominal': 1.0, 'hot': 10.0, 'overdrive': 30.0}, engine_block='b2'),
+    'b12': Block(
+        id='b12', title='B12 StageV1aV1b (V1a + V1b, joint root)', testbench='b12.cir', input_node='in',
+        output_node='p1b', probes=('g1a', 'k1a', 'p1a', 'na', 'vtop', 'w1', 'k1b'),
+        levels={'small': 0.01, 'nominal': 0.1, 'hot': 0.5, 'overdrive': 2.0}, engine_block='b12'),
     'b3': Block(
         id='b3', title='B3 StageV2aV2b', testbench='b3.cir', input_node='j2s', output_node='k2b',
         probes=('p1b', 'nb', 'g2a', 'k2a', 'p2a'),
