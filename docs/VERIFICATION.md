@@ -104,7 +104,7 @@ See `WDF_DESIGN.md` §5.5.
 
 | Metric | Definition |
 |---|---|
-| ESR | 10·log10( Σ(y−ŷ)² / Σy² ) in dB over the analysed window (whole signal unless stated) |
+| ESR | 10·log10( Σ(y−ŷ)² / Σy² ) in dB over the analysed window (whole signal unless stated), where y and ŷ are each the node voltage minus its own DC operating point (its value at t = 0; every signal starts there). Static DC offsets are scored by the DC error check; bias shifts during the signal are scored here (DECISIONS D-018). Best lag and the SWP-lo magnitude response use the same signals |
 | Harmonic diff | Levels of harmonics 1–10 (Hann window, last 40 ms of each sine), difference in dB; only harmonics above −80 dBc are scored |
 | THD diff | THD (10 harmonics) difference in percentage points |
 | Magnitude response | Engine response from SWP-lo (deconvolved) vs SPICE AC analysis; max abs dB error per band |

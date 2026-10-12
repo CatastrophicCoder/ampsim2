@@ -10,10 +10,10 @@ Legend: [ ] todo · [~] in progress · [x] done · [!] blocked (see note)
 - [x] Top-level CMake, pinned FetchContent (chowdsp_wdf, Catch2, JUCE, Eigen if used); targets build
 - [x] `ampwav` CLI (pass-through engine), 64-bit float WAV I/O
 - [x] `harness/signals.py`, `render_spice.py`, `run_engine.py`, `compare.py`
-- [~] Block testbenches B12, B3, B4, B56(+B7), B5-open, B6, full; DC sanity check vs F (≤ 0.5 %) — generated;
-  R_th pending step 5; b6 DC deviation at out/sl accepted as known (Q5)
-- [~] Junction Thevenin resistances measured and entered in CIRCUIT.md §4 — measured; B1+B2 merged
-  into B12 (Q6a); value basis awaiting owner (Q6b)
+- [x] Block testbenches B12, B3, B4, B56(+B7), B5-open, B6, full; DC sanity check vs F (≤ 0.5 %) — b6
+  DC deviation at out/sl accepted as known (Q5)
+- [x] Junction Thevenin resistances measured and entered in CIRCUIT.md §4 — B1+B2 merged into B12
+  (Q6a); |Z(1 kHz)| in junctions.py (Q6b); J5 provisional until M4
 - [ ] Device DC sweep CSVs generated into `tests/data/`
 - [ ] CI workflow (macOS): build + tests
 - [ ] M0 report: `harness/reports/M0/...`
@@ -134,6 +134,10 @@ Notes:
   1 kHz). `harness.partition` now studies J2 (b12 → b3 vs b123): the three R_th2 candidates give the
   same result within 0.1 dB; worst ESR at k2b −30.6 / −27.0 / −26.2 dB (CLEAN / DEFAULT / DRIVE, all
   from 0.5–2 V 5 kHz sines), small-signal error ≤ 0.18 dB (CIRCUIT.md §4).
+- 2026-10-12 Step 5 done. Q6b: junctions.py = |Z(1 kHz)| (J2 89.73 k, J3 359.9 Ω, J5a 58.06 k, J5b
+  56.93 k; J5 provisional); testbenches regenerated, none PENDING. Q7: `metrics.ac_part` (signal minus
+  its own value at t = 0) before ESR, best lag and sweep response in `compare` and `partition`
+  (VERIFICATION §6, D-018). 27 harness tests pass; `compare --block b12` runs end to end.
 
 ## M1 — B4 tone stack + master
 - [ ] MNA scattering builder (C++) + numpy reference + cross-check test
@@ -195,7 +199,8 @@ _(Claude Code: add questions here and also ask them in the session.)_
 - Q6a (M0): how to handle J1 (partition error, CIRCUIT.md §4)? — Answered 2026-10-12: merge B1 and
   B2 into one block B12 with a joint 4-port root (DECISIONS D-017).
 - Q6b (M0): which R_th basis (DC, |Z(1 kHz)|, Re Z(1 kHz)) goes into junctions.py for J2, J3, J5
-  (J5 provisional until M4)? Open.
+  (J5 provisional until M4)? — Answered 2026-10-12: |Z(1 kHz)| (DECISIONS D-018).
 - Q7 (M0): `metrics.esr_db` uses raw node voltages; at plate nodes (~250 V DC) the DC term dominates
   Σy² and makes ESR look better than it is (`compare` scores b1 at p1a, b2 at p1b). Compute ESR on the
-  signal minus the DC operating point? Open.
+  signal minus the DC operating point? — Answered 2026-10-12: each signal minus its own DC operating
+  point (value at t = 0) for ESR, best lag and the sweep response (DECISIONS D-018).

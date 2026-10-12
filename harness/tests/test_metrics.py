@@ -12,6 +12,19 @@ class TestMetrics(unittest.TestCase):
         self.assertAlmostEqual(metrics.esr_db(ref, ref * 1.1), 20 * np.log10(0.1), places=9)
         self.assertLess(metrics.esr_db(ref, ref), -250)
 
+    def test_esr_on_ac_part_ignores_static_dc_but_keeps_bias_shift(self):
+        ac = np.sin(np.linspace(0, 20, 1000))
+        ref = 250.0 + ac
+        # a 1 V static offset (within the 0.5 % DC tolerance at 250 V) does not count
+        self.assertLess(metrics.esr_db(metrics.ac_part(ref), metrics.ac_part(ref + 1.0)), -250)
+        # raw voltages hide a 10 % AC error behind the DC term
+        self.assertLess(metrics.esr_db(ref, 250.0 + 1.1 * ac), -60)
+        self.assertAlmostEqual(metrics.esr_db(metrics.ac_part(ref), metrics.ac_part(250.0 + 1.1 * ac)),
+                               20 * np.log10(0.1), places=9)
+        # a bias shift that develops during the signal is scored
+        shift = np.linspace(0.0, -0.5, 1000)
+        self.assertGreater(metrics.esr_db(metrics.ac_part(ref), metrics.ac_part(ref + shift)), -10)
+
     def test_best_lag_detects_one_sample_delay(self):
         x = signals.sine(1000.0, 1.0).x
         late = np.r_[0.0, x[:-1]]

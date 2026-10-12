@@ -6,6 +6,15 @@ from . import config
 TINY = 1e-300
 
 
+def ac_part(x):
+    """Signal minus its own DC operating point, i.e. its value at t = 0 (every test signal starts at
+    0 V, so both SPICE and the engine start from their operating point). Static DC offsets are left to
+    the DC check; bias shifts during the signal stay in. Applied before ESR, best lag and the sweep
+    response (VERIFICATION §6, DECISIONS D-018)."""
+    x = np.asarray(x, dtype=float)
+    return x - x[0]
+
+
 def esr_db(ref, y):
     """10·log10( Σ(y−ŷ)² / Σy² ), with y = reference and ŷ = signal under test."""
     ref, y = np.asarray(ref), np.asarray(y)

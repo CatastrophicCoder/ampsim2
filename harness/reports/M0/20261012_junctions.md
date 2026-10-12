@@ -3,6 +3,7 @@
 - Date: 2026-10-12, ngspice 47, default parameters unless stated
 - Method (SPEC §7 M0.5): 1 A AC current into the open-circuited output node of the upstream block testbench, block input AC-grounded, linearised at the DC operating point. DC = 1 mHz point of the sweep (capacitors effectively open), cross-checked by a ±1 µA finite difference of two DC operating points.
 - Upstream junctions inside a testbench (Rth_j2 in b3) use the junctions.py value, or the DC value measured here while it is unset.
+- junctions.py (used by the testbenches): j2 = 89.73 kΩ, j3 = 359.9 Ω, j5a = 58.06 kΩ, j5b = 56.93 kΩ (|Z(1 kHz)|, D-018)
 
 | Junction | Node | Testbench | R_th DC | DC (op finite diff.) | Z @ 1 kHz | Re Z @ 1 kHz |
 |---|---|---|---|---|---|---|

@@ -97,9 +97,8 @@ def run(study, jobs=None, log=print):
 
 
 def _metrics(study, sig, cand, ref, p):
-    # node voltages minus the DC operating point (first sample; every signal starts at 0 V)
-    r = {n: ref[n] - ref[n][0] for n in (study.out_node, study.up_node)}
-    y = {n: p[n] - p[n][0] for n in (study.out_node, study.up_node)}
+    r = {n: metrics.ac_part(ref[n]) for n in (study.out_node, study.up_node)}
+    y = {n: metrics.ac_part(p[n]) for n in (study.out_node, study.up_node)}
     row = {'signal': sig.id, 'kind': sig.kind, 'cand': cand,
            'esr': metrics.esr_db(r[study.out_node], y[study.out_node]),
            'esr_junction_node': metrics.esr_db(r[study.up_node], y[study.up_node]),

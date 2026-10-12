@@ -2,14 +2,13 @@
 * source: reference/spice/jcm800_2203.cir (sha256 5b0b8095ad124450)
 * B3 StageV2aV2b. Input: J2 Thevenin source (v_oc(p1b), R_th2) into node p1b.
 * Output: k2b (open). Supply bpX: constant from F op.
-* PENDING: R_th for j2 not measured yet (M0 step 5); placeholder 1 ohm
 .include tubes.lib
 .param vol=0.6 treble=0.5 middle=0.5 bass=0.5 master=0.3 presence=0.5
 .param rv1=4k vnl=505 rsrc=100
 .func atap(x) {max((pwr(81,x)-1)/80,1e-4)}
 .func ltap(x) {max(min(x,0.9999),1e-4)}
 .param lpt=25 npr={sqrt(1700/16)}
-.param rth_j2=1
+.param rth_j2=89731.8
 
 *** B3 (from the reference netlist)
 C7 p1b nB 0.022u

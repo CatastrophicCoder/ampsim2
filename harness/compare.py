@@ -62,9 +62,10 @@ def analyse(block, signals, spice_res, engine_res, report):
         y = engine_res[sig.id]['out']
         n = min(len(ref), len(y))
         ref, y = ref[:n], y[:n]
-        row = {'id': sig.id, 'kind': sig.kind, 'peak_ref': float(np.max(np.abs(ref)))}
-        row['esr'] = metrics.esr_db(ref, y)
-        row['lag'], row['lag_esr'] = metrics.best_lag(ref, y)
+        ref_ac, y_ac = metrics.ac_part(ref), metrics.ac_part(y)   # each minus its own DC op (D-018)
+        row = {'id': sig.id, 'kind': sig.kind, 'peak_ref': float(np.max(np.abs(ref_ac)))}
+        row['esr'] = metrics.esr_db(ref_ac, y_ac)
+        row['lag'], row['lag_esr'] = metrics.best_lag(ref_ac, y_ac)
         report.add('total_esr_db' if block.id == 'full' else 'nonlinear_esr_db', sig.id, row['esr'], ' dB')
         if sig.kind == 'SIN':
             f0 = sig.meta['freq']
@@ -87,8 +88,8 @@ def analyse(block, signals, spice_res, engine_res, report):
             f, h_ac = spice_res['ac']
             ac_db = 20 * np.log10(np.abs(h_ac))
             x = sig.x[:n]
-            e_db = metrics.sweep_response_db(x, y, f)
-            s_db = metrics.sweep_response_db(x, ref, f)
+            e_db = metrics.sweep_response_db(x, y_ac, f)
+            s_db = metrics.sweep_response_db(x, ref_ac, f)
             lo, hi = (f >= 20) & (f <= 10e3), (f > 10e3) & (f <= 20e3)
             row['mag'] = {'f': f, 'ac': ac_db, 'engine': e_db, 'spice_tran': s_db}
             report.add('linear_mag_db_20_10k', sig.id, float(np.max(np.abs(e_db - ac_db)[lo])), ' dB')

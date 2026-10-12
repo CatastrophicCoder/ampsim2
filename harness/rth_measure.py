@@ -68,21 +68,21 @@ def dc_finite_difference(j, rth):
     return (v[0] - v[1]) / (2 * I_FD)
 
 
-def upstream_rth(results, basis):
-    """Junction resistances for the upstream testbenches: junctions.py values where set, otherwise the
-    value measured here (basis 'dc' or 'ac' = |Z(1 kHz)|)."""
+def upstream_rth(results, basis, force=False):
+    """Junction resistances for the upstream testbenches: junctions.py values where set (unless `force`),
+    otherwise the value measured here (basis 'dc' or 'ac' = |Z(1 kHz)|)."""
     rth = dict(RTH)
     for k, r in results.items():
-        if rth[k] is None:
+        if force or rth[k] is None:
             rth[k] = float(r['dc'].real if basis == 'dc' else abs(r['ac']))
     return rth
 
 
-def measure(basis='dc'):
-    """Measures every junction in chain order; upstream junctions use `upstream_rth(.., basis)`."""
+def measure(basis='dc', force=False):
+    """Measures every junction in chain order; upstream junctions use `upstream_rth(.., basis, force)`."""
     results = {}
     for j in JUNCTIONS:
-        results[j.key] = measure_one(j, upstream_rth(results, basis))
+        results[j.key] = measure_one(j, upstream_rth(results, basis, force))
     return results
 
 
@@ -101,9 +101,9 @@ def preset_spread(results):
 
 def upstream_sensitivity(results):
     """Max relative change of each R_th when the upstream R_th switches between its DC and 1 kHz value."""
-    other = measure('ac')
-    return {k: max(abs(r['dc'] - other[k]['dc']) / abs(r['dc']), abs(r['ac'] - other[k]['ac']) / abs(r['ac']))
-            for k, r in results.items()}
+    a, b = measure('dc', force=True), measure('ac', force=True)
+    return {k: max(abs(a[k]['dc'] - b[k]['dc']) / abs(a[k]['dc']), abs(a[k]['ac'] - b[k]['ac']) / abs(a[k]['ac']))
+            for k in results}
 
 
 def _k(v):
@@ -148,7 +148,9 @@ def write_report(results, fd, spread, sens):
         f'sweep (capacitors effectively open), cross-checked by a ±{I_FD * 1e6:g} µA finite difference of '
         'two DC operating points.',
         '- Upstream junctions inside a testbench (Rth_j2 in b3) use the junctions.py value, '
-        'or the DC value measured here while it is unset.', '',
+        'or the DC value measured here while it is unset.',
+        '- junctions.py (used by the testbenches): ' + ', '.join(f'{k} = {_k(v)}' for k, v in RTH.items() if v)
+        + ' (|Z(1 kHz)|, D-018)', '',
         '| Junction | Node | Testbench | R_th DC | DC (op finite diff.) | Z @ 1 kHz | Re Z @ 1 kHz |',
         '|---|---|---|---|---|---|---|']
     for j in JUNCTIONS:

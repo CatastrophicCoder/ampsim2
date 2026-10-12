@@ -2,14 +2,13 @@
 * source: reference/spice/jcm800_2203.cir (sha256 5b0b8095ad124450)
 * B4 ToneStackMaster. Input: J3 Thevenin source (v_oc(k2b), R_th3) into node k2b.
 * Output: y (open, master wiper).
-* PENDING: R_th for j3 not measured yet (M0 step 5); placeholder 1 ohm
 .include tubes.lib
 .param vol=0.6 treble=0.5 middle=0.5 bass=0.5 master=0.3 presence=0.5
 .param rv1=4k vnl=505 rsrc=100
 .func atap(x) {max((pwr(81,x)-1)/80,1e-4)}
 .func ltap(x) {max(min(x,0.9999),1e-4)}
 .param lpt=25 npr={sqrt(1700/16)}
-.param rth_j3=1
+.param rth_j3=359.917
 
 *** B4 (from the reference netlist)
 C10 k2b tt 470p

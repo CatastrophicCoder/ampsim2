@@ -3,16 +3,14 @@
 * B6 PowerStage driven by the recorded PI open-circuit outputs through R_thA / R_thB.
 * No Vin: both inputs are recorded sources (from a B56 / B5-open run). Output: out.
 * Recorded supply rails (from a B56 run): ct, nScr. DC values from F op.
-* PENDING: R_th for j5a not measured yet (M0 step 5); placeholder 1 ohm
-* PENDING: R_th for j5b not measured yet (M0 step 5); placeholder 1 ohm
 .include tubes.lib
 .param vol=0.6 treble=0.5 middle=0.5 bass=0.5 master=0.3 presence=0.5
 .param rv1=4k vnl=505 rsrc=100
 .func atap(x) {max((pwr(81,x)-1)/80,1e-4)}
 .func ltap(x) {max(min(x,0.9999),1e-4)}
 .param lpt=25 npr={sqrt(1700/16)}
-.param rth_j5a=1
-.param rth_j5b=1
+.param rth_j5a=58062.8
+.param rth_j5b=56928.4
 
 *** B6 (from the reference netlist)
 C14 p3a nGn 0.022u

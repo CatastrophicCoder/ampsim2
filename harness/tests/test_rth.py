@@ -20,14 +20,13 @@ class TestJunctionMeasurement(unittest.TestCase):
             self.assertAlmostEqual(self.results[j.key]['dc'].real / fd, 1.0, delta=1e-4, msg=j.key)
 
     def test_junctions_py_matches_measurement(self):
-        # junctions.py holds the owner-chosen basis of each measured value (DECISIONS); a netlist or
-        # testbench change that moves a value by more than 0.1 % must be re-measured and re-recorded
+        # junctions.py holds |Z(1 kHz)| (owner decision Q6b, D-018); a netlist or testbench change that
+        # moves a value by more than 0.1 % must be re-measured and re-recorded
+        self.assertEqual(set(RTH), {j.key for j in rth_measure.JUNCTIONS})
         for k, v in RTH.items():
-            if v is None:
-                continue
-            r = self.results[k]
-            self.assertTrue(min(abs(v / r['dc'].real - 1), abs(v / abs(r['ac']) - 1)) < 1e-3,
-                            f'{k}: junctions.py {v} vs measured DC {r["dc"].real:.6g}, 1 kHz {abs(r["ac"]):.6g}')
+            self.assertIsNotNone(v, k)
+            z = abs(self.results[k]['ac'])
+            self.assertLess(abs(v / z - 1), 1e-3, f'{k}: junctions.py {v} vs measured |Z(1 kHz)| {z:.6g}')
 
 
 if __name__ == '__main__':

@@ -159,8 +159,8 @@ SPICE vs engine) in M4.
 
 Measured with `python -m harness.rth_measure` (DECISIONS D-016; report
 `harness/reports/M0/20261012_junctions.md`), default parameters, upstream block testbench with the output
-open and the input AC-grounded. The value used by the testbenches and the engine is pending the owner
-(PROGRESS.md Q6).
+open and the input AC-grounded. The value used by the testbenches and the engine is |Z(1 kHz)|
+(`harness/junctions.py`; DECISIONS D-018); J5 is provisional until its partition error is measured in M4.
 
 | Junction | Node | R_th (DC small-signal) | Z @ 1 kHz | Spread over presets (\|Z\| @ 1 kHz) | Method / notes |
 |---|---|---|---|---|---|

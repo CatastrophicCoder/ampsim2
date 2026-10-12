@@ -195,7 +195,7 @@ testbench stay unchanged; the DC report keeps listing it as FAIL with the explan
 deviation remains a failure.
 
 ## D-016 Junction resistance measurement and the SPICE partition-error study
-Date: 2026-10-12 · Status: accepted (method); the R_th values used are pending (PROGRESS.md Q6)
+Date: 2026-10-12 · Status: accepted (method); R_th values used: |Z(1 kHz)| (D-018)
 Context: SPEC §7 M0.5 asks for R_th1/2/3/A/B by AC current injection at 1 kHz plus the DC small-signal
 value. The measurements (CIRCUIT.md §4) show that J1 and J5 differ strongly between DC and 1 kHz, so the
 owner asked for a partition-error measurement before choosing.
@@ -235,3 +235,26 @@ two 2-unknown solves (cost measured in M2). SPEC §7: M2 is now B12 (triode mode
 4-port tree); M3 is B3 and the preamp cascade. Tolerances unchanged; the M2 block-exact checks are
 scored at p1b. V1a cannot be checked block-exact on its own in the engine; the triode model keeps its
 device unit tests (VERIFICATION §5.1). The J1 study is reproducible at commit 4838919.
+
+## D-018 Junction resistance basis and ESR on the signal minus its own DC operating point
+Date: 2026-10-12 · Status: accepted (owner decisions, PROGRESS.md Q6b and Q7)
+Context: D-016 measured R_th as the DC small-signal value and the complex value at 1 kHz. For J2 and
+J3 the choice makes no measurable difference (J2 partition study: within 0.1 dB); for J5 the DC value
+is about 30 % below the 57–59 kΩ the PI plates show from 10 Hz to 5 kHz. Separately, `metrics.esr_db`
+was applied to raw node voltages; at DC-biased nodes (plates at ~250 V) the DC term dominates Σy², so a
+1 % AC error on a 1 V signal read as about −88 dB.
+Decision:
+- junctions.py holds |Z(1 kHz)| at default parameters: J2 89.7318 kΩ, J3 359.917 Ω, J5a 58.0628 kΩ,
+  J5b 56.9284 kΩ. J5 is provisional until its partition error is measured in M4 (below ~5 Hz the true
+  value falls toward 41–46 kΩ). A unit test re-measures and fails on a > 0.1 % change.
+- ESR, best lag and the SWP-lo magnitude response use each signal minus its own DC operating point (its
+  value at t = 0; every test signal starts at 0 V): `metrics.ac_part`, used by `compare` and
+  `partition`. Static DC offsets are scored only by the DC error check (0.5 %); bias shifts that develop
+  during a signal stay in ESR. VERIFICATION §6 wording updated; tolerance values unchanged.
+Alternatives: DC small-signal or Re Z(1 kHz) for R_th (Re Z differs from |Z| by < 0.02 % here);
+subtracting the reference's operating point from both signals (a static engine DC offset inside the
+0.5 % DC tolerance, up to ~1.25 V at a 250 V plate, could push ESR to ~0 dB); subtracting the window
+mean (hides the average bias shift); raw voltages.
+Consequences: All committed testbenches are free of PENDING junctions, so every non-recorded block can
+be rendered in transient. Harmonics already removed the mean of their analysis window (unchanged);
+power into the load still uses the raw output voltage.
