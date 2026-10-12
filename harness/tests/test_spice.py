@@ -49,6 +49,14 @@ class TestSpice(unittest.TestCase):
         exact = 1 / (1 + 2j * np.pi * f * 1e3 * 1e-6)
         np.testing.assert_allclose(h, exact, rtol=1e-6)
 
+    def test_impedance_of_rc_with_input_ac_grounded(self):
+        # Z at out = R1 || C1 (Vin AC-grounded); the transimpedance to `in` is 0 (ideal source)
+        f, z = spice.impedance(RC, {}, 'out', ('in',))
+        exact = 1e3 / (1 + 2j * np.pi * f * 1e3 * 1e-6)
+        np.testing.assert_allclose(z['out'], exact, rtol=1e-6)
+        np.testing.assert_allclose(np.abs(z['in']), 0.0, atol=1e-9)
+        self.assertTrue(np.any(np.isclose(f, 1000.0, rtol=1e-12)))
+
     def test_apply_params_substitutes_known_params_only(self):
         text = spice.apply_params('.param vol=0.6 master=0.3\n.include tubes.lib\n',
                                   {'preampVolume': 0.8, 'presence': 1.0})

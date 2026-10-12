@@ -213,3 +213,25 @@ def ac(testbench_text, knobs, out_node, in_node, fstart=20.0, fstop=20000.0, ppd
 
     res = _cached(_key('ac', text, expr, fstart, fstop, ppd, ngspice_version()), compute)
     return res['f'], res['h']
+
+
+_AC_RE = re.compile(r'^([VI]\S*\s[^\n]*?)\s+AC\s+\S+', re.IGNORECASE | re.MULTILINE)
+
+
+def impedance(testbench_text, knobs, node, observe=(), fstart=1e-3, fstop=1e5, ppd=24):
+    """Small-signal impedance at `node`: 1 A AC injected into `node` with every other independent
+    source AC-grounded, at the DC operating point. Returns (f, {node: Z}) where Z[o] = v(o) / 1 A
+    (self impedance for `node`, transimpedance for the `observe` nodes). Frequencies on a decade grid
+    starting at `fstart` (powers of ten fall exactly on grid points)."""
+    text = _AC_RE.sub(r'\1', apply_params(testbench_text, knobs))
+    text = _strip_end(text) + f'\nIinj_zth 0 {node} DC 0 AC 1\n'
+    nodes = [node, *observe]
+    vecs = ' '.join(_vec(n) for n in nodes)
+
+    def compute():
+        _, raws = _run(text, f'ac dec {ppd} {fstart:g} {fstop:g}\nwrite ac.raw {vecs}')
+        raw = raws['ac.raw']
+        return {'f': raw['frequency'].real, **{n: raw[_vec(n).lower()] for n in nodes}}
+
+    res = _cached(_key('impedance', text, nodes, fstart, fstop, ppd, ngspice_version()), compute)
+    return res['f'], {n: res[n] for n in nodes}

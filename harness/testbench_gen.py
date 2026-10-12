@@ -117,6 +117,11 @@ def _specs(v, i_pre):
         Spec('b4', ('B4',), ['B4 ToneStackMaster. Input: J3 Thevenin source (v_oc(k2b), R_th3) into node k2b.',
                              'Output: y (open, master wiper).'],
              [('J3', f'Vin j3s 0 DC {_g(v["k2b"])} AC 1'), ('J3', f'Rth_j3 j3s k2b {rth("j3")}')], ('j3',)),
+        Spec('b12', ('B1', 'B2'),
+             ['Junction reference for J1: B1 and B2 joined directly (no J-Thevenin source), for the SPICE',
+              'partition-error study of J1 (harness/partition.py). Input: guitar source at node in.',
+              'Output: p1b (open). Supply bpA: constant from F op.'],
+             [('supply', f'Vsup_bpA bpA 0 DC {_g(v["bpa"])}')]),
         Spec('b56', ('B5', 'B6', 'B7'),
              ['B56+B7: phase inverter, power stage and supply with instantaneous NFB (VERIFICATION §1).',
               'Input: J4 Thevenin source (v_oc(y), R_th4) into node y; R_th4 = DC formula (WDF_DESIGN §6).',
@@ -159,15 +164,15 @@ def gen_full(ref_text):
                                       'Input: Vin in 0 (replaced by a filesource for transient runs).']) + body
 
 
-def gen_block(spec, ref, ref_text):
+def gen_block(spec, ref, ref_text, rth=RTH):
     by = ref.by_name()
     out = [_header(spec.name, ref_text, spec.notes).rstrip()]
     for k in spec.junctions:
-        if RTH[k] is None:
+        if rth[k] is None:
             out.append(f'{PENDING_MARK}R_th for {k} not measured yet (M0 step 5); placeholder 1 ohm')
     out += list(ref.directives)
     for k in spec.junctions:
-        out.append(f'.param rth_{k}={RTH[k]!r}' if RTH[k] is not None else f'.param rth_{k}=1')
+        out.append(f'.param rth_{k}={rth[k]!r}' if rth[k] is not None else f'.param rth_{k}=1')
     for b in spec.blocks:
         out.append(f'\n*** {b} (from the reference netlist)')
         out += [by[n].line for n in _elements(b)]
@@ -180,14 +185,15 @@ def gen_block(spec, ref, ref_text):
     return '\n'.join(out) + '\n'
 
 
-def generate():
+def generate(rth=RTH):
+    """Returns {file name: text}. `rth` overrides the junction resistances (used by rth_measure)."""
     ref_text = config.NETLIST.read_text()
     ref = reference()
     check_partition(ref)
     v, i_pre = f_operating_point()
     files = {'full.cir': gen_full(ref_text)}
     for spec in _specs(v, i_pre):
-        files[f'{spec.name}.cir'] = gen_block(spec, ref, ref_text)
+        files[f'{spec.name}.cir'] = gen_block(spec, ref, ref_text, rth)
     return files
 
 

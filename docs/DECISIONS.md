@@ -193,3 +193,26 @@ match F to ≤ 1.2e-9 relative. b6 differs at out/sl by 40 µV because R22 (B5) 
 decision (Q5, 2026-10-12): accepted as a known partition effect. The check, its 1 mV floor and the
 testbench stay unchanged; the DC report keeps listing it as FAIL with the explanation, and any other
 deviation remains a failure.
+
+## D-016 Junction resistance measurement and the SPICE partition-error study
+Date: 2026-10-12 · Status: accepted (method); the R_th values used are pending (PROGRESS.md Q6)
+Context: SPEC §7 M0.5 asks for R_th1/2/3/A/B by AC current injection at 1 kHz plus the DC small-signal
+value. The measurements (CIRCUIT.md §4) show that J1 and J5 differ strongly between DC and 1 kHz, so the
+owner asked for a partition-error measurement before choosing.
+Decision:
+- `harness/rth_measure.py`: 1 A AC into the open-circuited output node of the upstream block testbench,
+  every other independent source AC-grounded (`spice.impedance`), decade sweep 1 mHz–100 kHz. "DC" is
+  the 1 mHz point, cross-checked by a ±1 µA finite difference of two DC operating points (agree to
+  < 1e-4). Upstream junctions inside a testbench use junctions.py values, or the DC value measured
+  while unset; the measured sensitivity to that choice is < 4e-4.
+- `harness/partition.py`: SPICE-only partition error for one junction. P chain = upstream testbench
+  (output open) → downstream testbench driven by the recorded open-circuit voltage through each
+  candidate R_th. Reference = a junction reference testbench joining the two blocks directly with the
+  same constant supply (`b12` for J1, generated like the others and DC-checked), so the difference is
+  the junction alone. Metrics on node voltage minus its DC operating point: ESR, h1 and harmonics 2–5,
+  and the small-signal magnitude error from AC analyses. A unit test checks the AC error against the
+  Thevenin prediction |Z_in + Z_th| / |Z_in + R| (agreement < 0.01 dB).
+- J1 signal set: the B1 standard set without DI and SWP-hi, at the CLEAN, DEFAULT and DRIVE knob sets
+  (Preamp Volume 0.2 / 0.6 / 1.0). J5 cannot be studied this way before M4 (it needs B56 recordings).
+Consequences: Results in CIRCUIT.md §4 and `harness/reports/M0/20261012_partition_j1.md`. No constant
+R_th1 gives better than −11 dB (CLEAN) / −17.6 dB (DEFAULT) worst sine ESR at p1b.

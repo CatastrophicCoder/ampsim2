@@ -12,7 +12,8 @@ Legend: [ ] todo · [~] in progress · [x] done · [!] blocked (see note)
 - [x] `harness/signals.py`, `render_spice.py`, `run_engine.py`, `compare.py`
 - [~] Block testbenches B1–B4, B56(+B7), B5-open, B6, full; DC sanity check vs F (≤ 0.5 %) — generated;
   R_th pending step 5; b6 DC deviation at out/sl accepted as known (Q5)
-- [ ] Junction Thevenin resistances measured and entered in CIRCUIT.md §4
+- [~] Junction Thevenin resistances measured and entered in CIRCUIT.md §4 — measured; value basis and
+  J1 handling awaiting owner (Q6)
 - [ ] Device DC sweep CSVs generated into `tests/data/`
 - [ ] CI workflow (macOS): build + tests
 - [ ] M0 report: `harness/reports/M0/...`
@@ -120,6 +121,12 @@ Notes:
   B56 recordings (M4) and say so. 21 harness tests pass.
 - 2026-10-12 Owner decisions: Q4 RELTOL = 1e-6 (`harness/config.py`; cached renders re-render because
   RELTOL is part of the cache key); Q5 b6 out/sl deviation accepted as a known partition effect.
+- 2026-10-12 Step 5 measured (DECISIONS D-016, CIRCUIT.md §4): `python -m harness.rth_measure` gives
+  R_th DC / |Z(1 kHz)|: J1 74.8 k / 39.3 k, J2 90.1 k / 89.8 k, J3 360 / 360 Ω, J5a 41.4 k / 58.1 k,
+  J5b 45.5 k / 56.9 k. On the owner's request, `python -m harness.partition --junction j1` measured the
+  J1 partition error in SPICE (b1 → b2 chain vs b12 = B1+B2 joined): worst sine ESR at p1b −11 dB
+  (CLEAN) to −17.6 dB (DEFAULT) for the best constant R_th1, caused by B2's input impedance falling to
+  54–177 kΩ at 10 kHz. 25 harness tests pass. Open: Q6 (R_th basis, J1 handling), Q7 (ESR and DC).
 
 ## M1 — B4 tone stack + master
 - [ ] MNA scattering builder (C++) + numpy reference + cross-check test
@@ -179,3 +186,8 @@ _(Claude Code: add questions here and also ask them in the session.)_
 - Q5 (M0): b6 testbench DC at out/sl is 0 V vs 39.8 µV in F (R22's NFB current is in B5, not B6).
   Accept as a known partition deviation, or change the check / testbench? — Answered 2026-10-12:
   accept as known; check and testbench unchanged, report keeps the explained FAIL (DECISIONS D-015).
+- Q6 (M0): which R_th goes into junctions.py, and how to handle J1 (partition error, CIRCUIT.md §4)?
+  Open.
+- Q7 (M0): `metrics.esr_db` uses raw node voltages; at plate nodes (~250 V DC) the DC term dominates
+  Σy² and makes ESR look better than it is (`compare` scores b1 at p1a, b2 at p1b). Compute ESR on the
+  signal minus the DC operating point? Open.
