@@ -161,7 +161,7 @@ SPICE vs engine) in M4.
 | J1 | p1a | TBD | TBD | |
 | J2 | p1b | TBD | TBD | |
 | J3 | k2b | TBD | TBD | |
-| J4 | y | formula (param-dependent) | — | |
+| J4 | y | R_VR2b ‖ (R_VR2a + R_VR3b + R_VR5 + R_VR4) (knob-dependent) | — | DC, J3 shorted, caps open; reactive part ignored (DECISIONS D-015) |
 | J5a | p3a | TBD | TBD | LTP: depends on the other half and tail |
 | J5b | p3b | TBD | TBD | |
 

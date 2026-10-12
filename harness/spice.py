@@ -110,43 +110,71 @@ def _vec(node):
     return node if '(' in node or '[' in node else f'v({node})'
 
 
-def tran(testbench_text, knobs, x, nodes, fs=config.FS, reltol=config.SPICE_RELTOL):
-    """Transient driven by samples x (volts) at fs. Returns {node: array of len(x)} on the sample grid.
+_VREC_RE = re.compile(r'^Vrec_(\w+)\s+(\S+)\s+(\S+)\b.*$', re.IGNORECASE | re.MULTILINE)
+PENDING_MARK = '* PENDING: '
+
+
+def _filesource(name, n_pos, n_neg, file):
+    return (f'A{name} %vd([{n_pos} {n_neg}]) {name}_src\n'
+            f'.model {name}_src filesource (file="{file}" amploffset=[0] amplscale=[1] '
+            'timeoffset=0 timescale=1 timerelative=false amplstep=false)')
+
+
+def tran(testbench_text, knobs, x, nodes, recorded=None, fs=config.FS, reltol=config.SPICE_RELTOL):
+    """Transient on the sample grid at fs. Returns {node: array of len(x)}.
+    x: samples (volts) for the testbench's `Vin` source, or None if it has none.
+    recorded: {name: samples} for its `Vrec_<name>` sources (recordings from another run).
     reltol: ngspice RELTOL for this run (None = ngspice default)."""
     text = apply_params(testbench_text, knobs)
-    if not _VIN_RE.search(text):
-        raise SpiceError('testbench has no "Vin <n+> <n-> ..." input source')
-    x = np.asarray(x, dtype=np.float64)
-    n = len(x)
+    if PENDING_MARK in text:
+        pending = [ln for ln in text.splitlines() if ln.startswith(PENDING_MARK)]
+        raise SpiceError('testbench has pending values: ' + '; '.join(pending))
+    recorded = {k.lower(): np.asarray(v, dtype=np.float64) for k, v in (recorded or {}).items()}
+    has_vin = bool(_VIN_RE.search(text))
+    if has_vin != (x is not None):
+        raise SpiceError('x must be given exactly when the testbench has a "Vin" source')
+    rec_names = [m.group(1).lower() for m in _VREC_RE.finditer(text)]
+    if sorted(rec_names) != sorted(recorded):
+        raise SpiceError(f'testbench recorded sources {sorted(rec_names)} != given {sorted(recorded)}')
+    inputs = ({'vin': np.asarray(x, dtype=np.float64)} if has_vin else {}) | recorded
+    lengths = {len(v) for v in inputs.values()}
+    if len(lengths) != 1:
+        raise SpiceError(f'input lengths differ: { {k: len(v) for k, v in inputs.items()} }')
+    n = lengths.pop()
     dt = 1.0 / fs
     # The filesource does not create breakpoints, so ngspice's internal steps drift off the sample grid
     # and the input is interpolated twice (filesource, then `option interp`), a low-pass of about
     # 1.3e-3 at 5 kHz. A dummy triangle with a corner at every sample forces a time point on every
     # sample instant; the input is then exact (DECISIONS D-014).
-    text = _VIN_RE.sub(
-        lambda m: f'Ain %vd([{m.group(1)} {m.group(2)}]) harness_insrc\n'
-                  '.model harness_insrc filesource (file="input.txt" amploffset=[0] amplscale=[1] '
-                  'timeoffset=0 timescale=1 timerelative=false amplstep=false)\n'
-                  f'Vharness_brk harness_brk 0 PULSE(0 1 0 {dt:.17g} {dt:.17g} 0 {2 * dt:.17g})\n'
-                  'Rharness_brk harness_brk 0 1k', text, count=1)
+    brk = (f'Vharness_brk harness_brk 0 PULSE(0 1 0 {dt:.17g} {dt:.17g} 0 {2 * dt:.17g})\n'
+           'Rharness_brk harness_brk 0 1k')
+    if has_vin:
+        text = _VIN_RE.sub(lambda m: _filesource('harness_in', m.group(1), m.group(2), 'in_vin.txt'), text,
+                           count=1)
+    text = _VREC_RE.sub(lambda m: _filesource(f'harness_rec_{m.group(1).lower()}', m.group(2), m.group(3),
+                                              f'in_{m.group(1).lower()}.txt'), text)
+    text = _strip_end(text) + '\n' + brk + '\n'
     if reltol is not None:
-        text = _strip_end(text) + f'\n.options reltol={reltol!r}\n'
+        text += f'.options reltol={reltol!r}\n'
     vecs = [_vec(v) for v in nodes]
 
     def compute():
         t = np.arange(n + 2) * dt          # hold points past the end (the last samples need them)
-        data = np.r_[x, x[-1], x[-1]]
-        src = '\n'.join(f'{a:.17g} {b:.17g}' for a, b in zip(t, data)) + '\n'
+        files = {}
+        for name, v in inputs.items():
+            data = np.r_[v, v[-1], v[-1]]
+            files[f'in_{name}.txt'] = '\n'.join(f'{a:.17g} {b:.17g}' for a, b in zip(t, data)) + '\n'
         # stop half a sample past the last one so rounding cannot drop the final output point
         control = (f'option interp\ntran {dt:.17g} {(n - 0.5) * dt:.17g} 0 {dt:.17g}\n'
                    f'write tran.raw {" ".join(vecs)}')
-        _, raws = _run(text, control, {'input.txt': src})
+        _, raws = _run(text, control, files)
         raw = raws['tran.raw']
         if len(raw['time']) < n or np.max(np.abs(raw['time'][:n] - np.arange(n) * dt)) > 1e-3 * dt:
             raise SpiceError(f'SPICE time grid does not match the {n}-sample input grid')
         return {v: raw[v.lower()][:n] for v in vecs}
 
-    key = _key('tran', text, x.tobytes(), vecs, fs, ngspice_version())
+    digests = {k: hashlib.sha256(v.tobytes()).hexdigest() for k, v in sorted(inputs.items())}
+    key = _key('tran', text, digests, vecs, fs, ngspice_version())
     res = _cached(key, compute)
     return {node: res[v] for node, v in zip(nodes, vecs)}
 
@@ -157,8 +185,17 @@ def op(testbench_text, knobs, nodes):
     vecs = [_vec(v) for v in nodes]
 
     def compute():
-        _, raws = _run(text, f'op\nwrite op.raw {" ".join(vecs)}')
-        return {v: raws['op.raw'][v.lower()] for v in vecs}
+        # write every vector (long `write` lines break ngspice's parser); device quantities such as
+        # @r4[i] must be saved explicitly before the analysis
+        dev = [v for v in vecs if v.startswith('@')]
+        save = f'save all {" ".join(dev)}\n' if dev else ''
+        _, raws = _run(text, f'{save}op\nwrite op.raw')
+        raw = raws['op.raw']
+        name = lambda v: f'i({v.lower()})' if v.startswith('@') else v.lower()  # noqa: E731 (raw naming)
+        missing = [v for v in vecs if name(v) not in raw]
+        if missing:
+            raise SpiceError(f'op: vectors not found: {missing}')
+        return {v: raw[name(v)] for v in vecs}
 
     res = _cached(_key('op', text, vecs, ngspice_version()), compute)
     return {node: float(res[v][0]) for node, v in zip(nodes, vecs)}

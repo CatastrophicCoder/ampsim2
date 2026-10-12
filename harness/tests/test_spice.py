@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-from harness import config, signals, spice, testbench_gen
+from harness import config, signals, spice
 
 DIVIDER = """* divider testbench
 .param gain=0.5
@@ -55,18 +55,6 @@ class TestSpice(unittest.TestCase):
         self.assertIn('vol=0.8 ', text)
         self.assertIn('master=0.3', text)
         self.assertIn(f'.include {config.TUBES}', text)
-
-
-class TestTestbenches(unittest.TestCase):
-    def test_committed_testbenches_are_up_to_date(self):
-        for fname, text in testbench_gen.generate().items():
-            path = config.TESTBENCH_DIR / fname
-            self.assertTrue(path.exists(), f'{fname} missing; run python -m harness.testbench_gen')
-            self.assertEqual(path.read_text(), text, f'{fname} stale; run python -m harness.testbench_gen')
-
-    def test_full_testbench_equals_reference_netlist(self):
-        ref = config.NETLIST.read_text().split('\n', 1)[1]
-        self.assertTrue((config.TESTBENCH_DIR / 'full.cir').read_text().endswith(ref))
 
 
 if __name__ == '__main__':

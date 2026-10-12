@@ -34,7 +34,7 @@ def engine_nodes(block):
 def run(block, preset, signals, log=print):
     """Returns {signal id: {'out': array, 'nodes': {node: array}, 'stats': dict}}."""
     available = set(engine_nodes(block))
-    wanted = [n for n in dict.fromkeys([block.input_node, *block.probes, *block.dc_nodes]) if n in available]
+    wanted = [n for n in dict.fromkeys([block.input_node, *block.probes, *block.dc_node_list()]) if n in available]
     params = [x for k, v in preset.all_knobs().items() for x in ('--param', f'{k}={v!r}')]
     results = {}
     for sig in signals:

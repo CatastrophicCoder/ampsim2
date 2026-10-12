@@ -17,18 +17,27 @@ from .presets import PRESETS
 from .wavio import write_wav
 
 
+def _require_standalone(block):
+    if block.recorded:
+        raise NotImplementedError(
+            f'{block.id} is driven by recordings ({", ".join(block.recorded)}) from a B56 run; '
+            'chained P renders arrive with M4')
+
+
 def select_signals(block, preset, pattern=None):
+    _require_standalone(block)
     sigs = preset.signals(block)
     return [s for s in sigs if pattern is None or pattern in s.id]
 
 
 def render(block, preset, signals, jobs=None, log=print):
     """Returns {'op': {...}, 'ac': (f, h) or None, 'tran': {signal id: {node: array}}}."""
+    _require_standalone(block)
     text = block.path.read_text()
     knobs = preset.all_knobs()
     nodes = list(dict.fromkeys([block.output_node, block.input_node, *block.probes]))
 
-    result = {'op': spice.op(text, knobs, list(block.dc_nodes)) if block.dc_nodes else {}, 'ac': None, 'tran': {}}
+    result = {'op': spice.op(text, knobs, block.dc_node_list()), 'ac': None, 'tran': {}}
     if any(s.kind == 'SWP-lo' for s in signals):
         result['ac'] = spice.ac(text, knobs, block.output_node, block.input_node)
 

@@ -166,3 +166,28 @@ Alternatives: PWL input (too slow); inline PWL chunks; accepting the input low-p
 engine error at high frequencies).
 Consequences: Breakpoints cost about 1.6x run time on the full amp. Harness unit tests cover the input
 alignment (1 and 5 kHz, 1e-9 V) and the reference accuracy at RELTOL 1e-6.
+
+## D-015 Block testbench construction
+Date: 2026-10-12 · Status: accepted
+Context: VERIFICATION §1–2 define the testbench set and leave the construction details open.
+Decision (`harness/testbench_gen.py`, generated files in `harness/testbenches/`):
+- The reference netlist is parsed and every element is assigned to exactly one of B1–B7 (SPEC §4.2);
+  generation fails if an element is missing or assigned twice. Testbenches copy the element lines
+  verbatim and add only harness sources, so a netlist change propagates on regeneration.
+- Inputs: `Vin` is the J-Thevenin source voltage behind `Rth_jN` (or the guitar source for B1). Its DC
+  value is the F operating-point value of the upstream output, so `op` on a testbench reproduces F.
+  Transient runs replace `Vin` with the signal.
+- Supply rails in B1–B4: ideal constant sources at the F operating point (`Vsup_bpA`, `Vsup_bpX`).
+- B56+B7: the preamp loads on bpA (1.302 mA) and bpX (4.039 mA) are constant current sinks from the F
+  operating point (measured with a 0 V ammeter in a copy of the netlist for the V2b plate). Recorded
+  waveforms from F replace them in M4.
+- B5-open and B6: recordings from another run (`Vrec_<name>`: out and bpX for B5-open; p3a, p3b, ct
+  and nScr for B6), with F operating-point DC values. The harness renders them only from M4 on.
+- R_th4 (J4): DC resistance into the master wiper with J3 shorted and capacitors open,
+  `R_VR2b ‖ (R_VR2a + R_VR3b + R_VR5 + R_VR4)`, as a knob-dependent `.param` (WDF_DESIGN §6; reactive
+  part ignored). Its adequacy is checked by the partition error in M3/M4.
+- R_th1/2/3/5a/5b come from `harness/junctions.py` (M0 step 5). Unmeasured values are written as
+  `PENDING` placeholders and transient runs refuse such a testbench.
+Consequences: DC sanity check results in `harness/reports/M0/20261012_testbench_dc.md`: b1–b5open
+match F to ≤ 1.2e-9 relative. b6 differs at out/sl by 40 µV because R22 (B5) is not in B6; see
+PROGRESS.md Q5.

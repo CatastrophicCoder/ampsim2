@@ -55,6 +55,7 @@ ctest --test-dir build --output-on-failure
 ./build/tools/ampwav/ampwav --block full --in in.wav --out out.wav --rate 384000 --param preampVolume=0.6   # --help for all options
 source .venv/bin/activate                                  # harness commands below need the venv
 python -m harness.testbench_gen                            # regenerate harness/testbenches/*.cir (--check)
+python -m harness.dc_check                                 # testbench DC vs full netlist (M0 sanity)
 python -m harness.render_spice --block <id> --preset <id>  # SPICE reference (cached in harness/cache/)
 python -m harness.run_engine --block <id> --preset <id>
 python -m harness.compare --block <id> --preset <id> --milestone M<n>   # renders + runs + report
