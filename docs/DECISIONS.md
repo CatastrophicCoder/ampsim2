@@ -374,3 +374,38 @@ Consequences (vs 60 Ω): nScr −1.18 V (485.65 V), bpX / bpA −0.97 / −0.94 
 testbenches, DC check and junction measurements regenerated (junctions.py re-recorded: J2 89.7328 kΩ,
 J3 360.137 Ω, J5a 58.0676 kΩ, J5b 56.9374 kΩ; changes ≤ 0.06 %); all SPICE renders redone. Remaining
 limits: constant inductance, DCR at 20 °C (copper rises ≈ 0.4 %/°C when warm).
+
+## D-025 Knob-jump test criterion
+Date: 2026-10-13 · Status: accepted (owner decision, PROGRESS.md Q10)
+Context: SPEC §6.2 requires that full-range knob jumps produce no NaN/Inf and no clicks above the real
+circuit's transient, without a measurable criterion.
+Decision: Each knob is swept 0→1 in 10 ms during a 1 kHz tone. The reference is SPICE with
+time-varying pot resistances (ngspice `R='expr(time)'`) following the engine's smoothed rotation
+trajectory (one-pole, `paramSmoothingMs`). Pass: no NaN/Inf, and engine vs SPICE ESR ≤ −40 dB over the
+sweep and the 20 ms after it. Added to VERIFICATION §7.
+Alternatives: peak error ≤ 1 % of the reference peak; error energy above 5 kHz ≤ −60 dB relative to the
+tone; report only.
+Consequences: The ESR measures what the engine's rate-limited matrix updates (every
+`kParamUpdateInterval` samples) and the discretisation add to the real transient. A brief click carries
+little energy, so peak error and HF error energy are reported alongside as information.
+
+## D-026 MNA scattering builder: double-double setup arithmetic, exact Python reference
+Date: 2026-10-13 · Status: accepted (owner decision, PROGRESS.md Q11)
+Context: WDF_DESIGN §5.5 requires the adapted up-port of an R-type adaptor to be reflection-free to
+1e-12. For B4 with every knob at maximum (pot ends of 1–22 Ω next to 1 MΩ, capacitor ports of 59 Ω) the
+nodal matrix has a condition number near 1e5, and double precision gives |S[up][up]| ≈ 2–4e-12;
+iterative refinement and diagonal scaling do not improve it. Options presented: zero S[up][up] and
+check 1e-10; keep S and check 1e-10; higher precision.
+Decision:
+- `engine/src/mna/` (header-only, templated on port and node count, fixed-size arrays, no heap) solves
+  the nodal equations in double-double arithmetic (`DD`: error-free sums and fma products, ≈ 32
+  digits) with partial pivoting; results are rounded to double. Functions: `upPortResistance`,
+  `scattering` (definition-based, WDF_DESIGN §5.1), `solveDc` (for `reset()`).
+- `harness/mna.py` solves the same equations in exact rational arithmetic (`fractions`), so its fixtures
+  (`tests/data/rtype_fixtures.txt`: B4 at four knob sets and a random bridge) are the correctly rounded
+  exact results. No Eigen and no new dependency.
+- Tests: C++ vs fixtures within 1e-12 (R_up within 1e-15 relative), reflection-free < 1e-12,
+  losslessness 1e-9, 3-port R-types vs the library's parallel and series adaptors within 1e-12 (which
+  also pins the port orientation: the library's series adaptor presents −(v1 + v2) upwards).
+Consequences: The WDF_DESIGN §5.5 tolerances stay as written. A matrix update costs more than in plain
+double; the cost is measured with the ToneStackMaster block (M1 step 2).

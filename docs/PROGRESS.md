@@ -164,13 +164,62 @@ Notes:
   final netlist (unchanged: −30.6 / −27.1 / −26.2 dB). M0 report written. M0 stops here for review.
 
 ## M1 — B4 tone stack + master
-- [ ] MNA scattering builder (C++) + numpy reference + cross-check test
-- [ ] Adaptor sanity tests (series/parallel equivalence, losslessness, reflection-free up-port)
+- [x] MNA scattering builder (C++) + numpy reference + cross-check test — C++ in double-double, Python
+  reference in exact rationals (Q11, D-026)
+- [x] Adaptor sanity tests (series/parallel equivalence, losslessness, reflection-free up-port)
 - [ ] `ToneStackMaster` block with smoothing and rate-limited updates
 - [ ] Magnitude (5×5×5×3 settings) and time-domain checks; knob-jump test
 - [ ] M1 report
-Plan:
+Plan (2026-10-13; follows SPEC §7 M1, WDF_DESIGN §2, §5, §6 and VERIFICATION §6–7):
+
+Step 1 — MNA scattering builder
+- Python reference `harness/mna.py` (numpy): ports as (node+, node−) pairs plus port resistances;
+  definition-based S (WDF_DESIGN §5.1) and the reflection-free up-port resistance (§5.2); DC node
+  solve with capacitors open (for `reset()`).
+- C++ `engine/src/mna/` (header templates on port and node count, fixed-size arrays, Gaussian
+  elimination with partial pivoting, no heap): the same three functions. No Eigen: SPEC §2 allows a
+  small hand-written LU, so no new dependency.
+- Cross-check: the Python side writes S fixtures (B4 at several knob sets, plus a random network) to
+  `tests/data/`, a Catch2 test compares within 1e-12; freshness test in the harness.
+- WDF_DESIGN §5.5 sanity tests in C++: R-type for a pure series / parallel 3-port vs the library
+  adaptors (1e-12), losslessness (1e-9), up-port reflection-free (1e-12).
+
+Step 2 — `ToneStackMaster` block (`engine/include/amp2203/ToneStackMaster.h`, `engine/src/`)
+- Tree: `IdealVoltageSourceT` (J3 source voltage, absolute, as in the testbench) at the root →
+  `WDFSeriesT`(R_th3, R-type) → `RtypeAdaptor` adapted at its up-port (k2b–ground) with the 11 B4
+  elements as down-ports (C10, R15, C11, C12, VR3a/b, VR5, VR4a/b, VR2a/b). The library's
+  `RootRtypeAdaptor` is not used: its `compute()` scatters the incident waves of the previous call, which
+  would delay the source by one sample. Bilinear capacitors (WDF_DESIGN §2).
+- Pot values exactly as the netlist (linear Treble/Middle without +1 Ω, log Bass/Master with +1 Ω).
+- `reset()`: DC operating point from the MNA DC solve, written into the capacitor states (a small
+  custom capacitor element with a settable state, tested against the library's `CapacitorT`).
+- Smoothing: one-pole on knob rotations (`paramSmoothingMs`); S and port resistances recomputed every
+  `kParamUpdateInterval` = 32 samples while a value moves; `reset()` snaps to the targets. Cost per
+  sample and per update measured; interval recorded in DECISIONS.
+- Outputs: v_oc(y) (unloaded wiper) and R_th4 (the D-015 formula from the smoothed knobs). Probes for
+  k2b, tt, tw, nd, ne, nbb, mw, y. `ampwav --block b4` runs it; `Amp2203` (full) stays a pass-through
+  until the chain exists.
+
+Step 3 — Harness checks
+- `python -m harness.tonestack_check`: engine SWP-lo (1 V) vs SPICE AC for 5×5×5 Treble/Middle/Bass
+  at Master ∈ {0.2, 0.5, 1.0} (375 settings): max |dB error| 20 Hz–10 kHz ≤ 0.1, 10–20 kHz ≤ 0.3.
+- Time-domain ESR vs SPICE transient for the log sweep ≤ −60 dB at DEFAULT and the 8 tone-control
+  corners at Master 0.5 (SPICE transient sweeps cost ~1 min each at reltol 1e-6).
+- `compare --block b4 --preset DEFAULT --milestone M1` with M1 tolerances active in `tolerances.py`.
+- Knob-jump test (SPEC §6.2): each knob 0→1 in 10 ms during a 1 kHz tone. Engine: no NaN/Inf
+  (Catch2). Reference: SPICE with time-varying pot resistances following the engine's smoothed rotation
+  trajectory (ngspice `R='expr(time)'` works, checked). Pass criterion (Q10): ESR ≤ −40 dB over the
+  sweep and 20 ms after it, plus no NaN/Inf.
+
+Step 4 — M1 report (`harness/reports/M1/`), cost figures, PROGRESS/DECISIONS updates.
+
+Risks: R-type conditioning with 1 Ω pot ends next to 1 MΩ (check S accuracy against Python at the
+extremes); S-update cost in the audio thread (measure before considering a worker thread, WDF_DESIGN
+§5.4).
 Notes:
+- 2026-10-13 Step 1 done: `harness/mna.py` (exact rationals), `engine/src/mna/` (double-double),
+  fixtures `tests/data/rtype_fixtures.txt` (`python -m harness.mna --fixtures`, `--check`), Catch2
+  tests `test_mna.cpp` (fixtures 1e-12, §5.5 checks, library parallel/series equivalence).
 
 ## M2 — B12: V1a and V1b with a joint triode root
 - [ ] 12AX7 model + Wright omega grid current + Jacobian; device unit tests
@@ -233,3 +282,8 @@ _(Claude Code: add questions here and also ask them in the session.)_
   Blue–White on the pA side (DECISIONS D-023, open item O7).
 - Q9 (M0): use the Hammond 194F choke datasheet? — Answered 2026-10-13: adopt now, Rch 115 Ω, L 5 H
   (DECISIONS D-024).
+- Q10 (M1): knob-jump pass criterion? — Answered 2026-10-13: ESR ≤ −40 dB vs SPICE with time-varying
+  pots on the same smoothed trajectory, over the sweep and 20 ms after it (VERIFICATION §7, D-025).
+- Q11 (M1): the R-type up-port reaches only 2–4e-12 reflection-free in double precision at extreme B4
+  settings (WDF_DESIGN §5.5: 1e-12)? — Answered 2026-10-13: higher precision (double-double setup
+  arithmetic; exact-rational Python reference) (D-026).

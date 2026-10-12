@@ -124,6 +124,7 @@ See `WDF_DESIGN.md` §5.5.
 | Device DC sweeps | 0.1 % / 1 nA |
 | Linear block magnitude (B4) | ≤ 0.1 dB (20 Hz–10 kHz), ≤ 0.3 dB (10–20 kHz) |
 | Linear block time-domain ESR | ≤ −60 dB |
+| Knob jump (SPEC §6.2: each knob 0→1 in 10 ms during a 1 kHz tone) | No NaN/Inf; ESR vs SPICE with time-varying pots on the same smoothed rotation trajectory ≤ −40 dB over the sweep and the 20 ms after it (D-025) |
 | DC operating point (any block) | ≤ 0.5 % per node (EL34 currents: ±1 mA plate, ±0.3 mA screen) |
 | Block-exact ESR, nonlinear, Small/Nominal/Hot | ≤ −40 dB |
 | Block-exact ESR, Overdrive | ≤ −30 dB |

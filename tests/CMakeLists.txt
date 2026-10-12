@@ -1,8 +1,12 @@
 add_executable(amp2203_tests
     test_amp2203.cpp
-    test_chowdsp_wdf.cpp)
+    test_chowdsp_wdf.cpp
+    test_mna.cpp)
 
 target_link_libraries(amp2203_tests PRIVATE amp2203_engine Catch2::Catch2WithMain)
+# white-box tests of engine internals (engine/src) and the SPICE / Python fixtures in tests/data
+target_include_directories(amp2203_tests PRIVATE ${PROJECT_SOURCE_DIR}/engine/src)
+target_compile_definitions(amp2203_tests PRIVATE AMP2203_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 amp2203_set_warnings(amp2203_tests)
 
 include(Catch)

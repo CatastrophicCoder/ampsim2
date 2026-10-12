@@ -153,8 +153,9 @@ for j in 1..N:
     solve the linear circuit (MNA) for every port voltage v_n
     column j of S:  S[n][j] = 2·v_n − a_n
 ```
-Factor the MNA matrix once and back-substitute N times. Implement in C++ (setup-time, Eigen or a small
-LU) and in Python (numpy) in the harness; a unit test compares both for each adaptor.
+Factor the MNA matrix once and back-substitute N times. Implemented in C++ in double-double arithmetic
+(`engine/src/mna/`, D-026) and in Python in exact rationals (`harness/mna.py`); a unit test compares both
+for each adaptor.
 
 The closed-form MNA expression from Werner et al., "Wave Digital Filter Adaptors for Arbitrary
 Topologies and Multiport Linear Elements" (DAFx-15), S = I + 2·[0 R]·X⁻¹·[0 I]ᵀ, is equivalent; if used,
