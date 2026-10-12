@@ -16,7 +16,7 @@ Legend: [ ] todo · [~] in progress · [x] done · [!] blocked (see note)
   (Q6a); |Z(1 kHz)| in junctions.py (Q6b); J5 provisional until M4
 - [x] Device DC sweep CSVs generated into `tests/data/`
 - [x] CI workflow (macOS): build + tests — first GitHub run green (run 38304157627 on f311402, 52 s)
-- [ ] M0 report: `harness/reports/M0/...`
+- [x] M0 report: `harness/reports/M0/20261013_M0_report.md` — awaiting owner review
 Plan (2026-10-12; follows SPEC §7 M0 and VERIFICATION §1–8, no deviations intended):
 
 Step 0 — Environment and repo
@@ -159,6 +159,9 @@ Notes:
 - 2026-10-13 Choke from the Hammond 194F datasheet (Q9, D-024): Rch 60 → 115 Ω. Screens −1.2 V,
   preamp supplies −0.24 %, EL34 current −1.7 %, screen-supply resonance better damped, clean power −1.8 %.
   Regenerated again; step 8 renders restarted again.
+- 2026-10-13 Step 8 done on 3a47496: compare reports for full (CLEAN, CRUNCH, DRIVE, DEFAULT; DEFAULT
+  took 734 s at reltol 1e-6) and PIPE on b12, b3, b4, b56, all 0 FAIL; J2 partition study rerun on the
+  final netlist (unchanged: −30.6 / −27.1 / −26.2 dB). M0 report written. M0 stops here for review.
 
 ## M1 — B4 tone stack + master
 - [ ] MNA scattering builder (C++) + numpy reference + cross-check test

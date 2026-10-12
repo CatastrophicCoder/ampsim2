@@ -65,7 +65,7 @@ python -m harness.run_engine --block <id> --preset <id>
 python -m harness.compare --block <id> --preset <id> --milestone M<n>   # renders + runs + report
 python -m unittest discover -s harness/tests -t .          # harness unit tests
 ```
-Planned (created in M0; keep this section updated as they appear): none left for M0 step 3.
+Planned: none (all M0 commands exist; later milestones add theirs here).
 
 ## Definition of done
 Builds without warnings, tests pass, harness report regenerated and within tolerance (or deviation

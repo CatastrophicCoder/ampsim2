@@ -196,7 +196,7 @@ J2 partition error (`python -m harness.partition --junction j2`, report
 `harness/reports/M0/20261013_partition_j2.md`): the b12 → b3 chain vs B12+B3 joined (b123), at k2b. The
 three candidates differ by < 0.4 % and give the same result within 0.1 dB. Worst ESR (always a 2 V or
 0.5 V 5 kHz sine): CLEAN −30.6 dB, DEFAULT −27.0 dB, DRIVE −26.2 dB; small-signal magnitude error
-≤ 0.18 dB (20 Hz–20 kHz); harmonics 2–5 within 1.4–3.2 dB. At the loaded junction node p1b the worst is
+≤ 0.18 dB (20 Hz–20 kHz); harmonics 2–5 within 1.4–3.3 dB. At the loaded junction node p1b the worst is
 −19.4 dB (DRIVE, 2 V, 5 kHz), where V2a grid current loads V1b at large swing.
 
 ---
