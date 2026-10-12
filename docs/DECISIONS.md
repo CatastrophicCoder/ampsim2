@@ -360,3 +360,17 @@ out/sl deviation is now 42.4 µV (was 39.8 µV). NFB unchanged (6.2 dB at 1 kHz)
 inputs rises by 2–6 % (≈ 103 / 136 / 154 W at 25 / 30 / 40 mV). CIRCUIT §3, §5 and §6, reference/README,
 README and the testbenches are regenerated; all SPICE renders are redone. The model remains a linear
 transformer: no level-dependent inductance, core loss, winding capacitance or saturation.
+
+## D-024 Choke from the Hammond 194F datasheet (netlist change)
+Date: 2026-10-13 · Status: accepted (owner approval of the netlist change; PROGRESS.md Q9)
+Context: The choke was assumed at 5 H / 60 Ω (A3). The owner supplied the datasheet of the Hammond 194F,
+a replacement choke "for JCP and JCM800": 5 H @ 120 mA DC, DCR 115 Ω ±15 % at 20 °C, no curves.
+Decision: `Rch` 60 → 115 Ω; `Lch` stays 5 H (the inductance at the amp's ≈ 27 mA choke current is not
+specified).
+Consequences (vs 60 Ω): nScr −1.18 V (485.65 V), bpX / bpA −0.97 / −0.94 V, preamp plates −0.16 to
+−0.24 V, EL34 plate current −1.7 % (34.08 mA per tube), the choke/C22 resonance (ct → nScr, ≈ 9.7 Hz)
++6.4 dB instead of +10.2 dB, 100 Hz attenuation unchanged (−39.8 dB), clean power at 30 mV −1.8 %
+(133.2 W, 3.54 % THD), NFB 6.2 dB at 1 kHz. CIRCUIT §1 (B7), §5, §6 and reference/README updated;
+testbenches, DC check and junction measurements regenerated (junctions.py re-recorded: J2 89.7328 kΩ,
+J3 360.137 Ω, J5a 58.0676 kΩ, J5b 56.9374 kΩ; changes ≤ 0.06 %); all SPICE renders redone. Remaining
+limits: constant inductance, DCR at 20 °C (copper rises ≈ 0.4 %/°C when warm).

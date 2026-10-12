@@ -116,8 +116,9 @@ Rload out 0 16
 Vht raw 0 DC {vnl}
 Rsrc raw ct {rsrc}
 C23 ct 0 50u
+* Choke T3: Hammond 194F (replacement "for JCP and JCM800"): 5 H @ 120 mA DC, DCR 115 ohm +-15 % @ 20 C (D-024)
 Lch ct nch 5
-Rch nch nScr 60
+Rch nch nScr 115
 C22 nScr 0 50u
 R29 nScr bpX 10k
 C21b bpX 0 50u

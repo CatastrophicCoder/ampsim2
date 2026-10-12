@@ -117,7 +117,7 @@ Bias Thevenin check: Vth = −60 V · 51 kΩ / 66 kΩ = −46.364 V; Rth = 15 k�
 | Vht | 505 V | raw – gnd | Assumed no-load DC (rectifier + mains TX approximated) |
 | Rsrc | 100 Ω | raw – ct | Assumed source resistance (sag) |
 | C23 | 50 µF | ct – gnd | Reservoir; OT centre tap here (O4) |
-| T3 choke | 5 H, 60 Ω | ct – nScr | Assumed values |
+| T3 choke | 5 H, 115 Ω | ct – nScr | Hammond 194F replacement datasheet: 5 H @ 120 mA DC, DCR 115 Ω ±15 % @ 20 °C (D-024) |
 | C22 | 50 µF | nScr – gnd | Screen supply (O4) |
 | R29 | 10 kΩ 1 W | nScr – bpX | |
 | C21b | 50 µF | bpX – gnd | Feeds V2a, V2b, PI (O4) |
@@ -171,7 +171,7 @@ SPICE vs engine) in M4.
 ## 4. Junction Thevenin resistances (measured in M0)
 
 Measured with `python -m harness.rth_measure` (DECISIONS D-016; report
-`harness/reports/M0/20261012_junctions.md`), default parameters, upstream block testbench with the output
+`harness/reports/M0/20261013_junctions.md`), default parameters, upstream block testbench with the output
 open and the input AC-grounded. The value used by the testbenches and the engine is |Z(1 kHz)|
 (`harness/junctions.py`; DECISIONS D-018); J5 is provisional until its partition error is measured in M4.
 
@@ -179,10 +179,10 @@ open and the input AC-grounded. The value used by the testbenches and the engine
 |---|---|---|---|---|---|
 | (J1) | p1a | 74.79 kΩ | 39.25 kΩ ∠−15.1° | none | Removed: B1 and B2 merged into B12 (D-017). C1 bypasses the cathode above ~100 Hz; \|Z\| falls to 31 kΩ at 10 kHz. Measured at commit a64bf9b |
 | J2 | p1b | 90.11 kΩ | 89.73 kΩ ∠−1.0° | 88.4–90.1 kΩ (Preamp Volume, Miller) | Measured on B12. R6 unbypassed; flat to ~1 kHz, 85.6 kΩ at 10 kHz |
-| J3 | k2b | 359.9 Ω | 359.9 Ω ∠+0.1° | none | Cathode follower; flat |
+| J3 | k2b | 360.1 Ω | 360.1 Ω ∠+0.1° | none | Cathode follower; flat |
 | J4 | y | R_VR2b ‖ (R_VR2a + R_VR3b + R_VR5 + R_VR4) (knob-dependent) | — | — | DC, J3 shorted, caps open; reactive part ignored (DECISIONS D-015) |
-| J5a | p3a | 41.40 kΩ | 58.06 kΩ ∠−0.9° | 56.2–58.1 kΩ (Master) | LTP: DC value only below ~1 Hz; 57–59 kΩ flat 10 Hz–5 kHz. Transimpedance to p3b 25.5 kΩ @ 1 kHz (0.44 of self) |
-| J5b | p3b | 45.51 kΩ | 56.93 kΩ ∠+0.4° | 56.9–59.1 kΩ (Master) | As J5a; transimpedance to p3a 32.1 kΩ @ 1 kHz (0.56 of self) |
+| J5a | p3a | 41.40 kΩ | 58.07 kΩ ∠−0.9° | 56.2–58.1 kΩ (Master) | LTP: DC value only below ~1 Hz; 57–59 kΩ flat 10 Hz–5 kHz. Transimpedance to p3b 25.5 kΩ @ 1 kHz (0.44 of self) |
+| J5b | p3b | 45.52 kΩ | 56.94 kΩ ∠+0.4° | 56.9–59.1 kΩ (Master) | As J5a; transimpedance to p3a 32.1 kΩ @ 1 kHz (0.56 of self) |
 
 J1 partition error (SPICE, harness/partition.py at commit a64bf9b, report
 `harness/reports/M0/20261012_partition_j1.md`): the b1 → b2 chain vs B1+B2 joined, at p1b. Worst
@@ -193,7 +193,7 @@ matters; no constant R_th1 represents it. Owner decision: merge B1 and B2 into B
 D-017).
 
 J2 partition error (`python -m harness.partition --junction j2`, report
-`harness/reports/M0/20261012_partition_j2.md`): the b12 → b3 chain vs B12+B3 joined (b123), at k2b. The
+`harness/reports/M0/20261013_partition_j2.md`): the b12 → b3 chain vs B12+B3 joined (b123), at k2b. The
 three candidates differ by < 0.4 % and give the same result within 0.1 dB. Worst ESR (always a 2 V or
 0.5 V 5 kHz sine): CLEAN −30.6 dB, DEFAULT −27.0 dB, DRIVE −26.2 dB; small-signal magnitude error
 ≤ 0.18 dB (20 Hz–20 kHz); harmonics 2–5 within 1.4–3.2 dB. At the loaded junction node p1b the worst is
@@ -207,27 +207,28 @@ Defaults: vol 0.6, treble/middle/bass/presence 0.5, master 0.3, rv1 4 kΩ, vnl 5
 
 | Node | Voltage | Node | Voltage |
 |---|---|---|---|
-| ct (B+, OT CT) | 488.444 V | p2a | 231.658 V |
-| nScr | 486.828 V | k2a | 1.408 V |
-| bpX | 403.307 V | k2b | 232.216 V |
-| bpA | 390.288 V | p3a | 271.512 V |
-| nbias | −46.364 V | p3b | 262.884 V |
-| p1a | 297.104 V | k3 | 45.049 V |
-| k1a | 2.516 V | nF | 43.634 V |
-| p1b | 353.278 V | nG | 13.519 V |
-| k1b | 3.701 V | | |
+| ct (B+, OT CT) | 488.708 V | p2a | 231.130 V |
+| nScr | 485.649 V | k2a | 1.404 V |
+| bpX | 402.336 V | k2b | 231.686 V |
+| bpA | 389.350 V | p3a | 270.881 V |
+| nbias | −46.364 V | p3b | 262.271 V |
+| p1a | 296.402 V | k3 | 44.933 V |
+| k1a | 2.510 V | nF | 43.522 V |
+| p1b | 352.433 V | nG | 13.484 V |
+| k1b | 3.692 V | pA / pB (EL34 plates) | 487.662 / 487.580 V |
 
 | Current | Value |
 |---|---|
-| V1a plate (R4) | 0.932 mA |
-| V1b plate (R7) | 0.370 mA |
-| V2a plate (R12) | 1.716 mA |
-| V2b cathode (R13) | 2.322 mA |
-| PI plates (R18 / R21) | 1.607 / 1.404 mA |
-| R29 (preamp + PI total from nScr) | 8.352 mA |
-| EL34 plate, per tube | 34.65 mA |
-| EL34 screen, per tube | 4.65 mA |
-| Total HT current (Vht) | 165.6 mA |
+| V1a plate (R4) | 0.930 mA |
+| V1b plate (R7) | 0.369 mA |
+| V2a plate (R12) | 1.712 mA |
+| V2b cathode (R13) | 2.317 mA |
+| PI plates (R18 / R21) | 1.603 / 1.401 mA |
+| R29 (preamp + PI total from nScr) | 8.331 mA |
+| Choke (Lch) | 26.60 mA |
+| EL34 plate, per tube | 34.08 mA |
+| EL34 screen, per tube | 4.57 mA |
+| Total HT current (Vht) | 162.9 mA |
 
 Regenerate with `python3 reference/spice/spice_tools.py` after any netlist change.
 
@@ -246,7 +247,7 @@ Regenerate with `python3 reference/spice/spice_tools.py` after any netlist chang
 | O7 | OT half-primary orientation | Blue–White (15.36 Ω) on the pA side (V4/V5) | ±0.6 Ω winding asymmetry, about ±40 mV DC per side |
 | A1 | HT source 505 V / 100 Ω | Assumed | B+ level and sag |
 | A2 | OT values | Hammond 1750U replacement datasheet, primary inductance fitted (§3, D-023) | Power, LF/HF response, feedback |
-| A3 | Choke 5 H / 60 Ω | Assumed | Screen node dynamics |
+| A3 | Choke 5 H / 115 Ω | Hammond 194F replacement datasheet; L specified at 120 mA DC, the amp runs it at ≈ 27 mA (D-024) | Screen node dynamics, supply DC |
 | A4 | Bias −60 V at C20, RV1 4 kΩ | Assumed | Idle current, crossover |
 | A5 | Koren generic tube parameters | Generic | Overall voltages and distortion |
 

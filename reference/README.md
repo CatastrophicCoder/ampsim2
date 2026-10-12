@@ -30,7 +30,7 @@ C5 1 nF across Preamp Volume top-to-wiper; "50+50 µF" cans modelled as 50 µF p
 16 Ω tap; Low input not modelled.
 
 ## Assumed values (not on the schematic)
-HT source 505 V behind 100 Ω; choke 5 H / 60 Ω; bias −60 V at the C20 node with RV1 = 4 kΩ; generic Koren tube parameters; resistive
+HT source 505 V behind 100 Ω; bias −60 V at the C20 node with RV1 = 4 kΩ; generic Koren tube parameters; resistive
 16 Ω load; ideal guitar source.
 
 ## Output transformer (Hammond 1750U datasheet)
@@ -40,12 +40,17 @@ fitted to the datasheet's 27 dBu response and phase curves (`python -m harness.o
 Hammond's drop-in replacement for the original part; see `docs/CIRCUIT.md` §3 and `docs/DECISIONS.md`
 D-023.
 
+## Choke (Hammond 194F datasheet)
+5 H @ 120 mA DC, DCR 115 Ω (±15 % @ 20 °C), Hammond's replacement "for JCP and JCM800" (D-024). The amp
+runs it at ≈ 27 mA; the inductance at that current is not specified and stays 5 H.
+
 ## Sanity results
-- DC: B+ 488 V, screens 487 V, PI supply 403 V, preamp supply 390 V; EL34 34.7 mA plate + 4.65 mA screen
-  per tube (≈ 17 W plate dissipation, ≈ 68 % of 25 W).
-- Global NFB ≈ 6 dB: 6.7 / 6.2 / 6.1 dB at 100 Hz / 1 kHz / 5 kHz (verified negative by removing R22).
-- Clean power (Preamp 2, Master 10, 1 kHz; input 25 / 30 / 40 mV peak): ≈ 103 W at 2.9 % THD,
-  ≈ 136 W at 3.2 %, ≈ 154 W at 9.5 % (before D-023: 101 W / 130 W / 145 W at 2.8 / 3.8 / 9.6 %).
+- DC: B+ 489 V, screens 486 V, PI supply 402 V, preamp supply 389 V; EL34 34.1 mA plate + 4.57 mA screen
+  per tube (≈ 16.6 W plate dissipation, ≈ 66 % of 25 W).
+- Global NFB ≈ 6 dB: 6.6 / 6.2 / 6.0 dB at 100 Hz / 1 kHz / 5 kHz (verified negative by removing R22).
+- Clean power (Preamp 2, Master 10, 1 kHz; input 25 / 30 / 40 mV peak): ≈ 101 W at 3.2 % THD,
+  ≈ 133 W at 3.5 %, ≈ 151 W at 9.6 % (assumed OT and choke before D-023/D-024: 101 W / 130 W / 145 W at
+  2.8 / 3.8 / 9.6 %).
 - Overdrive (Preamp 8, Master 3, 300 mV @ 220 Hz): V2a is the main clipping stage; B+ sags ≈ 20 V.
 - Speed: ≈ 27x slower than real time for the full amp.
 

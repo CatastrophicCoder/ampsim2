@@ -156,6 +156,9 @@ Notes:
   `python -m harness.ot_fit` (lpt 25.61 H fitted, kot 0.9997925 from the leakage, DCRs from the
   datasheet, no capacitance). DC moves by ≤ 1.7 V at the plates; NFB unchanged; clean power +2–6 %.
   Testbenches, DC check and junction measurements regenerated; step 8 renders restarted.
+- 2026-10-13 Choke from the Hammond 194F datasheet (Q9, D-024): Rch 60 → 115 Ω. Screens −1.2 V,
+  preamp supplies −0.24 %, EL34 current −1.7 %, screen-supply resonance better damped, clean power −1.8 %.
+  Regenerated again; step 8 renders restarted again.
 
 ## M1 — B4 tone stack + master
 - [ ] MNA scattering builder (C++) + numpy reference + cross-check test
@@ -225,3 +228,5 @@ _(Claude Code: add questions here and also ask them in the session.)_
 - Q8 (M0): use the Hammond 1750U OT datasheet? — Answered 2026-10-12: adopt it in the netlist and fit
   the primary inductance to the published curves; nominal turns ratio 1700/16; asymmetric DCRs with
   Blue–White on the pA side (DECISIONS D-023, open item O7).
+- Q9 (M0): use the Hammond 194F choke datasheet? — Answered 2026-10-13: adopt now, Rch 115 Ω, L 5 H
+  (DECISIONS D-024).
