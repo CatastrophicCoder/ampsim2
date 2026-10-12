@@ -74,7 +74,8 @@ Block input amplitudes (volts peak at the junction source):
 | B56 (J4 source) | 0.1 | 1 | 5 | 20 |
 
 With the P chaining, realistic levels for downstream blocks come from the upstream SPICE outputs; the
-table is for the standalone sine tests.
+table is for the standalone sine tests. In standalone tests the signal rides on the junction source's DC operating
+point (the testbench's `Vin` DC value), for SPICE and the engine alike (DECISIONS D-022).
 
 Full-chain presets (tone controls 0.5, presence 0.5 unless stated):
 | Preset | Preamp Volume | Master | Input |

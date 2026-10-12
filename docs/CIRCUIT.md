@@ -138,16 +138,29 @@ the engine. EL34 screen current uses the repository modification (see `WDF_DESIG
 
 ---
 
-## 3. Output transformer (assumed values; C2668 data not available)
+## 3. Output transformer (from the Hammond 1750U datasheet; DECISIONS D-023)
 
-| Parameter | Value |
-|---|---|
-| Plate-to-plate impedance at 16 Ω | 1.7 kΩ → turns ratio n = sqrt(1700/16) = 10.308 (full primary : secondary) |
-| Total primary inductance | 25 H (each half-primary 6.25 H) |
-| Secondary inductance | 25 / n² = 0.2353 H |
-| Coupling coefficient (all pairs) | 0.999 |
-| Winding resistance | 40 Ω per half-primary, 0.3 Ω secondary |
-| Load | 16 Ω resistive |
+The original C2668 data are not available. The values come from the datasheet of the Hammond 1750U, a
+drop-in replacement for the JMP / JCM800 100 W transformer "designed to keep the material and design
+specifications as close as possible to the original part" (typical values, not a measurement of an
+original unit). The datasheet itself is not redistributed here.
+
+| Parameter | Value | Source |
+|---|---|---|
+| Plate-to-plate impedance at 16 Ω | 1.7 kΩ → n² = 1700/16 = 106.25 (n = 10.308) | Datasheet nominal; the 1 V inductance ratio gives 99.6 (owner decision: nominal) |
+| Total primary inductance `lpt` | 25.61 H (each half-primary 6.40 H) | Fitted to the datasheet response and phase curves at 27 dBu (`python -m harness.ot_fit`); the datasheet's 1 V / 1 kHz value is 8.85 H |
+| Secondary inductance | lpt / n² = 0.2410 H | From the ratio |
+| Coupling coefficient `kot` (all three pairs) | 0.9997925 | Set so the shorted-secondary inductance equals the measured 7.97 mH leakage |
+| Winding resistance | 15.36 Ω (pA side) / 16.56 Ω (pB side) per half-primary, 0.320 Ω secondary | Datasheet DCR (Blue–White, White–Red, Violet–Green); side assignment is open item O7 |
+| Winding capacitance | none | The fit sets a plate-to-plate capacitance to zero |
+| Load | 16 Ω resistive | |
+
+Fit quality against the datasheet curves (16 Ω, read by eye to about ±0.05 dB / ±1°): magnitude within
+0.15 dB (the model sits about 0.1 dB above the readings at both band edges), phase within 1.3°. In the
+datasheet test circuit (850 Ω at each primary end, 16 Ω load) the previous assumed values (25 H, k = 0.999,
+40 Ω per half) gave −1.6 dB at 10 kHz and −7.0 dB at 30 kHz against the measured ≈ −0.2 / −0.85 dB.
+Limits: one linear inductance (the datasheet shows it is level-dependent: 8.85 H at 1 V vs ≈ 25.6 H at
+27 dBu), no core loss, no winding capacitance, no saturation.
 
 The engine's linear equivalent circuit must reproduce the SPICE coupled-inductor model: verify with a
 small-signal comparison of the transformer network alone (plates driven by ideal current sources,
@@ -194,7 +207,7 @@ Defaults: vol 0.6, treble/middle/bass/presence 0.5, master 0.3, rv1 4 kΩ, vnl 5
 
 | Node | Voltage | Node | Voltage |
 |---|---|---|---|
-| ct (B+, OT CT) | 488.445 V | p2a | 231.658 V |
+| ct (B+, OT CT) | 488.444 V | p2a | 231.658 V |
 | nScr | 486.828 V | k2a | 1.408 V |
 | bpX | 403.307 V | k2b | 232.216 V |
 | bpA | 390.288 V | p3a | 271.512 V |
@@ -230,8 +243,9 @@ Regenerate with `python3 reference/spice/spice_tools.py` after any netlist chang
 | O4 | "50+50 µF" filter cans | 50 µF per node | Sag and ripple time constants |
 | O5 | NFB tap | 16 Ω output with 16 Ω load | Feedback amount if taken from another tap |
 | O6 | Low input | Not modelled | Feature only |
+| O7 | OT half-primary orientation | Blue–White (15.36 Ω) on the pA side (V4/V5) | ±0.6 Ω winding asymmetry, about ±40 mV DC per side |
 | A1 | HT source 505 V / 100 Ω | Assumed | B+ level and sag |
-| A2 | OT values | Assumed (see §3) | Power, LF/HF response, feedback |
+| A2 | OT values | Hammond 1750U replacement datasheet, primary inductance fitted (§3, D-023) | Power, LF/HF response, feedback |
 | A3 | Choke 5 H / 60 Ω | Assumed | Screen node dynamics |
 | A4 | Bias −60 V at C20, RV1 4 kΩ | Assumed | Idle current, crossover |
 | A5 | Koren generic tube parameters | Generic | Overall voltages and distortion |

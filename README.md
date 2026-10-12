@@ -51,8 +51,10 @@ All commands are listed in `CLAUDE.md` ("Commands").
 ## Circuit source
 The netlist was transcribed from Marshall's "2203 STD Preamp" (issue 4, 19-5-88) and "2203 STD Output
 Stage & PSU" (issue 6) drawings. The drawings are not included in this repository. Values that are not on
-the drawings (output transformer, choke, HT source, bias) are assumptions, listed in `docs/CIRCUIT.md` §6
-and `reference/README.md`.
+the drawings are either taken from other sources or assumed: the output transformer uses the datasheet of
+Hammond's drop-in replacement part (1750U), with its primary inductance fitted to the published response
+curves; the choke, HT source and bias are assumptions. All are listed in `docs/CIRCUIT.md` §3 and §6 and in
+`reference/README.md`.
 
 ## Licence
 Copyright (C) 2026 CatastrophicCoder. This project is licensed under the GNU Affero General Public

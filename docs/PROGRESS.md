@@ -15,8 +15,7 @@ Legend: [ ] todo · [~] in progress · [x] done · [!] blocked (see note)
 - [x] Junction Thevenin resistances measured and entered in CIRCUIT.md §4 — B1+B2 merged into B12
   (Q6a); |Z(1 kHz)| in junctions.py (Q6b); J5 provisional until M4
 - [x] Device DC sweep CSVs generated into `tests/data/`
-- [~] CI workflow (macOS): build + tests — written and run locally on a fresh clone; first GitHub run
-  pending a remote (D-020)
+- [x] CI workflow (macOS): build + tests — first GitHub run green (run 38304157627 on f311402, 52 s)
 - [ ] M0 report: `harness/reports/M0/...`
 Plan (2026-10-12; follows SPEC §7 M0 and VERIFICATION §1–8, no deviations intended):
 
@@ -149,6 +148,14 @@ Notes:
 - 2026-10-12 Step 7: `.github/workflows/ci.yml` (macos-15, checkout pinned by commit, plugin OFF,
   configure / build / ctest; DECISIONS D-020). The same steps on a fresh local clone: configure 4.4 s,
   build 8 s, no warnings, ctest 14/14. The repository has no remote yet, so no GitHub run so far.
+- 2026-10-12 Published on GitHub; first CI run green (52 s). Publication prep: drawings removed from
+  history, AGPL-3.0, README (D-021).
+- 2026-10-12 Step 8 started: the first compare runs found two harness defects, fixed in D-022 (junction
+  DC level for standalone signals; vector names that are control-language operators, e.g. nE).
+- 2026-10-12 OT from the Hammond 1750U datasheet (Q8, D-023): netlist change approved by the owner;
+  `python -m harness.ot_fit` (lpt 25.61 H fitted, kot 0.9997925 from the leakage, DCRs from the
+  datasheet, no capacitance). DC moves by ≤ 1.7 V at the plates; NFB unchanged; clean power +2–6 %.
+  Testbenches, DC check and junction measurements regenerated; step 8 renders restarted.
 
 ## M1 — B4 tone stack + master
 - [ ] MNA scattering builder (C++) + numpy reference + cross-check test
@@ -215,3 +222,6 @@ _(Claude Code: add questions here and also ask them in the session.)_
   Σy² and makes ESR look better than it is (`compare` scores b1 at p1a, b2 at p1b). Compute ESR on the
   signal minus the DC operating point? — Answered 2026-10-12: each signal minus its own DC operating
   point (value at t = 0) for ESR, best lag and the sweep response (DECISIONS D-018).
+- Q8 (M0): use the Hammond 1750U OT datasheet? — Answered 2026-10-12: adopt it in the netlist and fit
+  the primary inductance to the published curves; nominal turns ratio 1700/16; asymmetric DCRs with
+  Blue–White on the pA side (DECISIONS D-023, open item O7).

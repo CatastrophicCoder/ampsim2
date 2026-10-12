@@ -110,6 +110,20 @@ def _vec(node):
     return node if '(' in node or '[' in node else f'v({node})'
 
 
+def _save(vecs):
+    """Selects the vectors to keep with a netlist `.save` line, then `write <file>` without arguments.
+    Naming vectors in a control-language command instead breaks on node names that are operators there
+    (e.g. `ne`, `gt`, `and`: B4's tone-stack node nE)."""
+    return '.save ' + ' '.join(vecs) + '\n'
+
+
+def vin_dc(testbench_text):
+    """DC value of the testbench's `Vin` source (the junction source's operating point; 0 for the guitar
+    input), or None if it has no `Vin`."""
+    m = re.search(r'^Vin\s+\S+\s+\S+\s+DC\s+(\S+)', testbench_text, re.IGNORECASE | re.MULTILINE)
+    return float(m.group(1)) if m else None
+
+
 _VREC_RE = re.compile(r'^Vrec_(\w+)\s+(\S+)\s+(\S+)\b.*$', re.IGNORECASE | re.MULTILINE)
 PENDING_MARK = '* PENDING: '
 
@@ -153,10 +167,10 @@ def tran(testbench_text, knobs, x, nodes, recorded=None, fs=config.FS, reltol=co
                            count=1)
     text = _VREC_RE.sub(lambda m: _filesource(f'harness_rec_{m.group(1).lower()}', m.group(2), m.group(3),
                                               f'in_{m.group(1).lower()}.txt'), text)
-    text = _strip_end(text) + '\n' + brk + '\n'
+    vecs = [_vec(v) for v in nodes]
+    text = _strip_end(text) + '\n' + brk + '\n' + _save(vecs)
     if reltol is not None:
         text += f'.options reltol={reltol!r}\n'
-    vecs = [_vec(v) for v in nodes]
 
     def compute():
         t = np.arange(n + 2) * dt          # hold points past the end (the last samples need them)
@@ -166,7 +180,7 @@ def tran(testbench_text, knobs, x, nodes, recorded=None, fs=config.FS, reltol=co
             files[f'in_{name}.txt'] = '\n'.join(f'{a:.17g} {b:.17g}' for a, b in zip(t, data)) + '\n'
         # stop half a sample past the last one so rounding cannot drop the final output point
         control = (f'option interp\ntran {dt:.17g} {(n - 0.5) * dt:.17g} 0 {dt:.17g}\n'
-                   f'write tran.raw {" ".join(vecs)}')
+                   'write tran.raw')
         _, raws = _run(text, control, files)
         raw = raws['tran.raw']
         if len(raw['time']) < n or np.max(np.abs(raw['time'][:n] - np.arange(n) * dt)) > 1e-3 * dt:
@@ -203,15 +217,15 @@ def op(testbench_text, knobs, nodes):
 
 def ac(testbench_text, knobs, out_node, in_node, fstart=20.0, fstop=20000.0, ppd=48):
     """Small-signal transfer v(out)/v(in). Returns (f, complex H)."""
-    text = apply_params(testbench_text, knobs)
-    expr = f'{_vec(out_node)}/{_vec(in_node)}'
+    vo, vi = _vec(out_node), _vec(in_node)
+    text = _strip_end(apply_params(testbench_text, knobs)) + '\n' + _save([vo, vi])
 
     def compute():
-        _, raws = _run(text, f'ac dec {ppd} {fstart:g} {fstop:g}\nlet h = {expr}\nwrite ac.raw h')
+        _, raws = _run(text, f'ac dec {ppd} {fstart:g} {fstop:g}\nwrite ac.raw')
         raw = raws['ac.raw']
-        return {'f': raw['frequency'].real, 'h': raw['h']}
+        return {'f': raw['frequency'].real, 'h': raw[vo.lower()] / raw[vi.lower()]}
 
-    res = _cached(_key('ac', text, expr, fstart, fstop, ppd, ngspice_version()), compute)
+    res = _cached(_key('ac', text, fstart, fstop, ppd, ngspice_version()), compute)
     return res['f'], res['h']
 
 
@@ -224,12 +238,11 @@ def impedance(testbench_text, knobs, node, observe=(), fstart=1e-3, fstop=1e5, p
     (self impedance for `node`, transimpedance for the `observe` nodes). Frequencies on a decade grid
     starting at `fstart` (powers of ten fall exactly on grid points)."""
     text = _AC_RE.sub(r'\1', apply_params(testbench_text, knobs))
-    text = _strip_end(text) + f'\nIinj_zth 0 {node} DC 0 AC 1\n'
     nodes = [node, *observe]
-    vecs = ' '.join(_vec(n) for n in nodes)
+    text = _strip_end(text) + f'\nIinj_zth 0 {node} DC 0 AC 1\n' + _save([_vec(n) for n in nodes])
 
     def compute():
-        _, raws = _run(text, f'ac dec {ppd} {fstart:g} {fstop:g}\nwrite ac.raw {vecs}')
+        _, raws = _run(text, f'ac dec {ppd} {fstart:g} {fstop:g}\nwrite ac.raw')
         raw = raws['ac.raw']
         return {'f': raw['frequency'].real, **{n: raw[_vec(n).lower()] for n in nodes}}
 

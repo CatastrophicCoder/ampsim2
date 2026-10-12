@@ -280,7 +280,7 @@ Consequences: The C++ device tests (M2: 12AX7, M4: EL34) read these tables with 
 tolerance (0.1 % or 1 nA).
 
 ## D-020 CI workflow
-Date: 2026-10-12 · Status: accepted (not yet run on GitHub: the repository has no remote)
+Date: 2026-10-12 · Status: accepted; first GitHub run green (run 38304157627 on f311402)
 Context: SPEC §7 M0.6 asks for a minimal GitHub Actions workflow on a macOS runner; the owner chose to
 leave the JUCE plugin out of CI (PROGRESS.md Q3).
 Decision: `.github/workflows/ci.yml`, on pushes to main and on pull requests: `macos-15` runner,
@@ -291,8 +291,8 @@ Read-only token permissions, 30 min timeout, superseded runs cancelled. No depen
 pinned archives download in a few seconds. The Python harness stays out of CI (it needs ngspice and its
 SPICE runs take minutes).
 Consequences: Verified by running the same steps on a fresh clone locally (macOS 15.7, Apple clang 17,
-CMake 4.4.3): configure 4.4 s, build 8 s, 0 warnings, ctest 14/14. The first GitHub run is still to be
-observed once a remote exists; the runner's Xcode/clang version may differ from the local one.
+CMake 4.4.3): configure 4.4 s, build 8 s, 0 warnings, ctest 14/14. First GitHub run (macos-15,
+2026-10-12): configure 6 s, build 38 s, tests passed, 52 s in total.
 
 ## D-021 Publication: drawings removed from history, AGPL-3.0 licence
 Date: 2026-10-12 · Status: accepted (owner decisions before the first GitHub publication)
@@ -309,3 +309,54 @@ Decision:
 - README rewritten for the current state, with a non-affiliation / trademark disclaimer.
 Consequences: A pre-rewrite git bundle was kept outside the repository during the change. Contributions
 are under AGPL-3.0.
+
+## D-022 Harness fixes from M0 step 8: junction DC level, vector selection
+Date: 2026-10-12 · Status: accepted
+Context: The first `compare` runs on every block found two harness defects.
+1. `spice.tran` replaced a testbench's `Vin` with the signal itself, so for blocks driven by a junction
+   source (b3, b4, b56) the transient started from an operating point with that source at 0 V instead
+   of its F value (e.g. k2b at 0 V instead of 232 V in b4). Capacitor coupling and linearity kept the
+   AC results of these blocks unaffected, but internal node DC levels were wrong. The P chain (partition
+   studies) was not affected: it drives `Vin` with the absolute upstream voltage.
+2. `tran` and `impedance` named their output vectors in the control-language `write` command, and `ac`
+   built `v(out)/v(in)` there. Node names that are operators in that language (`ne`, `gt`, `and`, ...)
+   then fail; B4's tone-stack node nE stopped the b4 render.
+Decision:
+1. Standalone signals ride on the DC value of the block's `Vin` (`render_spice.block_input`): the
+   junction source's operating point, 0 V for the guitar input. The engine gets the same samples through
+   `run_engine`, so a block's input WAV is the absolute junction source voltage (VERIFICATION §4).
+   A test checks that b3, b4 and b56 transients start at the F operating point.
+2. Vectors are selected with a netlist `.save` line and `write <file>` without arguments; `ac` divides
+   in Python. A test uses nodes named ne, gt and and.
+Consequences: SPICE cache keys changed (renders before this fix are not reused). The junction
+measurement report is byte-identical after the change. The M0 step 8 compare runs were restarted.
+
+## D-023 Output transformer from the Hammond 1750U datasheet (netlist change)
+Date: 2026-10-12 · Status: accepted (owner approval of the netlist change; PROGRESS.md Q8)
+Context: The OT values in the reference netlist were assumptions (A2: 25 H, k = 0.999, 40 Ω per
+half-primary, 0.3 Ω secondary). The owner supplied the datasheet of the Hammond 1750U, a drop-in
+replacement for the JMP / JCM800 100 W OT: DCR 15.36 Ω (Blue–White), 16.56 Ω (White–Red), 0.320 Ω
+(Violet–Green, 16 Ω tap); 8.85 H primary and 88.86 mH secondary (16 Ω tap) at 1 V / 1 kHz; leakage
+7.97 mH (secondary shorted); response and phase curves at 27 dBu in a test circuit with RS/2 = 850 Ω at
+each primary end. In that test circuit the old values gave −1.6 dB at 10 kHz and −7.0 dB at 30 kHz,
+against ≈ −0.2 dB and ≈ −0.85 dB measured.
+Decision (owner choices: adopt and fit to the curves; nominal turns ratio; asymmetric DCRs with
+Blue–White on the pA side):
+- `reference/spice/jcm800_2203.cir`: Rwp1 15.36 Ω (pA side), Rwp2 16.56 Ω (pB side), Rws 0.320 Ω;
+  `npr` = sqrt(1700/16) unchanged; new `.param kot=0.9997925` for K1–K3 (from the 7.97 mH leakage);
+  `lpt` = 25.61 H fitted to the datasheet's 16 Ω response and phase curves (readings in
+  `harness/ot_fit.py`, ±0.05 dB / ±1°). The fit also allowed a plate-to-plate capacitance and set it to
+  zero, so no element was added. Residuals: magnitude ≤ 0.15 dB, phase ≤ 1.3°.
+- `python -m harness.ot_fit` reproduces the fit; `--check` (and a harness test) verifies the netlist
+  against the datasheet (DCRs, shorted-secondary inductance within 0.1 %, curve residuals ≤ 0.2 dB /
+  1.5°).
+- New open item O7: which half-primary goes to which EL34 pair.
+Alternatives: the 1 V inductances as given (8.85 H; the 27 dBu curves imply ≈ 25.6 H, so the low end
+would roll off too early); the measured inductance ratio for n² (99.6); averaged DCRs; keeping the
+assumptions.
+Consequences: DC changes are small: ct 488.444 V (was 488.445), plates pA/pB 487.38 / 487.30 V (were
+485.67 V), EL34 currents unchanged to 4 digits, preamp supplies change by 1e-9 relative. b6's known
+out/sl deviation is now 42.4 µV (was 39.8 µV). NFB unchanged (6.2 dB at 1 kHz). Clean power at the same
+inputs rises by 2–6 % (≈ 103 / 136 / 154 W at 25 / 30 / 40 mV). CIRCUIT §3, §5 and §6, reference/README,
+README and the testbenches are regenerated; all SPICE renders are redone. The model remains a linear
+transformer: no level-dependent inductance, core loss, winding capacitance or saturation.

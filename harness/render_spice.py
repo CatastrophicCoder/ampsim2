@@ -24,6 +24,13 @@ def _require_standalone(block):
             'chained P renders arrive with M4')
 
 
+def block_input(block, sig):
+    """Input samples of a block for a standalone signal: the signal rides on the DC value of the block's
+    `Vin` source (the junction source's operating point; 0 V for the guitar input), so SPICE and the
+    engine start from the same operating point as F. The engine gets the same samples (DECISIONS D-022)."""
+    return sig.x + (spice.vin_dc(block.path.read_text()) or 0.0)
+
+
 def select_signals(block, preset, pattern=None):
     _require_standalone(block)
     sigs = preset.signals(block)
@@ -43,7 +50,7 @@ def render(block, preset, signals, jobs=None, log=print):
 
     def one(sig):
         t0 = time.time()
-        res = spice.tran(text, knobs, sig.x, nodes)
+        res = spice.tran(text, knobs, block_input(block, sig), nodes)
         log(f'  spice {block.id}/{preset.id}/{sig.id}: {len(sig.x) / config.FS:.3f} s signal, {time.time() - t0:.1f} s')
         return sig.id, res
 

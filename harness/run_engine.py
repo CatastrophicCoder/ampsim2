@@ -10,7 +10,7 @@ import subprocess
 from . import config
 from .blocks import BLOCKS
 from .presets import PRESETS
-from .render_spice import select_signals
+from .render_spice import block_input, select_signals
 from .wavio import read_wav, write_wav
 
 
@@ -40,9 +40,9 @@ def run(block, preset, signals, log=print):
     for sig in signals:
         d = config.RENDER_DIR / 'engine' / block.id / preset.id / sig.id
         d.mkdir(parents=True, exist_ok=True)
-        sig_wav = config.RENDER_DIR / 'signals' / f'{sig.id}.wav'
+        sig_wav = config.RENDER_DIR / 'signals' / block.id / f'{sig.id}.wav'
         sig_wav.parent.mkdir(parents=True, exist_ok=True)
-        write_wav(sig_wav, sig.x)
+        write_wav(sig_wav, block_input(block, sig))
         base = ['--block', block.engine_block, '--in', str(sig_wav), '--rate', str(config.FS), *params]
 
         # timing run without node dumps (block-wise processing), then a run with dumps

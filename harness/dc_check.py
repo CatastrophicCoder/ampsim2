@@ -18,7 +18,7 @@ TESTBENCHES = ('b12', 'b3', 'b4', 'b56', 'b5open', 'b6', 'b123')
 # b6 out/sl: accepted by the owner as a known partition effect (PROGRESS Q5, DECISIONS D-015).
 KNOWN = {
     ('b6', 'out'): 'Accepted known partition effect (DECISIONS D-015), not a transcription error: in F, R22 (B5) injects '
-                   'v(nG)/100 kΩ ≈ 135 µA into node out, giving 135 µA × (16 Ω ‖ 0.3 Ω) ≈ 40 µV. '
+                   'v(nG)/100 kΩ ≈ 135 µA into node out, giving 135 µA × (16 Ω ‖ 0.32 Ω) ≈ 42 µV. '
                    'B6 does not contain R22 (SPEC §4.2), so out = 0 V there.',
     ('b6', 'sl'): 'Same cause as out (sl is out through the secondary inductance, DC short).',
 }

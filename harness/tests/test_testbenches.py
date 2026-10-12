@@ -57,6 +57,18 @@ class TestGeneratedTestbenches(unittest.TestCase):
         with self.assertRaises(spice.SpiceError):
             spice.tran(text, {}, signals.sine(1000.0, 1.0, seconds=0.001).x, ['k2b'])
 
+    def test_standalone_transient_starts_from_the_f_operating_point(self):
+        # the junction source carries its DC operating point (D-022): first transient sample = F op
+        from harness.blocks import BLOCKS
+        from harness.render_spice import block_input
+        from harness.testbench_gen import f_operating_point
+        v_f, _ = f_operating_point()
+        for bid, node in (('b3', 'k2b'), ('b4', 'k2b'), ('b56', 'p3a')):
+            block = BLOCKS[bid]
+            sig = signals.sine(1000.0, block.levels['nominal'], seconds=0.0005)
+            res = spice.tran(block.path.read_text(), {}, block_input(block, sig), [node])
+            self.assertAlmostEqual(res[node][0] / v_f[node], 1.0, delta=1e-6, msg=f'{bid} {node}')
+
     def test_committed_testbenches_have_no_pending_junctions(self):
         for path in config.TESTBENCH_DIR.glob('*.cir'):
             self.assertNotIn(spice.PENDING_MARK, path.read_text(), path.name)

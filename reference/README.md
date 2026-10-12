@@ -30,15 +30,22 @@ C5 1 nF across Preamp Volume top-to-wiper; "50+50 µF" cans modelled as 50 µF p
 16 Ω tap; Low input not modelled.
 
 ## Assumed values (not on the schematic)
-HT source 505 V behind 100 Ω; OT 1.7 kΩ : 16 Ω, 25 H primary, k = 0.999, 40 Ω per half-primary;
-choke 5 H / 60 Ω; bias −60 V at the C20 node with RV1 = 4 kΩ; generic Koren tube parameters; resistive
+HT source 505 V behind 100 Ω; choke 5 H / 60 Ω; bias −60 V at the C20 node with RV1 = 4 kΩ; generic Koren tube parameters; resistive
 16 Ω load; ideal guitar source.
+
+## Output transformer (Hammond 1750U datasheet)
+OT 1.7 kΩ : 16 Ω (nominal ratio), DCR 15.36 / 16.56 Ω per half-primary (Blue–White on the pA side) and
+0.320 Ω secondary, coupling k = 0.9997925 from the 7.97 mH leakage inductance, primary inductance 25.61 H
+fitted to the datasheet's 27 dBu response and phase curves (`python -m harness.ot_fit`). The 1750U is
+Hammond's drop-in replacement for the original part; see `docs/CIRCUIT.md` §3 and `docs/DECISIONS.md`
+D-023.
 
 ## Sanity results
 - DC: B+ 488 V, screens 487 V, PI supply 403 V, preamp supply 390 V; EL34 34.7 mA plate + 4.65 mA screen
   per tube (≈ 17 W plate dissipation, ≈ 68 % of 25 W).
-- Global NFB ≈ 6 dB (verified negative by removing R22).
-- Clean power (Preamp 2, Master 10, 1 kHz): ≈ 101 W at 2.8 % THD, ≈ 130 W at 3.8 %, ≈ 145 W at 9.6 %.
+- Global NFB ≈ 6 dB: 6.7 / 6.2 / 6.1 dB at 100 Hz / 1 kHz / 5 kHz (verified negative by removing R22).
+- Clean power (Preamp 2, Master 10, 1 kHz; input 25 / 30 / 40 mV peak): ≈ 103 W at 2.9 % THD,
+  ≈ 136 W at 3.2 %, ≈ 154 W at 9.5 % (before D-023: 101 W / 130 W / 145 W at 2.8 / 3.8 / 9.6 %).
 - Overdrive (Preamp 8, Master 3, 300 mV @ 220 Hz): V2a is the main clipping stage; B+ sags ≈ 20 V.
 - Speed: ≈ 27x slower than real time for the full amp.
 

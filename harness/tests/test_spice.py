@@ -57,6 +57,23 @@ class TestSpice(unittest.TestCase):
         np.testing.assert_allclose(np.abs(z['in']), 0.0, atol=1e-9)
         self.assertTrue(np.any(np.isclose(f, 1000.0, rtol=1e-12)))
 
+    def test_node_names_that_are_control_language_operators(self):
+        # `ne`, `gt` and `and` are operators in ngspice's control language (B4 has a node nE)
+        tb = '* operator names\nVin ne 0 DC 0 AC 1\nR1 ne gt 1k\nR2 gt and 1k\nR3 and 0 2k\n'
+        x = signals.sine(1000.0, 1.0, seconds=0.002).x
+        res = spice.tran(tb, {}, x, ['gt', 'and', 'ne'])
+        np.testing.assert_allclose(res['gt'], 0.75 * x, atol=1e-9)
+        np.testing.assert_allclose(res['and'], 0.5 * x, atol=1e-9)
+        _, h = spice.ac(tb, {}, 'and', 'ne')
+        np.testing.assert_allclose(h, 0.5, rtol=1e-9)
+        _, z = spice.impedance(tb, {}, 'gt', ('and',))
+        np.testing.assert_allclose(z['gt'], 1e3 * 3e3 / 4e3, rtol=1e-9)
+
+    def test_vin_dc(self):
+        self.assertEqual(spice.vin_dc('* t\nVin j3s 0 DC 232.5 AC 1\n'), 232.5)
+        self.assertEqual(spice.vin_dc(DIVIDER), 0.0)
+        self.assertIsNone(spice.vin_dc('* t\nVrec_a a 0 DC 1\n'))
+
     def test_apply_params_substitutes_known_params_only(self):
         text = spice.apply_params('.param vol=0.6 master=0.3\n.include tubes.lib\n',
                                   {'preampVolume': 0.8, 'presence': 1.0})
