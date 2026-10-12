@@ -167,7 +167,7 @@ Notes:
 - [x] MNA scattering builder (C++) + numpy reference + cross-check test — C++ in double-double, Python
   reference in exact rationals (Q11, D-026)
 - [x] Adaptor sanity tests (series/parallel equivalence, losslessness, reflection-free up-port)
-- [ ] `ToneStackMaster` block with smoothing and rate-limited updates
+- [x] `ToneStackMaster` block with smoothing and rate-limited updates (D-027)
 - [ ] Magnitude (5×5×5×3 settings) and time-domain checks; knob-jump test
 - [ ] M1 report
 Plan (2026-10-13; follows SPEC §7 M1, WDF_DESIGN §2, §5, §6 and VERIFICATION §6–7):
@@ -220,6 +220,10 @@ Notes:
 - 2026-10-13 Step 1 done: `harness/mna.py` (exact rationals), `engine/src/mna/` (double-double),
   fixtures `tests/data/rtype_fixtures.txt` (`python -m harness.mna --fixtures`, `--check`), Catch2
   tests `test_mna.cpp` (fixtures 1e-12, §5.5 checks, library parallel/series equivalence).
+- 2026-10-13 Step 2 done: `ToneStackMaster` (`engine/include/amp2203/ToneStackMaster.h`), `DcCapacitor`,
+  tapers and knob smoother, ampwav `--block b4`, `amp2203_bench b4`. First SPICE comparison (PIPE,
+  1 kHz 1 V): ESR −90.3 dB, best lag 0, DC exact. Cost: 31.7 ns/sample static, 7.3 µs per matrix
+  update, 262 ns/sample with knobs moving (D-027). Catch2: 21 tests.
 
 ## M2 — B12: V1a and V1b with a joint triode root
 - [ ] 12AX7 model + Wright omega grid current + Jacobian; device unit tests

@@ -409,3 +409,29 @@ Decision:
   also pins the port orientation: the library's series adaptor presents −(v1 + v2) upwards).
 Consequences: The WDF_DESIGN §5.5 tolerances stay as written. A matrix update costs more than in plain
 double; the cost is measured with the ToneStackMaster block (M1 step 2).
+
+## D-027 ToneStackMaster (B4) structure, DC start, smoothing and matrix-update interval
+Date: 2026-10-13 · Status: accepted
+Context: SPEC §7 M1.2, WDF_DESIGN §5.2–5.4, SPEC §3.6 and §6.2.
+Decision:
+- Tree: `IdealVoltageSourceT` (J3 source voltage, absolute volts) → `PolarityInverterT` →
+  `WDFSeriesT`(R_th3, R-type) → `RtypeAdaptor` with up-port index 0 (k2b–ground, reflection-free) and
+  the 11 B4 elements as down-ports (port order and node order = `engine/src/tonestack/ToneStackNetwork.h`
+  = `harness/mna.py` B4_PORTS). The library's `RootRtypeAdaptor` is not used: its `compute()` scatters
+  the incident waves stored by the previous call, a one-sample delay of the source. R_th3 = 360.137 Ω
+  (junctions.py). Pots exactly as the netlist (SPEC §6.1).
+- `reset(vInDc)`: DC node voltages from `mna::solveDc` (J3 source as a Norton equivalent, capacitors
+  open) written into the capacitor states. The capacitors are `detail::DcCapacitor`, the library's
+  bilinear capacitor equations plus a settable DC state (a test checks it against `CapacitorT`
+  sample for sample). Knobs jump to their targets.
+- Smoothing: one-pole on each knob rotation (`paramSmoothingMs`, 20 ms), settled within 1e-7. While a
+  knob moves, the pots and the scattering matrix are recomputed every `kParamUpdateInterval` = 32
+  samples (one R-type computation per update via `ScopedDeferImpedancePropagation`), plus one final
+  update on the targets.
+- R_th4 for J4: the D-015 formula from the smoothed knobs, also exposed as probe `rth4` (ohms).
+- ampwav `--block b4` runs the block; it resets on the first input sample (signals start at the
+  operating point).
+Cost (amp2203_bench b4, Apple M-series, Release, 384 kHz): 31.7 ns/sample with static knobs (1.2 % of
+the 2.6 µs/sample budget); one matrix update ≈ 7.3 µs (double-double, D-026); with knobs moving
+continuously 262 ns/sample (≈ 10 % of the budget, only while a knob moves). This fits the audio thread,
+so no worker thread (WDF_DESIGN §5.4); the interval stays at 32.

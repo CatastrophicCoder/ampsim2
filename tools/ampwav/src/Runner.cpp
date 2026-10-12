@@ -1,5 +1,7 @@
 #include "Runner.h"
 
+#include "amp2203/ToneStackMaster.h"
+
 #include <algorithm>
 #include <cctype>
 
@@ -31,6 +33,32 @@ public:
 private:
     amp2203::EngineConfig cfg_{};
     amp2203::Amp2203 amp_;
+};
+
+/// B4 ToneStackMaster: input = J3 source voltage (absolute volts), output = v_oc(y). The block starts
+/// from the DC operating point of the first input sample (every harness signal starts there).
+class ToneStackRunner final : public Runner {
+public:
+    void prepare(double sampleRate, int) override {
+        block_.prepare(sampleRate, amp2203::EngineConfig{}.paramSmoothingMs);
+        started_ = false;
+    }
+    void setParams(const amp2203::Params& p) override { block_.setParams(p); }
+
+    void processVolts(double* v, int numSamples) noexcept override {
+        if (numSamples > 0 && !started_) {
+            block_.reset(v[0]);
+            started_ = true;
+        }
+        for (int n = 0; n < numSamples; ++n)
+            v[n] = block_.process(v[n]);
+    }
+
+    std::span<const amp2203::Probe> probes() const noexcept override { return block_.probes(); }
+
+private:
+    amp2203::ToneStackMaster block_;
+    bool started_ = false;
 };
 
 /// M0 stand-in for a block that is not implemented yet: output = input (volts).
@@ -69,6 +97,8 @@ std::unique_ptr<Runner> makeRunner(std::string_view blockId) {
     const std::string id = lower(blockId);
     if (id == "full")
         return std::make_unique<FullRunner>();
+    if (id == "b4")
+        return std::make_unique<ToneStackRunner>();
     const auto& ids = blockIds();
     if (std::find(ids.begin(), ids.end(), id) != ids.end())
         return std::make_unique<PassThroughRunner>();
