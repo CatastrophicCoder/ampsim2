@@ -1,0 +1,31 @@
+* Koren tube models (N. Koren, 1996/2003 parameter sets)
+* Triode pin order: plate grid cathode
+.subckt 12AX7 p g k params: mu=100 ex=1.4 kg1=1060 kp=600 kvb=300 rgi=2000 ccg=2.3p cgp=2.4p ccp=0.9p
+Be1 e1 0 V = V(p,k)/kp*ln(1+exp(kp*(1/mu+V(g,k)/sqrt(kvb+V(p,k)*V(p,k)))))
+Re1 e1 0 1G
+Bp p k I = 2*pwr(max(V(e1),0),ex)/kg1
+Rcp p k 1G
+Cg g k {ccg}
+Cgp g p {cgp}
+Cpk p k {ccp}
+Rg g gx {rgi}
+Dg gx k DGRID
+.model DGRID D(IS=1n RS=1 CJO=1p TT=1n)
+.ends 12AX7
+
+* Pentode pin order: plate screen grid cathode
+.subckt EL34 p s g k params: mu=11 ex=1.35 kg1=650 kg2=4200 kp=60 kvb=24 rgi=1000 ccg=15p cpg=1p ccp=8p
+Be1 e1 0 V = max(V(s,k),1m)/kp*ln(1+exp(kp*(1/mu+V(g,k)/max(V(s,k),1m))))
+Re1 e1 0 1G
+Bp p k I = 2*pwr(max(V(e1),0),ex)/kg1*atan(V(p,k)/kvb)
+* Screen: same E1 term as plate (Koren form gives ~0 near bias), plus cathode-current
+* conservation: plate current lost to the atan knee is diverted to the screen (modification)
+Bs s k I = 2*pwr(max(V(e1),0),ex)*(1/kg2 + (1.5707963-atan(max(V(p,k),0)/kvb))/kg1)
+Rcp p k 1G
+Cg g k {ccg}
+Cgp g p {cpg}
+Cpk p k {ccp}
+Rg g gx {rgi}
+Dg gx k DGRIDP
+.model DGRIDP D(IS=1n RS=1 CJO=1p TT=1n)
+.ends EL34

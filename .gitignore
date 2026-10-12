@@ -1,0 +1,20 @@
+# build
+build/
+cmake-build-*/
+out/
+# IDE
+.idea/
+.vscode/
+*.xcodeproj/
+.DS_Store
+# python
+__pycache__/
+*.pyc
+.venv/
+# harness caches and renders (reports are committed)
+harness/cache/
+harness/renders/
+*.raw
+# local audio
+reference/di/*.wav
+!reference/di/README.md

@@ -1,0 +1,123 @@
+* Marshall JCM800 2203 (Marshall drawings 2203 STD Preamp iss.4 + Output Stage & PSU iss.6)
+* Reference model. Knob params are rotations 0..1. See ASSUMPTIONS in README.
+.include tubes.lib
+.param vol=0.6 treble=0.5 middle=0.5 bass=0.5 master=0.3 presence=0.5
+.param rv1=4k vnl=505 rsrc=100
+.func atap(x) {max((pwr(81,x)-1)/80,1e-4)}
+.func ltap(x) {max(min(x,0.9999),1e-4)}
+
+*** Input (High jack J1)
+Vin in 0 DC 0 AC 1
+R2 in 0 1Meg
+R3 in g1a 68k
+
+*** V1a
+X1a p1a g1a k1a 12AX7
+R1 k1a 0 2.7k
+C1 k1a 0 0.68u
+R4 bpA p1a 100k
+C3 p1a nA 0.022u
+
+*** 470k/470p into Preamp Vol (VR1 1M log), C5 1n top-to-wiper
+R5 nA vtop 470k
+C4 nA vtop 470p
+C5 vtop w1 1n
+RVR1a vtop w1 {1Meg*(1-atap(vol))+1}
+RVR1b w1 0 {1Meg*atap(vol)+1}
+
+*** V1b
+X1b p1b w1 k1b 12AX7
+R6 k1b 0 10k
+R7 bpA p1b 100k
+C7 p1b nB 0.022u
+R10 nB g2a 470k
+C8 nB g2a 470p
+R11 g2a 0 470k
+
+*** V2a gain stage, direct-coupled V2b cathode follower
+X2a p2a g2a k2a 12AX7
+R9 k2a 0 820
+R12 bpX p2a 100k
+X2b bpX p2a k2b 12AX7
+R13 k2b 0 100k
+
+*** Tone stack (drawn: C12 to Middle wiper, Bass wiper tied to its top)
+C10 k2b tt 470p
+R15 k2b nD 33k
+C11 nD nE 0.022u
+C12 nD mw 0.022u
+RVR3a tt tw {220k*(1-ltap(treble))}
+RVR3b tw nE {220k*ltap(treble)}
+RVR5 nE nbb {1Meg*atap(bass)+1}
+RVR4a nbb mw {22k*(1-ltap(middle))}
+RVR4b mw 0 {22k*ltap(middle)}
+* Master (VR2 1M log), fed from Treble wiper via link 'R14'
+RVR2a tw y {1Meg*(1-atap(master))+1}
+RVR2b y 0 {1Meg*atap(master)+1}
+
+*** Phase inverter V3 (long-tail pair) with NFB + Presence
+C9 y g3a 0.022u
+R17 g3a nF 1Meg
+R16 k3 nF 470
+R19 nF g3b 1Meg
+C15 g3b nG 0.1u
+R20 nF nG 10k
+R23 nG 0 4.7k
+C17 nG npr 0.1u
+RVR6 npr 0 {22k*(1-ltap(presence))+1}
+R22 nG out 100k
+X3a p3a g3a k3 12AX7
+X3b p3b g3b k3 12AX7
+R18 bpX p3a 82k
+R21 bpX p3b 100k
+C14 p3a nGn 0.022u
+C16 p3b nOr 0.022u
+C18 nGn nOr 47p
+R24 nGn nbias 220k
+R25 nbias nOr 220k
+C19 nbias 0 10u
+
+*** Bias supply (D1/R30/C20 replaced by ideal negative DC at C20 node)
+Vc20 c20 0 DC -60
+R27 c20 nbias 15k
+R26 nbias nrv 47k
+RRV1 nrv 0 {rv1}
+
+*** Output stage 4x EL34
+R31 nGn g4 5.6k
+R33 nGn g5 5.6k
+R32 nOr g6 5.6k
+R34 nOr g7 5.6k
+R35 s4 nScr 1k
+R37 s5 nScr 1k
+R36 s6 nScr 1k
+R38 s7 nScr 1k
+X4 pA s4 g4 0 EL34
+X5 pA s5 g5 0 EL34
+X6 pB s6 g6 0 EL34
+X7 pB s7 g7 0 EL34
+
+*** Output transformer C2668 (assumed Zpp 1.7k : 16R, Lp 25H)
+.param lpt=25 npr={sqrt(1700/16)}
+Lp1 pA1 ct {lpt/4}
+Lp2 ct pB1 {lpt/4}
+Ls out sl {lpt/(npr*npr)}
+Rwp1 pA pA1 40
+Rwp2 pB1 pB 40
+Rws sl 0 0.3
+K1 Lp1 Lp2 0.999
+K2 Lp1 Ls 0.999
+K3 Lp2 Ls 0.999
+Rload out 0 16
+
+*** HT supply (rectifier + mains TX approximated as DC source behind rsrc)
+Vht raw 0 DC {vnl}
+Rsrc raw ct {rsrc}
+C23 ct 0 50u
+Lch ct nch 5
+Rch nch nScr 60
+C22 nScr 0 50u
+R29 nScr bpX 10k
+C21b bpX 0 50u
+R8 bpX bpA 10k
+C21a bpA 0 50u
