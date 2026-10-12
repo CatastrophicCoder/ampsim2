@@ -9,7 +9,7 @@ Legend: [ ] todo · [~] in progress · [x] done · [!] blocked (see note)
 ## M0 — Skeleton and verification harness
 - [x] Top-level CMake, pinned FetchContent (chowdsp_wdf, Catch2, JUCE, Eigen if used); targets build
 - [x] `ampwav` CLI (pass-through engine), 64-bit float WAV I/O
-- [ ] `harness/signals.py`, `render_spice.py`, `run_engine.py`, `compare.py`
+- [x] `harness/signals.py`, `render_spice.py`, `run_engine.py`, `compare.py`
 - [ ] Block testbenches B1–B4, B56(+B7), B5-open, B6, full; DC sanity check vs F (≤ 0.5 %)
 - [ ] Junction Thevenin resistances measured and entered in CIRCUIT.md §4
 - [ ] Device DC sweep CSVs generated into `tests/data/`
@@ -98,6 +98,18 @@ Notes:
   `ampwav_core` so it is unit-tested by `ampwav_tests` (11 Catch2 cases: parsing, WAV round trips,
   end-to-end runs, error paths) plus two CLI smoke tests; ctest 14/14 pass, no warnings. Checked
   that Python `soundfile` reads and writes the same 64-bit float WAVs (round trip within 2e-15 V).
+- 2026-10-12 Step 3 done: harness package (`signals`, `blocks`, `presets`, `spice`, `render_spice`,
+  `run_engine`, `metrics`, `tolerances`, `compare`, `testbench_gen` with `full` only) and 14 unittest
+  cases (`python -m unittest discover -s harness/tests -t .`). `compare --block full --preset PIPE`
+  runs end to end (SPICE render, engine run, metrics, markdown report with plots) in ~11 s.
+  Findings, all in DECISIONS D-014: (1) filesource input drifted off the sample grid, a 1.35e-3
+  low-pass at 5 kHz; fixed with per-sample breakpoints (input now exact). (2) The reference's own
+  accuracy at ngspice's default RELTOL is about −35 dB at `y` and −46 dB at `out` on the full amp at
+  5 kHz, i.e. worse than the −40 dB block-exact tolerance; RELTOL is now a harness setting, still at
+  the default, pending Q4. (3) Octave smoothing biased the sweep magnitude; replaced by per-bin Y/X
+  with a 50 ms sweep tail. Also observed: on the full amp at default knobs the 10 mV SWP-lo is not
+  small-signal (about 1 dB compression around 3–15 kHz; 0.18 dB at 1 mV); this only affects INFO
+  magnitude plots for `full`, the scored magnitude check is B4's.
 
 ## M1 — B4 tone stack + master
 - [ ] MNA scattering builder (C++) + numpy reference + cross-check test
@@ -152,3 +164,5 @@ _(Claude Code: add questions here and also ask them in the session.)_
 - Q1 (M0): git init + baseline commit? — Answered 2026-10-12: yes; repo-local author CatastrophicCoder.
 - Q2 (M0): install ngspice? — Answered 2026-10-12: yes; ngspice 47 installed via Homebrew.
 - Q3 (M0): build the JUCE plugin in CI? — Answered 2026-10-12: no, plugin OFF in CI.
+- Q4 (M0): ngspice RELTOL for reference transients (`harness/config.py: SPICE_RELTOL`). Measurements
+  in DECISIONS D-014; open.

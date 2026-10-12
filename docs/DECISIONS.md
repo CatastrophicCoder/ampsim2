@@ -136,3 +136,33 @@ are dumped, the engine is called one sample at a time; otherwise in `--block-siz
 512), so timing figures should come from runs without dumps.
 Alternatives: Full-scale samples everywhere (the harness would have to know each block's scaling).
 Consequences: SPICE renders and engine outputs are directly comparable without scaling.
+
+## D-014 SPICE transient setup: sample-aligned input, sweep tail, configurable RELTOL
+Date: 2026-10-12 · Status: accepted (RELTOL value: open, see PROGRESS.md Q4)
+Context: M0 step 3 measurements (ngspice 47):
+- An XSPICE filesource creates no breakpoints, so ngspice's internal steps drift off the 384 kHz grid
+  and the input is interpolated twice (filesource, then `option interp`). The circuit input was
+  low-passed by 5.4e-5 at 1 kHz and 1.35e-3 at 5 kHz (load-independent, ∝ f²).
+- PWL sources are exact but their lookup is linear in the number of points (0.5 s at 384 kHz on a
+  single resistor took 52 s).
+- Even with an exact input, ngspice's default RELTOL (1e-3) limits the reference accuracy: an RC
+  low-pass vs its exact continuous response gives −104/−76/−52 dB ESR at 1/5/15 kHz without
+  breakpoints and −92/−78/−67 dB with them; with RELTOL 1e-6, −92/−88/−97 dB. On the full amp
+  (5 kHz, 0.1 V, 50 ms), compared with a RELTOL 1e-7 run: default −46 dB at `out`, −35 dB at `y`;
+  breakpoints −60/−37 dB; +RELTOL 1e-5 −73/−61 dB; +RELTOL 1e-6 −87/−76 dB. Run times 5 / 8 / 23 /
+  41 / 74 s (default / breakpoints / 1e-5 / 1e-6 / 1e-7).
+- Fractional-octave averaging of Y·X* biases the sweep magnitude estimate (0.044 dB on a known
+  filter, because the phase rotates within each band).
+Decision:
+- Keep the filesource and add a dummy PULSE triangle with a corner at every sample (breakpoints), so
+  every sample instant is a simulator time point; the input is then exact (< 1e-10 V).
+- The transient stops half a sample after the last sample and the input file has two hold points.
+- Sweeps (SWP-lo/hi) carry 50 ms of silence after the 2 s sweep; the magnitude response is the per-bin
+  ratio Y/X, complex-interpolated, without smoothing (error 1.3e-4 dB on the known filter).
+- RELTOL for reference transients is one harness setting, `harness/config.py: SPICE_RELTOL`, part of
+  the cache key. It stays at the ngspice default until the owner decides (Q4). op and ac are
+  unaffected.
+Alternatives: PWL input (too slow); inline PWL chunks; accepting the input low-pass (would appear as
+engine error at high frequencies).
+Consequences: Breakpoints cost about 1.6x run time on the full amp. Harness unit tests cover the input
+alignment (1 and 5 kHz, 1e-9 V) and the reference accuracy at RELTOL 1e-6.

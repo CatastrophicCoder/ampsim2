@@ -44,13 +44,16 @@ Feedback and supply exceptions:
   `option interp` approach used in `spice_tools.py`), so that SPICE output samples align 1:1 with the
   engine's samples at 384 kHz. Both start from the DC operating point; no time alignment is applied.
   The comparison reports the best lag within ±2 samples as a diagnostic; a non-zero best lag is a bug.
+  Implementation (DECISIONS D-014): XSPICE filesource input plus a dummy PULSE source with a corner at
+  every sample, so every sample instant is a simulator time point; ngspice RELTOL is set in
+  `harness/config.py`.
 
 ## 3. Test signals (generated at 384 kHz by `harness/signals.py`)
 
 | ID | Signal | Notes |
 |---|---|---|
 | SIN | Sines at 100 Hz, 1 kHz, 5 kHz; 150 ms each | Amplitudes per block, see §4 |
-| SWP-lo | Exponential sweep 20 Hz–20 kHz, 2 s, small-signal level | Frequency response in the linear region |
+| SWP-lo | Exponential sweep 20 Hz–20 kHz, 2 s, small-signal level, then 50 ms silence | Frequency response in the linear region (per-bin Y/X, D-014) |
 | SWP-hi | Same sweep at nominal block level | Nonlinear frequency behaviour |
 | TT | Two tones 220 Hz + 330 Hz, equal level, 300 ms | Intermodulation (power-chord-like) |
 | BURST | 1 kHz: 50 ms low, 300 ms high (+30 dB), 300 ms low | Blocking / bias-shift recovery |

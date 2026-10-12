@@ -53,12 +53,14 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ./build/tools/bench/amp2203_bench                          # real-time factor, 60 s at 48 kHz x 8
 ./build/tools/ampwav/ampwav --block full --in in.wav --out out.wav --rate 384000 --param preampVolume=0.6   # --help for all options
+source .venv/bin/activate                                  # harness commands below need the venv
+python -m harness.testbench_gen                            # regenerate harness/testbenches/*.cir (--check)
+python -m harness.render_spice --block <id> --preset <id>  # SPICE reference (cached in harness/cache/)
+python -m harness.run_engine --block <id> --preset <id>
+python -m harness.compare --block <id> --preset <id> --milestone M<n>   # renders + runs + report
+python -m unittest discover -s harness/tests -t .          # harness unit tests
 ```
-Planned (created in M0; keep this section updated as they appear):
-```bash
-python -m harness.render_spice --block <id> --preset <id>
-python -m harness.compare --block <id> --preset <id> --milestone M<n>
-```
+Planned (created in M0; keep this section updated as they appear): none left for M0 step 3.
 
 ## Definition of done
 Builds without warnings, tests pass, harness report regenerated and within tolerance (or deviation
