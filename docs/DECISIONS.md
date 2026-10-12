@@ -92,3 +92,33 @@ comparing against real hardware later.
 Consequences: SPICE/harness tests are in volts and unaffected; only the scaling of DI recordings and of
 plugin input changes.
 
+
+## D-011 Dependency pins
+Date: 2026-10-12 · Status: accepted
+Context: SPEC §2 requires every third-party dependency to be pinned and recorded here.
+Decision: FetchContent from GitHub source archives of fixed commits, verified by SHA-256
+(`cmake/Dependencies.cmake`):
+| Dependency | Pin | Commit | Archive SHA-256 |
+|---|---|---|---|
+| chowdsp_wdf | main (no tag) | 43bcd295e8403de913f9966f4fd7ff9d17c9f1a5 (2026-07-02) | 4fa7919de8ee893ea3810e5a46728a8fdf04d319dea51359670bed90a29eeb70 |
+| Catch2 | v3.16.1 | 5010924c4d8e912e64fd64a11819eecacf572c06 | 66e15ad3f8896fb1a4ef9a868b1de573be766f45c9495eb3c4ba4cc944ea4e22 |
+| dr_libs (dr_wav) | wav-0.14.5 | fa931f3285ced10ace628f7f1ac951e1951e7ea6 | b56be5930399b9ea81591a837e0c9ee959a5d57e90dac96e0af37dde1fa0bb7e |
+| JUCE (plugin only) | 8.0.15 | 91ad83ae34a81e0833b1a2b0866f54846370ae53 | 04f8d5055382582c757be9da069ea98338005f98248facd9c2804435ac853e70 |
+Eigen is not fetched; whether it is used is decided in M1.
+Alternatives: chowdsp_wdf tag v1.0.0 (2022-12-15, 17 commits older). It lacks the 2026-07-02 change to
+the adapted R-type up-port reflection (computed from the current incident waves instead of returned
+from `b_vec`), SIMD comparison fixes, the open/short compile fix and the user-supplied Omega option.
+The owner chose the main commit. JUCE 9.x exists (9.0.4) but SPEC §2 specifies 8.x, so the latest 8.x
+tag is used. Git clones were not used because the JUCE history is large; archives with a hash give
+the same pinning.
+Consequences: If GitHub ever regenerates an archive with different bytes, the hash check fails loudly;
+the fix is to switch that dependency to `GIT_REPOSITORY` + `GIT_TAG <commit>` (same pin).
+
+## D-012 Engine API additions to SPEC §3.2
+Date: 2026-10-12 · Status: accepted
+Decision: `Amp2203` additionally has `process(double*, int) noexcept` (ampwav and tests run in double
+end to end) and `probes()`, returning `{name, const double*}` pairs for `ampwav --dump-node`. Probes
+point at members the blocks update anyway, so they cost nothing in the plugin; the class is
+non-copyable because of these pointers. The M0 pass-through is the identity in volts
+(v_speaker = v_in), so normalised output = input · inputVoltsPerFullScale / outputVoltsPerFullScale.
+Consequences: SPEC §3.2 remains the minimum API; the plugin uses only the float overload.

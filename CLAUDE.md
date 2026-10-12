@@ -48,12 +48,13 @@ harness. Work proceeds in milestones M0–M5 defined in `docs/SPEC.md`.
 Available now:
 ```bash
 python3 reference/spice/spice_tools.py           # prints the SPICE DC operating point
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release   # add -DAMP2203_BUILD_PLUGIN=OFF to skip JUCE
+cmake --build build
+ctest --test-dir build --output-on-failure
+./build/tools/bench/amp2203_bench                          # real-time factor, 60 s at 48 kHz x 8
 ```
 Planned (created in M0; keep this section updated as they appear):
 ```bash
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-ctest --test-dir build --output-on-failure
 ./build/tools/ampwav/ampwav --block full --in in.wav --out out.wav --rate 384000 --param preampVolume=0.6
 python -m harness.render_spice --block <id> --preset <id>
 python -m harness.compare --block <id> --preset <id> --milestone M<n>

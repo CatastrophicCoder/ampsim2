@@ -7,7 +7,7 @@ risks) and wait for the owner's go-ahead if the plan deviates from SPEC.md.
 Legend: [ ] todo · [~] in progress · [x] done · [!] blocked (see note)
 
 ## M0 — Skeleton and verification harness
-- [ ] Top-level CMake, pinned FetchContent (chowdsp_wdf, Catch2, JUCE, Eigen if used); targets build
+- [x] Top-level CMake, pinned FetchContent (chowdsp_wdf, Catch2, JUCE, Eigen if used); targets build
 - [ ] `ampwav` CLI (pass-through engine), 64-bit float WAV I/O
 - [ ] `harness/signals.py`, `render_spice.py`, `run_engine.py`, `compare.py`
 - [ ] Block testbenches B1–B4, B56(+B7), B5-open, B6, full; DC sanity check vs F (≤ 0.5 %)
@@ -87,6 +87,12 @@ Notes:
   created from `requirements.txt`. `spice_tools.py` operating point reproduces CIRCUIT.md §5 exactly.
   XSPICE `filesource` works in this build, so recorded signals are driven with `filesource` (no PWL
   fallback needed).
+- 2026-10-12 Step 1 done: CMake skeleton with all five targets; pins in DECISIONS D-011 (chowdsp_wdf
+  at main 43bcd29 by owner's choice, JUCE 8.0.15, Catch2 v3.16.1, dr_wav 0.14.5). A clean configure +
+  build (Release, plugin ON) takes ~34 s with zero warnings and produces AU, VST3 and Standalone.
+  ctest: 3/3 pass (pass-through silence/identity, chowdsp_wdf divider with the wdft API).
+  `ampwav` is a stub until step 2; `amp2203_bench` runs the pass-through (RTF ≈ 990, meaningless
+  until real blocks exist). API additions (double `process`, probes) in DECISIONS D-012.
 
 ## M1 — B4 tone stack + master
 - [ ] MNA scattering builder (C++) + numpy reference + cross-check test
