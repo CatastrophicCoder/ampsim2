@@ -122,3 +122,17 @@ point at members the blocks update anyway, so they cost nothing in the plugin; t
 non-copyable because of these pointers. The M0 pass-through is the identity in volts
 (v_speaker = v_in), so normalised output = input · inputVoltsPerFullScale / outputVoltsPerFullScale.
 Consequences: SPEC §3.2 remains the minimum API; the plugin uses only the float overload.
+
+## D-013 ampwav I/O conventions
+Date: 2026-10-12 · Status: accepted
+Context: The harness compares engine output with SPICE node voltages; the engine API works in
+full-scale samples (SPEC §3.3).
+Decision: `ampwav` WAV samples are volts at the block's input and output by default (`--units volts`),
+for every block including `full`; `--units fs` (full amp only) uses full-scale samples as the plugin
+sees them. Output and node dumps are mono 64-bit float WAV. The input must be mono and its rate must
+equal `--rate` (no resampling, D-007). Block ids follow VERIFICATION §1: `full`, `b1`..`b7`, `b56`
+(case-insensitive). `--stats` writes timing and Newton statistics as JSON for the reports. When nodes
+are dumped, the engine is called one sample at a time; otherwise in `--block-size` chunks (default
+512), so timing figures should come from runs without dumps.
+Alternatives: Full-scale samples everywhere (the harness would have to know each block's scaling).
+Consequences: SPICE renders and engine outputs are directly comparable without scaling.

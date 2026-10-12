@@ -1,0 +1,44 @@
+#pragma once
+
+#include <iosfwd>
+#include <optional>
+#include <string>
+#include <vector>
+
+#include "amp2203/Amp2203.h"
+
+namespace ampwav {
+
+enum class Units {
+    Volts,      // WAV samples are volts at the block input/output (default; matches SPICE)
+    FullScale,  // WAV samples are full-scale normalised, as the plugin sees them (full amp only)
+};
+
+struct NodeDump {
+    std::string node;
+    std::string path;
+};
+
+struct Options {
+    std::string block = "full";
+    std::string inPath;
+    std::string outPath;
+    std::optional<double> rate;  // must equal the input file's rate when given (no resampling, D-007)
+    amp2203::Params params;
+    std::vector<NodeDump> dumps;
+    std::string statsPath;       // optional JSON with timing and Newton statistics
+    Units units = Units::Volts;
+    int blockSize = 512;
+    bool listNodes = false;
+    bool help = false;
+};
+
+/// Parses argv[1..]. Returns std::nullopt and sets `error` on invalid input.
+std::optional<Options> parseArgs(const std::vector<std::string>& args, std::string& error);
+
+void printUsage(std::ostream& os);
+
+/// Runs the whole CLI job. Returns the process exit code (0 ok, 1 runtime error).
+int run(const Options& opts, std::ostream& log);
+
+}  // namespace ampwav

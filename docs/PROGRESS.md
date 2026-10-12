@@ -8,7 +8,7 @@ Legend: [ ] todo · [~] in progress · [x] done · [!] blocked (see note)
 
 ## M0 — Skeleton and verification harness
 - [x] Top-level CMake, pinned FetchContent (chowdsp_wdf, Catch2, JUCE, Eigen if used); targets build
-- [ ] `ampwav` CLI (pass-through engine), 64-bit float WAV I/O
+- [x] `ampwav` CLI (pass-through engine), 64-bit float WAV I/O
 - [ ] `harness/signals.py`, `render_spice.py`, `run_engine.py`, `compare.py`
 - [ ] Block testbenches B1–B4, B56(+B7), B5-open, B6, full; DC sanity check vs F (≤ 0.5 %)
 - [ ] Junction Thevenin resistances measured and entered in CIRCUIT.md §4
@@ -93,6 +93,11 @@ Notes:
   ctest: 3/3 pass (pass-through silence/identity, chowdsp_wdf divider with the wdft API).
   `ampwav` is a stub until step 2; `amp2203_bench` runs the pass-through (RTF ≈ 990, meaningless
   until real blocks exist). API additions (double `process`, probes) in DECISIONS D-012.
+- 2026-10-12 Step 2 done: `ampwav` with the full SPEC §7 M0.2 command line plus `--units`,
+  `--block-size`, `--stats` and `--list-nodes` (conventions in DECISIONS D-013). Code lives in
+  `ampwav_core` so it is unit-tested by `ampwav_tests` (11 Catch2 cases: parsing, WAV round trips,
+  end-to-end runs, error paths) plus two CLI smoke tests; ctest 14/14 pass, no warnings. Checked
+  that Python `soundfile` reads and writes the same 64-bit float WAVs (round trip within 2e-15 V).
 
 ## M1 — B4 tone stack + master
 - [ ] MNA scattering builder (C++) + numpy reference + cross-check test

@@ -1,11 +1,22 @@
-// ampwav — WAV in -> engine block -> WAV out. Placeholder; the command line (SPEC §7 M0.2) is
-// implemented in M0 step 2.
-#include <cstdio>
+// ampwav — WAV in -> engine block -> WAV out (SPEC §7 M0.2). See `ampwav --help`.
+#include <iostream>
+#include <string>
+#include <vector>
 
-int main() {
-    std::fprintf(stderr,
-                 "usage: ampwav --block <name|full> --in in.wav --out out.wav --rate 384000 "
-                 "[--param name=value ...] [--dump-node name=file.wav ...]\n"
-                 "ampwav: not implemented yet (M0 step 2)\n");
-    return 2;
+#include "src/Cli.h"
+
+int main(int argc, char** argv) {
+    const std::vector<std::string> args(argv + 1, argv + argc);
+    std::string error;
+    const auto opts = ampwav::parseArgs(args, error);
+    if (!opts) {
+        std::cerr << "ampwav: " << error << "\n\n";
+        ampwav::printUsage(std::cerr);
+        return 2;
+    }
+    if (opts->help) {
+        ampwav::printUsage(std::cout);
+        return 0;
+    }
+    return ampwav::run(*opts, opts->listNodes ? std::cout : std::cerr);
 }
