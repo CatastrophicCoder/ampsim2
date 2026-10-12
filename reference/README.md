@@ -1,7 +1,7 @@
 # Reference model: Marshall JCM800 2203 (SPICE)
 
 Transcribed from the Marshall drawings "2203 STD Preamp" (issue 4) and "2203 STD Output Stage & PSU"
-(issue 6), included in `schematics/`. This model is the ground truth for the WDF engine.
+(issue 6); the drawings are not included in the repository (docs/DECISIONS.md D-021). This model is the ground truth for the WDF engine.
 
 ## Files
 - `spice/jcm800_2203.cir` — full amp: preamp, tone stack, master, long-tail-pair PI with NFB and

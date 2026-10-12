@@ -89,7 +89,7 @@ wdf-amp-2203/
 │   ├── run_engine.py           # runs ampwav on the same signals
 │   ├── compare.py              # metrics + markdown/HTML report with plots
 │   └── testbenches/            # per-block ngspice testbenches (generated or hand-written)
-├── reference/                  # SPICE reference model, schematics, plots (already present)
+├── reference/                  # SPICE reference model, plots (already present; drawings not included)
 └── docs/
 ```
 

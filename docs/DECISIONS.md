@@ -234,7 +234,7 @@ Consequences: No J1 partition error by construction. One 4-unknown Newton solve 
 two 2-unknown solves (cost measured in M2). SPEC §7: M2 is now B12 (triode model, multiport Newton, the
 4-port tree); M3 is B3 and the preamp cascade. Tolerances unchanged; the M2 block-exact checks are
 scored at p1b. V1a cannot be checked block-exact on its own in the engine; the triode model keeps its
-device unit tests (VERIFICATION §5.1). The J1 study is reproducible at commit 4838919.
+device unit tests (VERIFICATION §5.1). The J1 study is reproducible at commit a64bf9b.
 
 ## D-018 Junction resistance basis and ESR on the signal minus its own DC operating point
 Date: 2026-10-12 · Status: accepted (owner decisions, PROGRESS.md Q6b and Q7)
@@ -293,3 +293,19 @@ SPICE runs take minutes).
 Consequences: Verified by running the same steps on a fresh clone locally (macOS 15.7, Apple clang 17,
 CMake 4.4.3): configure 4.4 s, build 8 s, 0 warnings, ctest 14/14. The first GitHub run is still to be
 observed once a remote exists; the runner's Xcode/clang version may differ from the local one.
+
+## D-021 Publication: drawings removed from history, AGPL-3.0 licence
+Date: 2026-10-12 · Status: accepted (owner decisions before the first GitHub publication)
+Context: `reference/schematics/` held Marshall's own drawings (2203_preamp.gif,
+2203_output_stage_psu.gif) in every commit; the repository had no licence and no trademark notice.
+Decision:
+- The drawings were removed from all commits with `git filter-branch --index-filter` before the first
+  push (refs/original, reflog and unreachable objects purged; their blobs are no longer in the object
+  store). They stay on the owner's machine, ignored by git (`.gitignore`). CIRCUIT.md, reference/README.md
+  and the README name the drawings by title and issue instead. Every commit hash changed; the only hash
+  cited in the docs (the J1 study, formerly 4838919) is now a64bf9b.
+- Licence: GNU AGPL-3.0 (`LICENSE`, the FSF text), matching JUCE 8's open-source licence option.
+  Dependencies keep their own licences (README "Licence").
+- README rewritten for the current state, with a non-affiliation / trademark disclaimer.
+Consequences: A pre-rewrite git bundle was kept outside the repository during the change. Contributions
+are under AGPL-3.0.

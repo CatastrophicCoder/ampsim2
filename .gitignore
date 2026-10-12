@@ -18,3 +18,5 @@ harness/renders/
 # local audio
 reference/di/*.wav
 !reference/di/README.md
+# Marshall drawings: kept locally, not redistributed (DECISIONS D-021)
+reference/schematics/

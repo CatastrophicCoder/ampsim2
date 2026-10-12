@@ -3,7 +3,7 @@ node). For J2: the P chain b12 -> b3 (b3's J2 source driven by b12's open-circui
 candidate R_th2) is compared with b123, where B12 and B3 are joined directly. Both have the same constant
 supplies, so the difference is the J2 junction alone. Writes
 harness/reports/M0/<YYYYMMDD>_partition_<junction>.md. (The J1 study of 2026-10-12, which led to merging
-B1 and B2, ran at commit 4838919; DECISIONS D-016, D-017.)
+B1 and B2, ran at commit a64bf9b; DECISIONS D-016, D-017.)
 
     python -m harness.partition --junction j2
 """
