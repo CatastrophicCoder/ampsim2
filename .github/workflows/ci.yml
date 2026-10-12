@@ -1,0 +1,38 @@
+# Build the engine, unit tests and CLI tools on macOS and run the tests (SPEC §7 M0.6, DECISIONS D-020).
+# The JUCE plugin and the Python harness are not part of CI (PROGRESS.md Q3, M0 plan step 7).
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Tools
+        run: |
+          command -v ninja >/dev/null || brew install ninja
+          cmake --version | head -1
+          echo "ninja $(ninja --version)"
+          clang++ --version | head -1
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DAMP2203_BUILD_PLUGIN=OFF
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure

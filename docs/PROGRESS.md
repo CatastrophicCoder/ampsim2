@@ -15,7 +15,8 @@ Legend: [ ] todo · [~] in progress · [x] done · [!] blocked (see note)
 - [x] Junction Thevenin resistances measured and entered in CIRCUIT.md §4 — B1+B2 merged into B12
   (Q6a); |Z(1 kHz)| in junctions.py (Q6b); J5 provisional until M4
 - [x] Device DC sweep CSVs generated into `tests/data/`
-- [ ] CI workflow (macOS): build + tests
+- [~] CI workflow (macOS): build + tests — written and run locally on a fresh clone; first GitHub run
+  pending a remote (D-020)
 - [ ] M0 report: `harness/reports/M0/...`
 Plan (2026-10-12; follows SPEC §7 M0 and VERIFICATION §1–8, no deviations intended):
 
@@ -145,6 +146,9 @@ Notes:
   WDF_DESIGN §3: ngspice's Vt constants (25.8649170 mV), tubes.lib's 1.5707963 for π/2 in the EL34
   screen current, and ngspice's reverse-bias diode form below −3·Vt (≤ 5e-11 A, not replicated). The
   1 GΩ Rcp is removed from `ip` (kept as `ip_terminal`). 31 harness tests pass.
+- 2026-10-12 Step 7: `.github/workflows/ci.yml` (macos-15, checkout pinned by commit, plugin OFF,
+  configure / build / ctest; DECISIONS D-020). The same steps on a fresh local clone: configure 4.4 s,
+  build 8 s, no warnings, ctest 14/14. The repository has no remote yet, so no GitHub run so far.
 
 ## M1 — B4 tone stack + master
 - [ ] MNA scattering builder (C++) + numpy reference + cross-check test

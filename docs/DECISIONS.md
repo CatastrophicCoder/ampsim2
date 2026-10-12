@@ -278,3 +278,18 @@ Decision:
   reverse-bias diode form below −3·Vt (≤ 5e-11 A, not replicated in the engine).
 Consequences: The C++ device tests (M2: 12AX7, M4: EL34) read these tables with the VERIFICATION §5.1
 tolerance (0.1 % or 1 nA).
+
+## D-020 CI workflow
+Date: 2026-10-12 · Status: accepted (not yet run on GitHub: the repository has no remote)
+Context: SPEC §7 M0.6 asks for a minimal GitHub Actions workflow on a macOS runner; the owner chose to
+leave the JUCE plugin out of CI (PROGRESS.md Q3).
+Decision: `.github/workflows/ci.yml`, on pushes to main and on pull requests: `macos-15` runner,
+`actions/checkout` pinned to the v7.0.1 commit (3d3c42e5aac5ba805825da76410c181273ba90b1), Ninja from
+Homebrew only if the image lacks it, then the documented commands: configure Release with
+`-DAMP2203_BUILD_PLUGIN=OFF`, build (warnings are errors on our targets), `ctest --output-on-failure`.
+Read-only token permissions, 30 min timeout, superseded runs cancelled. No dependency cache: the three
+pinned archives download in a few seconds. The Python harness stays out of CI (it needs ngspice and its
+SPICE runs take minutes).
+Consequences: Verified by running the same steps on a fresh clone locally (macOS 15.7, Apple clang 17,
+CMake 4.4.3): configure 4.4 s, build 8 s, 0 warnings, ctest 14/14. The first GitHub run is still to be
+observed once a remote exists; the runner's Xcode/clang version may differ from the local one.
