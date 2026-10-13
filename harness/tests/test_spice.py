@@ -31,15 +31,17 @@ class TestSpice(unittest.TestCase):
             np.testing.assert_allclose(res['out'], x / 2, atol=1e-9)
 
     def test_rc_tran_matches_exact_response_with_tight_reltol(self):
-        # Reference accuracy check: with per-sample breakpoints and reltol 1e-6, SPICE matches the exact
-        # continuous-time response to the piecewise-linear input (scipy lsim) to better than -80 dB.
-        # At the ngspice default reltol it gives about -67 dB at 15 kHz (-52 dB without breakpoints; D-014).
+        # Reference accuracy check: with per-sample breakpoints and the configured RELTOL (1e-8, D-031) at the
+        # verification rate (768 kHz, D-035), SPICE matches the exact continuous-time response to the
+        # piecewise-linear input (scipy lsim) to better than -80 dB (measured -127 / -104 dB at 5 / 15 kHz;
+        # RELTOL 1e-6 gives -73 dB at 5 kHz at this rate). At the ngspice default it is about -67 dB at
+        # 15 kHz (-52 dB without breakpoints; D-014).
         from scipy import signal as ss
         for freq in (5000.0, 15000.0):
             x = signals.sine(freq, 1.0, seconds=0.01).x
             t = np.arange(len(x)) / config.FS
             _, exact, _ = ss.lsim(([1.0], [1e-3, 1.0]), x, t, interp=True)
-            res = spice.tran(RC, {}, x, ['out'], reltol=1e-6)['out']
+            res = spice.tran(RC, {}, x, ['out'])['out']
             err = 10 * np.log10(np.sum((res - exact) ** 2) / np.sum(exact ** 2))
             self.assertLess(err, -80.0, f'{freq:g} Hz')
 

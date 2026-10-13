@@ -27,7 +27,7 @@ Feedback and supply exceptions:
 - For isolated unit verification, two open-loop testbenches exist: **B5-open** (R22 driven by the
   recorded speaker voltage from the B56 run, as an ideal source) and **B6** (driven by the recorded
   PI open-circuit outputs). Supply node voltages in these are the recorded B56 supply waveforms.
-- Blocks B12, B3 and B4 in P use the supply node voltages from the corresponding F run as ideal recorded
+- Blocks B12, B3, B4 and B34 in P use the supply node voltages from the corresponding F run as ideal recorded
   sources (or constants from the DC table for M1–M2).
 
 ## 2. Testbench construction
@@ -40,15 +40,15 @@ Feedback and supply exceptions:
 - Driving recorded signals into ngspice: prefer an XSPICE file source or PWL-from-file if available in
   the installed ngspice (check `ngspice -v` and the manual); otherwise generate an inline PWL include
   file. Cache renders keyed by a hash of (testbench text, parameters, input signal).
-- Transient settings: `tran` with max step = 1/384000 s and `linearize` to that exact step (or the
+- Transient settings: `tran` with max step = 1/768000 s (D-035) and `linearize` to that exact step (or the
   `option interp` approach used in `spice_tools.py`), so that SPICE output samples align 1:1 with the
-  engine's samples at 384 kHz. Both start from the DC operating point; no time alignment is applied.
+  engine's samples at 768 kHz. Both start from the DC operating point; no time alignment is applied.
   The comparison reports the best lag within ±2 samples as a diagnostic; a non-zero best lag is a bug.
   Implementation (DECISIONS D-014): XSPICE filesource input plus a dummy PULSE source with a corner at
   every sample, so every sample instant is a simulator time point; ngspice RELTOL is set in
   `harness/config.py`.
 
-## 3. Test signals (generated at 384 kHz by `harness/signals.py`)
+## 3. Test signals (generated at 768 kHz by `harness/signals.py`, D-035)
 
 | ID | Signal | Notes |
 |---|---|---|
@@ -58,7 +58,7 @@ Feedback and supply exceptions:
 | TT | Two tones 220 Hz + 330 Hz, equal level, 300 ms | Intermodulation (power-chord-like) |
 | BURST | 1 kHz: 50 ms low, 300 ms high (+30 dB), 300 ms low | Blocking / bias-shift recovery |
 | STEP | 0 → nominal DC-free pulse train (5 ms on/off), edges band-limited by a causal 4th-order Bessel low-pass (−3 dB at 20 kHz) | Transient settling (DECISIONS D-030) |
-| DI | Owner's DI guitar recordings in `reference/di/` (mono WAV), resampled to 384 kHz with `scipy.signal.resample_poly`, scaled by `inputVoltsPerFullScale` | 5–10 s excerpts; most representative test |
+| DI | Owner's DI guitar recordings in `reference/di/` (mono WAV), resampled to 768 kHz with `scipy.signal.resample_poly`, scaled by `inputVoltsPerFullScale` | 5–10 s excerpts; most representative test |
 
 DI recordings are not included in the repository by default (owner provides them; see
 `reference/di/README.md`). Tests that need them are skipped with a clear message when absent.
@@ -71,6 +71,7 @@ Block input amplitudes (volts peak at the junction source):
 | B12 (guitar input) | 0.01 | 0.1 | 0.5 | 2.0 |
 | B3 (J2 source) | 0.1 | 1 | 10 | 50 |
 | B4 (J3 source, linear) | — | 1 | — | — |
+| B34 (J2 source; B3 + B4, D-033) | 0.1 | 1 | 10 | 50 |
 | B56 (J4 source) | 0.1 | 1 | 5 | 20 |
 
 With the P chaining, realistic levels for downstream blocks come from the upstream SPICE outputs; the
@@ -132,7 +133,7 @@ See `WDF_DESIGN.md` §5.5.
 | Block-exact ESR, nonlinear, Small/Nominal/Hot | ≤ −40 dB |
 | Block-exact ESR, Overdrive | ≤ −30 dB |
 | Block-exact harmonics 2–5 | within 0.5 dB |
-| Partition error at y (M3) | ≤ −26 dB sines, ≤ −20 dB DI (report; triggers upgrade path if exceeded) |
+| Partition error at y (M3) | ≤ −26 dB sines, ≤ −20 dB DI, at the loaded y: the SPICE chain's v_oc(y) through the J4 source into the PI (b56) vs F (D-036; report; triggers upgrade path if exceeded) |
 | Total, CLEAN power | ±5 % of SPICE, THD ±0.5 pp |
 | Total, DRIVE/CRUNCH ESR | ≤ −20 dB; harmonics 2–9 within 1.5 dB |
 | NFB amount | ±0.5 dB at 100 Hz / 1 kHz / 5 kHz |

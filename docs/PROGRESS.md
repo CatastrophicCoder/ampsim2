@@ -318,12 +318,59 @@ Notes:
   H3 0.09 dB); B4 17 PASS, sweeps worst −79.9 dB, knob jumps unchanged. M2 stops here for review.
 
 ## M3 — B3, preamp cascade
-- [ ] `StageV2aV2b` (joint 4-port root)
-- [ ] Cascade B12→B4, node dumps
-- [ ] Block-exact and partition reports; junction upgrades if needed (DECISIONS entries)
-- [ ] M3 report
-Plan:
+- [x] `StageV2aV2b` (joint 4-port root) — D-032; B3 + B4 merged into B34 (Q14, D-033)
+- [x] Cascade B12→B34 (`Preamp`), node dumps
+- [x] Block-exact and partition reports; junction upgrades (J3 → merge); 768 kHz (Q16); loaded-y scoring (Q15)
+- [x] M3 report: `harness/reports/M3/20261013_M3_report.md` — awaiting owner review (Q17, Q18 open)
+Plan (2026-10-13; follows SPEC §7 M3, §4.1, WDF_DESIGN §4, §6 and VERIFICATION §1, §7):
+
+Step 1 — Shared root-network code
+- Move the per-sample machinery of B12 (element waves → open-root node voltages → Newton → incident
+  waves, matrix updates, DC solve) into a header template reused by B3 and later B5 / B6. Ports may have
+  a terminal on an ideal supply node (V2b's plate is bpX, a fixed voltage, not a network node): the port
+  is stored against ground and the supply voltage enters as an exact offset of its wave / Thevenin
+  voltage. B12 must reproduce its M2 results bit for bit (renders compared).
+
+Step 2 — `StageV2aV2b` (B3, CIRCUIT.md §1 B3)
+- Network: 6 nodes (p1b, nB, g2a, k2a, p2a, k2b), 13 element ports: J2 source (v_oc(p1b), R_th2 =
+  89732.8 Ω, junctions.py), C7, R10‖C8, R11, R9, (bpX, R12), R13 and the six inter-electrode
+  capacitances (V2b's Cgp and Cpk end on bpX). Root: V2a (g2a−k2a, p2a−k2a), V2b (p2a−k2b, bpX−k2b).
+- Output v_oc(k2b) (unloaded) for J3; supply current for B7; DC start as B12. No knobs.
+- ampwav `--block b3`, `amp2203_bench b3`. Catch2: DC start / silence, robustness at 50 V+.
+- Block-exact: `compare --block b3 --preset DEFAULT --milestone M3` with the M2 targets (ESR ≤ −40 dB at
+  0.1 / 1 / 10 V, ≤ −30 dB at the 50 V overdrive sines, harmonics 2–5 ≤ 0.5 dB, Newton median ≤ 3,
+  max ≤ 12, no failures, DC 0.5 %).
+
+Step 3 — Preamp cascade
+- `Preamp` engine class: B12 → B3 (J2 driven by v_oc(p1b)) → B4 (J3 driven by v_oc(k2b)), output
+  v_oc(y); `reset()` passes each block's DC output to the next; probes from all three blocks.
+  ampwav `--block preamp`. `Amp2203` stays a pass-through until M4.
+
+Step 4 — Partition and total error at y (`python -m harness.cascade`)
+- Standard signal set at the B12 levels, Preamp Volume ∈ {0.2, 0.6, 1.0}, other knobs default:
+  F = full netlist (PI load at y present), P = SPICE chain b12 → b3 → b4 (each J-Thevenin source driven
+  by the upstream open-circuit voltage), E = engine cascade. Reported at p1b, k2b and y: P vs F
+  (partition error, VERIFICATION §1), E vs F (total, SPEC §7 M3 wording), E vs P (block-exact chain).
+- Scored at y: ESR ≤ −26 dB on sines for P vs F and for E vs F (VERIFICATION §7 / SPEC §7 M3); DI
+  ≤ −20 dB (no DI clips present: skipped with the harness message). Other signals reported.
+- If a junction fails: apply the SPEC §4.1 upgrade path and ask the owner before changing the partition.
+
+Step 5 — M3 report (`harness/reports/M3/`), costs, PROGRESS / DECISIONS updates.
+
+Risks: B3 at 50 V (hard grid conduction in V2a, V2b grid current through R12) stresses Newton (B12 already
+used all 12 iterations once); J2's R_th2 varies with Preamp Volume (88.4–90.1 kΩ) and frequency; the
+M0 J2 study already gave −26.2 dB at k2b for DRIVE, so y may fail the −26 dB target. Full-netlist renders
+at RELTOL 1e-8 take a long time; they run in the background.
 Notes:
+- 2026-10-13 Step 1–2: shared `stage/RootNetwork.h` with exact supply offsets; B12 bit-identical after the
+  move; B3 block-exact 87 PASS (D-032).
+- 2026-10-13 Cascade study: J3 failed as a J-Thevenin junction (−2 to −8 dB at y); merged B3 + B4 into B34
+  (Q14, D-033). B34 Newton fixes (D-034). Recorded F supplies for P and E (VERIFICATION §1). Scoring at the
+  loaded y (Q15, D-036). 384 kHz too coarse for the cutoff transitions: verification rate 768 kHz (Q16,
+  D-035), all M1–M3 references re-rendered; step limits for 768 kHz (D-037).
+- 2026-10-13 M3 report: B3 / B34 block-exact PASS, knob jumps PASS, cascade 273 PASS / 3 FAIL (Q17: E vs P
+  at 5 kHz 0.5 V −39.3 / −38.4 dB; Q18: loaded-y partition at Volume 1.0, 5 kHz 2 V −22.1 dB). M3 stops
+  here for review.
 
 ## M4 — B5, B6, B7, full chain
 - [ ] EL34 model (+ screen modification) and Jacobian; device unit tests
@@ -381,3 +428,16 @@ _(Claude Code: add questions here and also ask them in the session.)_
 - Q13 (M2): H3 of the 5 kHz 0.1 V sine at Preamp Volume 0.2 differs by 0.54 dB (≤ 0.5 dB); the SPICE
   reference is not converged at RELTOL 1e-6 (−70.68 dBc; −71.13 at 1e-8; engine −71.23). How to treat
   it? — Answered 2026-10-13: RELTOL 1e-8 for all reference transients; M1 and M2 re-rendered (D-031).
+- Q14 (M3): J3 (cathode follower k2b → tone stack) fails as a J-Thevenin junction: SPICE partition ESR at
+  y −2.2 to −7.5 dB from 0.1 V up (V2b cuts off into the tone stack). Merge B3 and B4, keep J3 and report,
+  use a fixed load, or analyse more first? — Answered 2026-10-13: merge B3 and B4 into B34 (D-033).
+- Q15 (M3): which comparison at y should M3 score (SPEC: v_oc(y) vs F's PI-loaded y)? — Answered 2026-10-13:
+  score the loaded y (SPICE chain through the J4 source into the PI testbench) vs F; the engine vs the
+  SPICE chain with the block-exact limits (D-036).
+- Q16 (M3): engine discretisation at extreme slews (5 kHz, 0.5–2 V input) at 384 kHz? — Answered
+  2026-10-13: verify at 768 kHz and make it the default internal rate (D-035).
+- Q17 (M3): engine vs the SPICE chain at 5 kHz 0.5 V is −39.3 / −38.4 dB (≤ −40 dB) at 768 kHz
+  (discretisation, as Q16). How to treat it? — Open.
+- Q18 (M3): partition at the loaded y, Volume 1.0, 5 kHz 2 V is −22.1 dB (≤ −26 dB), mostly J2. Upgrade
+  path (a) reactive R_th2, (b) merge B12 and B34, or other? — Open.
+

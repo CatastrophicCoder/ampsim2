@@ -53,6 +53,10 @@ BLOCKS = {
         id='b3', title='B3 StageV2aV2b', testbench='b3.cir', input_node='j2s', output_node='k2b',
         probes=('p1b', 'nb', 'g2a', 'k2a', 'p2a'),
         levels={'small': 0.1, 'nominal': 1.0, 'hot': 10.0, 'overdrive': 50.0}, engine_block='b3'),
+    'b34': Block(
+        id='b34', title='B34 StageV2aV2bToneStack (B3 + B4 in one tree, D-033)', testbench='b34.cir',
+        input_node='j2s', output_node='y', probes=('p1b', 'nb', 'g2a', 'k2a', 'p2a', 'k2b', 'tt', 'tw', 'nd', 'ne', 'mw'),
+        levels={'small': 0.1, 'nominal': 1.0, 'hot': 10.0, 'overdrive': 50.0}, engine_block='b34'),
     'b4': Block(
         id='b4', title='B4 ToneStackMaster', testbench='b4.cir', input_node='j3s', output_node='y',
         probes=('k2b', 'tt', 'tw', 'nd', 'ne', 'mw'),

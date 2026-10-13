@@ -39,9 +39,9 @@ class TestKnobJumpHelpers(unittest.TestCase):
         self.assertTrue(np.all(np.diff(s) >= 0))
 
     def test_spice_testbench_replaces_every_pot(self):
-        for block_id, n_knobs in (('b4', 4), ('b12', 1)):
+        for block_id, n_knobs in (('b4', 4), ('b12', 1), ('b34', 4)):
             text = knob_jump.spice_testbench(block_id)
-            for name in knob_jump.SETUPS[block_id]['pots']:
+            for name in knob_jump.SETUPS[block_id]['pots'] or knob_jump.SETUPS['b4']['pots']:
                 self.assertRegex(text, rf"(?m)^{name} \S+ \S+ R='")
             self.assertEqual(text.count('Vrec_rot_'), n_knobs)
 

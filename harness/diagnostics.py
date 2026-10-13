@@ -4,8 +4,8 @@ engine's discretisation. Not scored; the numbers go into the milestone report an
 1. Grid-diode CJO/TT (tubes.lib, ignored by the engine per SPEC §5): SPICE with CJO = TT = 0 (a copy of
    tubes.lib in harness/cache/, the reference files are not changed) vs SPICE, and the engine vs both.
 2. Engine discretisation: the engine at 1x, 2x and 4x the verification rate on the piecewise-linear
-   input that SPICE sees (linear interpolation of the 384 kHz samples), compared at the 384 kHz
-   instants; and ESR after low-pass filters on both signals.
+   input that SPICE sees (linear interpolation of the verification-rate samples), compared at the
+   verification-rate instants; and ESR after low-pass filters on both signals.
 3. SPICE reference convergence: harmonics 2–4 of a sine vs ngspice RELTOL.
 Writes harness/reports/<milestone>/<YYYYMMDD>_<block>_diagnostics.md.
 
@@ -137,10 +137,10 @@ def main():
                 lines.append(f'| {vol:g} | {sid} | {a1:.1f} dB | {a2:.1f} dB | {a3:.1f} dB |')
                 print(f'diagnostics: CJO vol {vol:g} {sid}: {a1:.1f} / {a2:.1f} / {a3:.1f} dB')
         lines += ['', '## 2. Engine discretisation', '',
-                  'ESR vs SPICE with the engine at 1x / 2x / 4x of 384 kHz (input: the piecewise-linear signal through '
-                  'the 384 kHz samples, as SPICE sees it; output at the 384 kHz instants), and at 1x after an '
+                  f'ESR vs SPICE with the engine at 1x / 2x / 4x of {config.FS / 1e3:g} kHz (input: the piecewise-linear '
+                  'signal through the verification-rate samples, as SPICE sees it; output at those instants), and at 1x after an '
                   f'8th-order low-pass ({", ".join(f"{fc / 1e3:g} kHz" for fc in LOWPASS)}, zero phase) on both signals.', '',
-                  '| Preamp Volume | Signal | 384 kHz | 768 kHz | 1536 kHz | ' + ' | '.join(f'LP {fc / 1e3:g} kHz' for fc in LOWPASS)
+                  '| Preamp Volume | Signal | ' + ' | '.join(f'{config.FS * m / 1e3:g} kHz' for m in (1, 2, 4)) + ' | ' + ' | '.join(f'LP {fc / 1e3:g} kHz' for fc in LOWPASS)
                   + ' |', '|---|---|---|---|---|' + '---|' * len(LOWPASS)]
         for vol in VOLUMES:
             knobs = dict(config.DEFAULT_KNOBS, preampVolume=vol)

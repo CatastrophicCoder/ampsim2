@@ -1,4 +1,4 @@
-"""Test signals at 384 kHz (VERIFICATION.md §3). All signals start at 0 V so that SPICE and the engine
+"""Test signals at the verification rate config.FS (768 kHz, VERIFICATION.md §3). All signals start at 0 V so that SPICE and the engine
 both start from the DC operating point.
 
     python -m harness.signals --levels b12 --out harness/renders/signals   # writes the WAVs
@@ -88,7 +88,7 @@ def step(amp, period=0.005, seconds=0.100):
 
 
 def di_signals(volts_per_fs=config.INPUT_VOLTS_PER_FS, seconds=DI_SECONDS, di_dir=config.DI_DIR):
-    """DI recordings from reference/di/, resampled to 384 kHz and scaled to volts at the jack.
+    """DI recordings from reference/di/, resampled to config.FS and scaled to volts at the jack.
     Returns [] (and says so) when there are none."""
     from math import gcd
     from scipy.signal import resample_poly

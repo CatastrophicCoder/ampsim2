@@ -1,7 +1,7 @@
 """Paths and constants shared by the harness modules."""
 from pathlib import Path
 
-FS = 384000                    # verification rate (DECISIONS D-007)
+FS = 768000                    # verification rate (DECISIONS D-035; was 384 kHz, D-007)
 INPUT_VOLTS_PER_FS = 4.361     # 0 dBFS = +12 dBu at the jack (D-010); scales DI recordings
 
 ROOT = Path(__file__).resolve().parent.parent

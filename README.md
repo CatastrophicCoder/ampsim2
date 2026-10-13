@@ -16,7 +16,7 @@ a pass-through. Milestones M0–M5 are defined in `docs/SPEC.md`; current state 
   root, solved with a bounded multiport Newton iteration. Blocks are joined by Thevenin junctions whose
   error is measured in SPICE before they are used. The engine is JUCE-free; only `plugin/` uses JUCE.
 - **Verification:** the harness generates block testbenches from the netlist, renders SPICE references
-  at 384 kHz, runs the engine on the same signals through the `ampwav` CLI, and writes reports with
+  at 768 kHz, runs the engine on the same signals through the `ampwav` CLI, and writes reports with
   ESR, harmonics, frequency response and DC tables against fixed tolerances (`docs/VERIFICATION.md`).
 
 ## Repository layout

@@ -18,6 +18,8 @@ TOLERANCES = {
     'total_esr_db': (-20.0, 'max'),
     'total_harmonics_2_9_db': (1.5, 'max'),
     'newton_failures': (0, 'max'),
+    'partition_esr_db_sines': (-26.0, 'max'),        # at y (M3), VERIFICATION §7
+    'partition_esr_db_di': (-20.0, 'max'),
     'newton_median_iterations': (3, 'max'),        # SPEC §7 M2 acceptance
     'newton_max_iterations': (12, 'max'),          # the configured limit (WDF_DESIGN §4 maxIter)
 }
@@ -33,6 +35,15 @@ SCORED = {
     # overdrive-level (2 V) sines ≤ −30 dB; harmonics 2–5 where above −80 dBc; Newton statistics.
     'M2': {'b12': {'dc_rel_error', 'nonlinear_esr_db', 'nonlinear_esr_db_overdrive', 'harmonics_2_5_db',
                    'newton_failures', 'newton_median_iterations', 'newton_max_iterations'}},
+    # M3: B3 StageV2aV2b block-exact with the M2 targets at B3's own levels (SPEC §7 M3); the cascade
+    # partition / total error at y is scored by harness/cascade.py.
+    'M3': {'b3': {'dc_rel_error', 'nonlinear_esr_db', 'nonlinear_esr_db_overdrive', 'harmonics_2_5_db',
+                  'newton_failures', 'newton_median_iterations', 'newton_max_iterations'},
+           'b34': {'dc_rel_error', 'nonlinear_esr_db', 'nonlinear_esr_db_overdrive', 'harmonics_2_5_db',
+                   'newton_failures', 'newton_median_iterations', 'newton_max_iterations'},
+           # cascade (harness/cascade.py, D-036): partition at the loaded y, engine vs the SPICE chain
+           'preamp': {'partition_esr_db_sines', 'partition_esr_db_di', 'nonlinear_esr_db', 'nonlinear_esr_db_overdrive',
+                      'harmonics_2_5_db', 'newton_failures', 'newton_median_iterations', 'newton_max_iterations'}},
 }
 
 

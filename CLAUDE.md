@@ -51,8 +51,8 @@ python3 reference/spice/spice_tools.py           # prints the SPICE DC operating
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release   # add -DAMP2203_BUILD_PLUGIN=OFF to skip JUCE
 cmake --build build
 ctest --test-dir build --output-on-failure
-./build/tools/bench/amp2203_bench                          # real-time factor, 60 s at 48 kHz x 8 (b4 / b12: block costs)
-./build/tools/ampwav/ampwav --block full --in in.wav --out out.wav --rate 384000 --param preampVolume=0.6   # --help for all options
+./build/tools/bench/amp2203_bench                          # real-time factor, 60 s at 48 kHz x 16 (b4 / b12 / b3 / b34 / preamp: block costs)
+./build/tools/ampwav/ampwav --block full --in in.wav --out out.wav --rate 768000 --param preampVolume=0.6   # --help for all options
 source .venv/bin/activate                                  # harness commands below need the venv
 python -m harness.testbench_gen                            # regenerate harness/testbenches/*.cir (--check)
 python -m harness.dc_check                                 # testbench DC vs full netlist (M0 sanity)
@@ -62,8 +62,9 @@ python -m harness.device_sweeps                            # tests/data device D
 python -m harness.ot_fit                                   # OT fit to the 1750U datasheet (--check: netlist)
 python -m harness.mna --fixtures                           # R-type S fixtures for the C++ cross-check (--check)
 python -m harness.tonestack_check --tran                   # M1: B4 magnitude (375 settings), sweeps, R_th4
-python -m harness.knob_jump [--block b12]                 # knob-jump test vs SPICE (D-025): B4 (M1), Preamp Volume (M2)
+python -m harness.knob_jump [--block b12|b34]             # knob-jump test vs SPICE (D-025): B4 (M1), Preamp Volume (M2), B34 (M3)
 python -m harness.diagnostics --block b12                  # M2: diode CJO/TT, engine-rate and SPICE-RELTOL convergence
+python -m harness.cascade                                  # M3: preamp cascade F / P / P56 / E at p1b, k2b, y (hours)
 python -m harness.render_spice --block <id> --preset <id>  # SPICE reference (cached in harness/cache/)
 python -m harness.run_engine --block <id> --preset <id>
 python -m harness.compare --block <id> --preset <id> --milestone M<n>   # renders + runs + report
