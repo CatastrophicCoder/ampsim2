@@ -142,7 +142,7 @@ See `WDF_DESIGN.md` §5.5.
 | Total, DRIVE/CRUNCH ESR | ≤ −20 dB; harmonics 2–9 within 1.5 dB |
 | NFB amount | ±0.5 dB at 100 Hz / 1 kHz / 5 kHz |
 | Stability | 60 s silence at max settings: |out| < 1 mV, no growth |
-| Newton | 0 failures on the standard signal set |
+| Newton | 0 failures on the standard signal set; max iterations ≤ the configured limit (12; 16 for the power amp B56 and the full amp, D-045) |
 
 ESR on heavily clipped signals is sensitive to tiny timing differences at sharp edges. If a check fails
 mainly because of edge timing, also report ESR after a 5 kHz low-pass on both signals and the harmonic

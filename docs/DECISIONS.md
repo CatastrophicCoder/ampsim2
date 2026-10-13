@@ -797,3 +797,14 @@ Decision:
   768 kHz. ampwav `--knob-ramp` now follows each knob's latest started ramp (piecewise-linear trajectories;
   single ramps unchanged).
 Consequences: see the M5 report (`harness/reports/M5/20261013_M5_report.md`).
+
+## D-045 Power-amp Newton iteration limit 16
+Date: 2026-10-13 · Status: accepted (owner decision, PROGRESS.md Q21)
+Context: M5 automation (every knob at audio rate, `harness/reports/M5/20261013_automation.md`): 6367 power-amp
+first solves did not converge in 12 iterations (all rescued by the D-042 fallback); with static knobs at high
+Master too (5 s of DI with every knob at 1.0: 865). A limit of 16 / 20 gave 10 / 7 at the same cost. Options
+presented: raise the limit; count rescued solves as converged; both; keep.
+Decision: `PowerAmp` uses `TriodesPentodes::solver(16)` (maxIter 16; the DC solve keeps 500, every other block
+12). The Newton maximum check ("≤ the configured limit") is 16 for b56 and the full amp
+(`harness/tolerances.py` OVERRIDES); first-solve failures still count as failures.
+Consequences: M4 / M5 reports for b56 and the full amp regenerated with the new limit.

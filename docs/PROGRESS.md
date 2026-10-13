@@ -615,7 +615,9 @@ _(Claude Code: add questions here and also ask them in the session.)_
 - Q21 (M5): under automation at high Master the power amp's first solves exceed 12 iterations (6367 in 56 runs,
   all rescued by the D-042 fallback, 0 unrescued; static every-knob-at-1.0 DI: 865 / 5 s). A B56 limit of 16 /
   20 iterations: 10 / 7 at the same cost. Options: count rescued solves as converged; raise the B56
-  iteration limit (and the "max ≤ configured limit" check with it); keep as reported; other. — Open.
+  iteration limit (and the "max ≤ configured limit" check with it); keep as reported; other. — Answered
+  2026-10-13: raise the B56 limit to 16 (D-045).
 - Q22 (M5): real-time factor 0.42 at 48 kHz × 16 (target ≥ 10); profile in the M5 report. Which direction:
   optimise the solver / device code first (structure-exploiting solve, chord Newton, tables), lower the internal
-  rate (accuracy table in the report, unverified against SPICE), both, or other? — Open.
+  rate (accuracy table in the report, unverified against SPICE), both, or other? — Answered 2026-10-13:
+  optimise the solver first (accuracy unchanged; measured per step).

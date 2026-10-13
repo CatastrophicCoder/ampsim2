@@ -14,7 +14,7 @@ using namespace stage56;
 using devices::TriodesPentodes;
 
 constexpr stage::RootNetwork<kNumNodes, kNumElements, kNumRootPorts> kNet{kElements, kRoot};
-const solver::MultiportNewton<10> kRootSolver = TriodesPentodes::solver(12);
+const solver::MultiportNewton<10> kRootSolver = TriodesPentodes::solver(16);  // D-045 (owner decision Q21)
 const solver::MultiportNewton<10> kDcSolver = TriodesPentodes::solver(500);  // reset() only
 constexpr std::array<double, kNumRootPorts> kNoRootOffsets{};
 constexpr double kWindingDcConductance = 1e6;  // S: the windings are shorts at DC (as PowerStage)

@@ -70,12 +70,17 @@ SCORED = {
 }
 
 
+# per-block overrides of a tolerance: the Newton maximum is "the configured limit", which is 16 for the power
+# amp B56 and therefore for the full amp (owner decision Q21, DECISIONS D-045); every other root has 12
+OVERRIDES = {('b56', 'newton_max_iterations'): (16, 'max'), ('full', 'newton_max_iterations'): (16, 'max')}
+
+
 def status(milestone, block_id, check, value):
     """Returns (tolerance text, 'PASS' | 'FAIL' | 'INFO')."""
     scored = SCORED.get(milestone, {}).get(block_id, set()) | SCORED.get(milestone, {}).get('*', set())
     if check not in TOLERANCES:
         return '—', 'INFO'
-    limit, kind = TOLERANCES[check]
+    limit, kind = OVERRIDES.get((block_id, check), TOLERANCES[check])
     text = f'{"≤" if kind == "max" else "≥"} {limit:g}'
     if check not in scored or value is None:
         return text, 'INFO'
