@@ -837,6 +837,6 @@ the fixed checks). Tried and not kept: two-accumulator residual (no gain at K = 
 writes `harness/reports/M5/20261014_full_acceptance_fs384000.md`: 107 PASS, 0 FAIL (DI −60.8 to −62.7 dB;
 768 kHz −61.0 to −63.0 dB). Plugin real-time factor on 20 s of DI (idle machine): 16x 0.55–0.61, 8x
 0.97–1.17, 4x 1.71–2.27. At 192 kHz (`20261014_full_acceptance_fs192000.md`): 102 PASS, 5 FAIL (1–2 Newton
-first-solve failures on five DI runs, all rescued); DI ESR −54.4 to −57.1 dB, sines and NFB as at 768 kHz.
+first-solve failures on five DI runs, 2 of them not rescued by the fallback); DI ESR −54.4 to −57.1 dB, sines and NFB as at 768 kHz.
 Consequences: the earlier "8x vs 16x render" comparison (−42 to −47 dB) mixed two oversampling filter chains
 and is not a measure of the engine's accuracy; the SPICE comparison at each rate is.
