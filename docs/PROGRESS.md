@@ -472,6 +472,13 @@ Notes:
   robustness tests; ampwav `--block b5` / `b6` (recorded inputs through `--supply`). The harness renders
   the recordings for b5open / b6 from b56 runs (`harness/recordings.py`); first b5open check (1 kHz 1 V):
   ESR −80.5 dB. The J5 structure (keep, change R_th, 2-port source, or merge B5 + B6) waits for step 1.
+- 2026-10-13 Step 7 (chain): `Amp2203` = Preamp → PhaseInverter (NFB out[n−1]) → PowerStage, Supply once per
+  sample; DC by fixed point; `--nfb open|delay2` diagnostics; `python -m harness.m4_acceptance`. With the
+  provisional J5: DC PASS (EL34 34.078 mA per tube, 1.2e-5 mA from SPICE), overdrive ESR −25.7 dB,
+  harmonics 2–9 0.74 dB, sag 1.66 V; CLEAN power 88.3 W vs 100.2 W and the open-loop gain 0.9 dB low (the
+  J5 small-signal error). Newton at Master 1.0 / Presence 1.0 with 1.9 V guitar peaks: 1469 failures in
+  30 ms in the power stage (slow convergence through OT flyback; 100 iterations converge, max 24–42); the
+  acceptance signals converge in ≤ 5.
 
 ## M5 — JUCE plugin
 - [ ] Processor, parameters, oversampling, latency

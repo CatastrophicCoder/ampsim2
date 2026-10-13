@@ -123,17 +123,17 @@ TEST_CASE("CLI: invalid command lines are rejected with a message", "[ampwav]") 
     }
 }
 
-TEST_CASE("Runner: every block id resolves; full is the identity in volts", "[ampwav]") {
+TEST_CASE("Runner: every block id resolves; full runs the amplifier in volts", "[ampwav]") {
     for (const auto& id : ampwav::blockIds())
         REQUIRE(ampwav::makeRunner(id));
     REQUIRE_FALSE(ampwav::makeRunner("b8"));
 
     auto r = ampwav::makeRunner("full");
-    r->prepare(384000.0, 64);
-    double v[] = {0.1, -2.0, 0.0};
-    r->processVolts(v, 3);
-    REQUIRE_THAT(v[0], WithinAbs(0.1, 1e-15));
-    REQUIRE_THAT(v[1], WithinAbs(-2.0, 1e-15));
+    r->prepare(768000.0, 64);
+    std::vector<double> v(256, 0.0);  // silence in: silence out (the engine starts at its DC point)
+    r->processVolts(v.data(), static_cast<int>(v.size()));
+    for (double y : v)
+        REQUIRE(std::fabs(y) < 1e-6);
 }
 
 TEST_CASE("CLI end to end: output, node dump and stats", "[ampwav]") {
@@ -142,7 +142,7 @@ TEST_CASE("CLI end to end: output, node dump and stats", "[ampwav]") {
     std::string err;
     REQUIRE(ampwav::writeMonoWavF64(dir.file("in.wav"), 384000.0, x, err));
 
-    for (const char* block : {"full", "b7"}) {  // pass-through blocks: output = input
+    for (const char* block : {"b7", "b56"}) {  // pass-through blocks: output = input
         INFO("block " << block);
         const auto o = parse({"--block", block, "--in", dir.file("in.wav"), "--out", dir.file("out.wav"), "--rate",
                               "384000", "--dump-node", "in=" + dir.file("node_in.wav"), "--stats",
@@ -220,8 +220,14 @@ TEST_CASE("CLI end to end: full-scale units apply the engine calibration", "[amp
 
     ampwav::MonoWav out;
     REQUIRE(ampwav::readMonoWav(dir.file("o.wav"), out, err));
-    const amp2203::EngineConfig cfg;
-    REQUIRE_THAT(out.samples[0], WithinAbs(0.5 * cfg.inputVoltsPerFullScale / cfg.outputVoltsPerFullScale, 1e-15));
+    // the same as the engine itself on full-scale samples
+    amp2203::EngineConfig cfg;
+    cfg.sampleRate = 384000.0;
+    amp2203::Amp2203 amp;
+    amp.prepare(cfg);
+    double x = 0.5;
+    amp.process(&x, 1);
+    REQUIRE_THAT(out.samples[0], WithinAbs(x, 1e-12));
 }
 
 TEST_CASE("CLI: knob ramps", "[ampwav]") {

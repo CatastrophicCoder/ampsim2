@@ -65,8 +65,9 @@ void printUsage(std::ostream& os) {
           "              [--param name=value ...] [--dump-node node=file.wav ...]\n"
           "              [--units volts|fs] [--block-size N] [--stats stats.json] [--list-nodes]\n"
           "              [--knob-ramp knob=start,duration,from,to ...] [--supply node=file.wav ...]\n"
+          "              [--nfb closed|open|delay2]\n"
           "\n"
-          "  --block       full, b12, b3 .. b7, b56 (M0: every block except full is a pass-through)\n"
+          "  --block       full, preamp (= b1234), b12, b3, b34, b4, b5, b6; b7, b56 are pass-throughs\n"
           "  --in          mono WAV; 64-bit float is read bit-exact, other formats via 32-bit float\n"
           "  --out         written as mono 64-bit float WAV at the input rate\n"
           "  --rate        engine rate; must equal the input file's rate (no resampling)\n"
@@ -79,6 +80,8 @@ void printUsage(std::ostream& os) {
           "  --list-nodes  print the probe names of the block and exit\n"
           "  --knob-ramp   ramp a knob's target rotation linearly (times in s); the engine smooths it.\n"
           "                Params are then set every sample (knob-jump test, VERIFICATION §7)\n"
+          "  --nfb         full amp NFB diagnostics (SPEC §7 M4): closed (default), open (R22 -> 1 TOhm) or\n"
+          "                delay2 (two-sample NFB delay instead of one)\n"
           "  --supply      drive a recorded input of the block from a WAV of the same length and rate, set every\n"
           "                sample: supply nodes (bpa, bpx, ct, nscr), the NFB speaker voltage (b5: out) or the\n"
           "                second PI output (b6: p3b) (partition studies and B5 / B6 tests, VERIFICATION §1)\n";
@@ -151,6 +154,12 @@ std::optional<Options> parseArgs(const std::vector<std::string>& args, std::stri
                 return std::nullopt;
             }
             *k = x;
+        } else if (a == "--nfb") {
+            if (!value(o.nfb)) return std::nullopt;
+            if (o.nfb != "closed" && o.nfb != "open" && o.nfb != "delay2") {
+                error = "--nfb expects closed, open or delay2, got '" + o.nfb + "'";
+                return std::nullopt;
+            }
         } else if (a == "--supply") {
             std::string v;
             if (!value(v)) return std::nullopt;
@@ -244,6 +253,10 @@ int run(const Options& o, std::ostream& log) {
 
     runner->prepare(rate, o.blockSize);
     runner->setParams(o.params);
+    if (!o.nfb.empty() && !runner->setFeedback(o.nfb != "open", o.nfb == "delay2" ? 2 : 1)) {
+        log << "ampwav: block '" << o.block << "' has no NFB loop (--nfb)\n";
+        return 1;
+    }
 
     // resolve probes before processing so a typo fails fast
     std::vector<const double*> dumpSrc;

@@ -6,7 +6,7 @@
 
 #include <chowdsp_wdf/chowdsp_wdf.h>
 
-#include "amp2203/Amp2203.h"
+#include "amp2203/Params.h"
 #include "amp2203/Probe.h"
 #include "amp2203/detail/DcCapacitor.h"
 #include "amp2203/detail/NewtonStats.h"
@@ -46,6 +46,8 @@ public:
     /// J4 source resistance R_th4 (the preamp's rth4()); the matrices follow at the next update.
     void setSourceResistance(double rth4) noexcept;
     void setSupplyVoltage(double vbpX) noexcept { vbpX_ = vbpX; }
+    /// R22 value (default R22; e.g. 1 TΩ opens the feedback loop for the M4 NFB check). Not real-time.
+    void setFeedbackResistance(double r);
     /// Speaker voltage that drives R22 for the next sample.
     void setFeedbackVoltage(double vOut) noexcept { vFb_ = vOut; }
     /// DC operating point for a constant J4 source voltage (capacitors open). Not real-time.

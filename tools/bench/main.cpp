@@ -7,6 +7,8 @@
 //   amp2203_bench b3         StageV2aV2b: ns per sample at the B3 levels; Newton iterations
 //   amp2203_bench b34        StageV2aV2bToneStack: as b3, plus tone knobs moving and µs per matrix update
 //   amp2203_bench preamp     Preamp B1234 (one tree, 8-port root) at the B12 levels
+//   amp2203_bench b5         PhaseInverter at the B56 levels (J4 source), NFB input at its DC value
+//   amp2203_bench b6         PowerStage driven push-pull at the PI plates
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -18,6 +20,8 @@
 #include <vector>
 
 #include "amp2203/Amp2203.h"
+#include "amp2203/PhaseInverter.h"
+#include "amp2203/PowerStage.h"
 #include "amp2203/Preamp.h"
 #include "amp2203/StageV1aV1b.h"
 #include "amp2203/StageV2aV2b.h"
@@ -261,6 +265,51 @@ int benchPreamp() {
 
 }  // namespace
 
+int benchPhaseInverter() {
+    const long n = static_cast<long>(5.0 * kRate);
+    double sink = 0.0;
+    std::printf("PhaseInverter at %.0f Hz (default knobs):\n", kRate);
+    for (const auto& [freq, amp] : {std::pair{1000.0, 0.1}, {1000.0, 1.0}, {1000.0, 5.0}, {1000.0, 20.0}, {5000.0, 20.0}}) {
+        amp2203::PhaseInverter st;
+        st.prepare(kRate, amp2203::EngineConfig{}.paramSmoothingMs);
+        st.setSourceResistance(43000.0);
+        st.reset(0.0);
+        const double dphi = 2.0 * std::numbers::pi * freq / kRate;
+        const auto t0 = Clock::now();
+        for (long i = 0; i < n; ++i)
+            sink += st.process(amp * std::sin(dphi * static_cast<double>(i)));
+        const double ns = seconds(t0) / static_cast<double>(n) * 1e9;
+        const auto& s = st.newtonStats();
+        std::printf("  %5.0f Hz %5.1f V: %6.1f ns/sample, Newton median %d max %d failures %llu\n", freq, amp, ns,
+                    s.medianIterations(), s.maxIterations, static_cast<unsigned long long>(s.failures));
+    }
+    std::printf("  checksum %g\n", sink);
+    return 0;
+}
+
+int benchPowerStage() {
+    const long n = static_cast<long>(5.0 * kRate);
+    double sink = 0.0;
+    std::printf("PowerStage at %.0f Hz (push-pull drive at the PI plates):\n", kRate);
+    for (const auto& [freq, amp] : {std::pair{1000.0, 1.0}, {1000.0, 20.0}, {1000.0, 60.0}, {220.0, 120.0}, {5000.0, 60.0}}) {
+        amp2203::PowerStage st;
+        st.prepare(kRate);
+        st.reset(270.880925, 262.270582);
+        const double dphi = 2.0 * std::numbers::pi * freq / kRate;
+        const auto t0 = Clock::now();
+        for (long i = 0; i < n; ++i) {
+            const double x = amp * std::sin(dphi * static_cast<double>(i));
+            sink += st.process(270.880925 + x, 262.270582 - x);
+        }
+        const double ns = seconds(t0) / static_cast<double>(n) * 1e9;
+        const auto& s = st.newtonStats();
+        std::printf("  %5.0f Hz %5.1f V: %6.1f ns/sample, Newton median %d max %d failures %llu\n", freq, amp, ns,
+                    s.medianIterations(), s.maxIterations, static_cast<unsigned long long>(s.failures));
+    }
+    std::printf("  checksum %g\n", sink);
+    return 0;
+}
+
 int main(int argc, char** argv) {
     if (argc > 1 && std::strcmp(argv[1], "b4") == 0)
         return benchToneStack();
@@ -272,8 +321,12 @@ int main(int argc, char** argv) {
         return benchStage34();
     if (argc > 1 && std::strcmp(argv[1], "preamp") == 0)
         return benchPreamp();
+    if (argc > 1 && std::strcmp(argv[1], "b5") == 0)
+        return benchPhaseInverter();
+    if (argc > 1 && std::strcmp(argv[1], "b6") == 0)
+        return benchPowerStage();
     if (argc > 1) {
-        std::fprintf(stderr, "usage: amp2203_bench [b4|b12|b3|b34|preamp]\n");
+        std::fprintf(stderr, "usage: amp2203_bench [b4|b12|b3|b34|preamp|b5|b6]\n");
         return 1;
     }
     return benchFull();

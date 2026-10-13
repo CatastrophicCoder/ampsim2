@@ -38,6 +38,11 @@ void PhaseInverter::setSourceResistance(double rth4) noexcept {
     }
 }
 
+void PhaseInverter::setFeedbackResistance(double r) {
+    src22_.setResistanceValue(r);
+    applyKnobs();
+}
+
 PhaseInverter::Wave PhaseInverter::conductances(bool dc) const noexcept {
     Wave G{};
     G[eJ4] = j4_.wdf.G;

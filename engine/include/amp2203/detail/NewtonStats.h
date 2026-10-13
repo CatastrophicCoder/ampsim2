@@ -24,6 +24,15 @@ struct NewtonStats {
 
     void clear() noexcept { *this = NewtonStats{}; }
 
+    /// Adds another root's statistics (the full amp reports all its roots together).
+    void add(const NewtonStats& o) noexcept {
+        for (size_t k = 0; k < histogram.size(); ++k)
+            histogram[k] += o.histogram[k];
+        solves += o.solves;
+        failures += o.failures;
+        maxIterations = o.maxIterations > maxIterations ? o.maxIterations : maxIterations;
+    }
+
     /// Median number of iterations (lower median), 0 if there were no solves.
     int medianIterations() const noexcept {
         uint64_t seen = 0;

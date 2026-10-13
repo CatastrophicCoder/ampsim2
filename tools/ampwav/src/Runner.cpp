@@ -20,10 +20,19 @@ public:
         cfg_.sampleRate = sampleRate;
         cfg_.maxBlockSize = maxBlockSize;
         amp_.prepare(cfg_);
+        started_ = false;
     }
     void setParams(const amp2203::Params& p) override { amp_.setParams(p); }
+    bool setFeedback(bool closed, int delaySamples) override {
+        amp_.setFeedbackOptions(closed, delaySamples);
+        return true;
+    }
 
     void processVolts(double* v, int numSamples) noexcept override {
+        if (numSamples > 0 && !started_) {
+            amp_.reset();  // DC operating point at the knobs given (SPICE starts there too)
+            started_ = true;
+        }
         for (int n = 0; n < numSamples; ++n)
             v[n] /= cfg_.inputVoltsPerFullScale;
         amp_.process(v, numSamples);
@@ -39,6 +48,7 @@ public:
 private:
     amp2203::EngineConfig cfg_{};
     amp2203::Amp2203 amp_;
+    bool started_ = false;
 };
 
 /// B4 ToneStackMaster: input = J3 source voltage (absolute volts), output = v_oc(y). The block starts

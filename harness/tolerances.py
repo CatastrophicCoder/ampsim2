@@ -22,6 +22,16 @@ TOLERANCES = {
     'partition_esr_db_di': (-20.0, 'max'),
     'newton_median_iterations': (3, 'max'),        # SPEC §7 M2 acceptance
     'newton_max_iterations': (12, 'max'),          # the configured limit (WDF_DESIGN §4 maxIter)
+    # SPEC §7 M4 acceptance (full amp vs F)
+    'el34_plate_ma': (1.0, 'max'),                 # EL34 plate current per tube, ±1 mA
+    'el34_screen_ma': (0.3, 'max'),                # screen ±0.3 mA
+    'ct_rel': (0.01, 'max'),                       # v(ct) within 1 %
+    'nbias_v': (0.2, 'max'),                       # bias node within 0.2 V
+    'nfb_gain_db': (0.5, 'max'),                   # NFB amount: gain with / without R22 within 0.5 dB
+    'stability_out_v': (1e-3, 'max'),              # 60 s silence at max settings: |out| < 1 mV
+    'stability_growth': (1e-6, 'max'),             # "no growth": last-10 s RMS ≤ first-10 s RMS + 1 µV (SPEC §3.6 silence)
+    'sag_min_v': (2.0, 'max'),                     # B+ sag minimum within 2 V (overdrive)
+    'nfb_delay_db': (0.5, 'max'),                  # 1- vs 2-sample NFB delay, small-signal; above: raise with the owner
 }
 
 # milestone -> block -> set of scored checks. M0 tests the pipeline only: everything is INFO, except
@@ -47,7 +57,11 @@ SCORED = {
            'preamp': {'partition_esr_db_sines', 'partition_esr_db_di', 'nonlinear_esr_db', 'nonlinear_esr_db_overdrive',
                       'harmonics_2_5_db', 'newton_failures', 'newton_median_iterations', 'newton_max_iterations'}},
     # M4: B5 / B6 block-exact on recordings (VERIFICATION §1), the nonlinear block targets as M2 / M3
-    'M4': {'b5open': {'dc_rel_error', 'nonlinear_esr_db', 'nonlinear_esr_db_overdrive', 'harmonics_2_5_db',
+    'M4': {'full': {'dc_rel_error', 'el34_plate_ma', 'el34_screen_ma', 'ct_rel', 'nbias_v', 'nfb_gain_db',
+                    'total_power_rel', 'total_thd_pp', 'stability_out_v', 'stability_growth', 'total_esr_db',
+                    'total_harmonics_2_9_db', 'sag_min_v', 'nfb_delay_db', 'newton_failures',
+                    'newton_median_iterations', 'newton_max_iterations'},
+           'b5open': {'dc_rel_error', 'nonlinear_esr_db', 'nonlinear_esr_db_overdrive', 'harmonics_2_5_db',
                       'newton_failures', 'newton_median_iterations', 'newton_max_iterations'},
            'b6': {'dc_rel_error', 'nonlinear_esr_db', 'nonlinear_esr_db_overdrive', 'harmonics_2_5_db',
                   'newton_failures', 'newton_median_iterations', 'newton_max_iterations'}},

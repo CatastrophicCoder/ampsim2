@@ -21,6 +21,8 @@ class Preset:
             return signals.standard_set(block.levels, include=kinds)
         if self.id == 'CLEAN':
             return [signals.sine(1000.0, 0.025)]
+        if self.id == 'OVERDRIVE':
+            return [signals.sine(220.0, 0.3)]
         if self.id in ('CRUNCH', 'DRIVE'):
             return [signals.sine(220.0, 0.3)] + signals.di_signals()
         if self.id.startswith('TONE-'):
@@ -46,6 +48,7 @@ PRESETS = {
     'VOL0.2': Preset('VOL0.2', {'preampVolume': 0.2}, 'Preamp Volume 0.2; standard signal set (M2)'),
     'VOL1.0': Preset('VOL1.0', {'preampVolume': 1.0}, 'Preamp Volume 1.0; standard signal set (M2)'),
     'CLEAN': Preset('CLEAN', {'preampVolume': 0.2, 'master': 1.0}, '25 mV peak 1 kHz (about 100 W in SPICE)'),
+    'OVERDRIVE': Preset('OVERDRIVE', {'preampVolume': 0.8, 'master': 0.3}, '300 mV peak 220 Hz (SPEC §7 M4 overdrive)'),
     'CRUNCH': Preset('CRUNCH', {'preampVolume': 0.6, 'master': 0.3}, '300 mV peak 220 Hz, DI clips'),
     'DRIVE': Preset('DRIVE', {'preampVolume': 1.0, 'master': 0.3}, '300 mV peak 220 Hz, DI clips'),
     'PRES0': Preset('PRES0', {'presence': 0.0}, 'Presence 0; standard signal set (M4 J5 study)'),

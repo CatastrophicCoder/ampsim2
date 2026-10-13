@@ -21,6 +21,9 @@ public:
     virtual amp2203::Amp2203::Stats stats() const { return {}; }
     /// Sets an ideal supply node (e.g. "bpa", "bpx") for the next samples; false if the block has none.
     virtual bool setSupply(std::string_view, double) noexcept { return false; }
+    /// NFB diagnostics of the full amp (SPEC §7 M4): loop closed or open (R22 → 1 TΩ), delay in samples.
+    /// False if the block has no NFB loop.
+    virtual bool setFeedback(bool, int) { return false; }
     /// Volts per full-scale sample at the input and output (only meaningful for the full amp).
     virtual double inputVoltsPerFullScale() const { return 1.0; }
     virtual double outputVoltsPerFullScale() const { return 1.0; }

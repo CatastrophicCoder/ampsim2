@@ -6,7 +6,7 @@
 
 #include <chowdsp_wdf/chowdsp_wdf.h>
 
-#include "amp2203/Amp2203.h"
+#include "amp2203/Params.h"
 #include "amp2203/Probe.h"
 #include "amp2203/detail/DcCapacitor.h"
 #include "amp2203/detail/NewtonStats.h"

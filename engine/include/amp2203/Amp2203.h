@@ -1,35 +1,27 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <span>
+#include <vector>
 
 #include "amp2203/Probe.h"
+#include "amp2203/Params.h"
 
 namespace amp2203 {
 
-/// Knob rotations, 0.0 .. 1.0 (0 = fully counter-clockwise). SPEC §3.2.
-struct Params {
-    double preampVolume = 0.6;
-    double treble       = 0.5;
-    double middle       = 0.5;
-    double bass         = 0.5;
-    double master       = 0.3;
-    double presence     = 0.5;
-};
+class Preamp;
+class PhaseInverter;
+class PowerStage;
+class Supply;
 
-struct EngineConfig {
-    double sampleRate = 768000.0;           // the rate process() is called at (already oversampled; D-035)
-    int    maxBlockSize = 512;
-    double inputVoltsPerFullScale  = 4.361; // 0 dBFS input = +12 dBu at the jack (DECISIONS D-010)
-    double outputVoltsPerFullScale = 60.0;  // 60 V peak across 16 Ω = 0 dBFS output
-    double paramSmoothingMs        = 20.0;
-};
-
-/// Full amplifier. M0: pass-through in volts (v_speaker = v_in) so the CLI and harness pipeline can be
-/// tested; the circuit blocks replace this from M1 on.
+/// Full amplifier (SPEC §3.2, §4.3): Preamp (B1234) → J4 → PhaseInverter (B5, NFB from the previous
+/// sample's speaker voltage) → J5 → PowerStage (B6) → speaker voltage; Supply (B7) advances once per sample
+/// with the currents of the sample just processed and sets the supply nodes of the next one.
 class Amp2203 {
 public:
-    Amp2203() = default;
+    Amp2203();
+    ~Amp2203();
     Amp2203(const Amp2203&) = delete;  // probes point into this object
     Amp2203& operator=(const Amp2203&) = delete;
 
@@ -42,6 +34,11 @@ public:
     /// Same as above in double precision (used by ampwav and the tests).
     void process(double* mono, int numSamples) noexcept;
 
+    /// Diagnostics for the M4 NFB checks (SPEC §7 M4; DECISIONS D-012 addition), not real-time: `closed` =
+    /// false sets R22 to 1 TΩ (loop open); `delaySamples` is the NFB delay (1 = the engine's design; 2 for
+    /// the delayed-NFB partition check). Takes effect at the next reset().
+    void setFeedbackOptions(bool closed, int delaySamples);
+
     // diagnostics (non-real-time)
     struct Stats {
         uint64_t newtonFailures = 0;
@@ -49,21 +46,31 @@ public:
         uint64_t newtonSolves = 0;        // DECISIONS D-012 addition (M2): Newton solves so far
         double   medianIterations = 0.0;  // median Newton iterations per solve (SPEC §7 M2 acceptance)
     };
+    /// Newton statistics of all roots together (preamp, phase inverter, power stage).
     Stats getStats() const;
 
-    /// Node probes for the harness (`ampwav --dump-node`). Values are valid after each processed sample.
+    /// Node probes for the harness (`ampwav --dump-node`), netlist names. Values are valid after each
+    /// processed sample.
     std::span<const Probe> probes() const noexcept;
 
 private:
     double processSample(double x) noexcept;
+    void solveDc();
+    void applySupplies() noexcept;
 
     EngineConfig cfg_{};
     Params params_{};
-    Stats stats_{};
+    std::unique_ptr<Preamp> preamp_;
+    std::unique_ptr<PhaseInverter> pi_;
+    std::unique_ptr<PowerStage> power_;
+    std::unique_ptr<Supply> supply_;
+    bool nfbClosed_ = true;
+    int nfbDelay_ = 1;
+    double fb_[2] = {0.0, 0.0};  // speaker voltage of the last two samples (NFB delay line)
 
     double vIn_ = 0.0;   // V at the input jack
     double vOut_ = 0.0;  // V across the 16 Ω load
-    Probe probes_[2] = {{"in", &vIn_}, {"out", &vOut_}};
+    std::vector<Probe> probes_;
 };
 
 }  // namespace amp2203
