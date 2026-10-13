@@ -499,7 +499,54 @@ Notes:
 - [ ] pluginval (VST3, AU), auval
 - [ ] Wrapper null test vs `ampwav`
 - [ ] M5 report
-Plan:
+Plan (2026-10-13; follows SPEC §7 M5, §3.3–3.5, §6.3, D-035):
+
+Step 1 — Processor (`plugin/src/`, the only JUCE code)
+- APVTS parameters per SPEC §6.3: Preamp Volume, Treble, Middle, Bass, Master, Presence (0–10 shown,
+  rotation 0–1 inside), Interface Level (0..+24 dBu, default +12), Input Trim (±24 dB), Output Level
+  (−48..+12 dB, default 0 dB), Oversampling (2x / 4x / 8x / 16x; default by host rate per SPEC §3.4: 16x at
+  44.1 / 48 kHz, 8x at 88.2 / 96, 4x at 176.4 / 192), Oversampling filter (linear-phase FIR or polyphase IIR,
+  task 2). State saved / restored through the APVTS.
+- Mono: a mono bus uses its channel; on a stereo bus the left channel is processed (SPEC allows summed or
+  left; guitar interfaces put the instrument on input 1, and summing a single-sided input halves it) and the
+  output goes to every channel.
+- `juce::dsp::Oversampling` around `Amp2203` at host rate × factor; latency of the oversampler reported via
+  `setLatencySamples`. Changing the factor or the filter rebuilds off the audio thread (suspendProcessing,
+  re-prepare, new latency). `juce::ScopedNoDenormals`; knob values go to `Amp2203::setParams` once per
+  block (the engine smooths them). Interface Level sets the engine's input scale (a real-time setter on
+  `Amp2203`, D-012 addition); trim and output level are gains in the wrapper.
+- The processor code goes into a static library shared by the plugin and a console tool (step 4).
+
+Step 2 — Minimal editor: six knobs, Interface Level, Input Trim, Output Level, Oversampling and filter
+  selectors (JUCE sliders / combo boxes with APVTS attachments).
+
+Step 3 — `amp2203_bench` (task 4): 60 s of a DI clip (`reference/di/`, its first 60 s; linear 16x
+  interpolation in the bench, which costs little against the engine) at 48 kHz × 16, real-time factor, plus
+  the per-block costs (SPEC: if the real-time factor is below 10, profile and report before optimising).
+
+Step 4 — Wrapper null test: console tool `amp2203_render` (JUCE, links the processor library): renders a
+  WAV through the processor offline at 16x, and runs the oversampler's up / down stages alone. Harness
+  `python -m harness.plugin_null`: plugin(x) vs down(ampwav full(up(x))) at default levels, ESR ≤ −60 dB, for a
+  sine set and a DI excerpt.
+
+Step 5 — pluginval `--strictness-level 5` on the VST3 and the AU, `auval -v aufx A223 Ctcd`. These need the
+  built plugins in `~/Library/Audio/Plug-Ins/{VST3,Components}`; the build copies them there only when asked
+  (option or manual copy, documented). pluginval 1.0.4 is the owner's installed app (recorded in DECISIONS).
+
+Step 6 — Automation: every knob over its full range at audio rate (fast LFO sweeps and 0 → 1 jumps) during a
+  hot DI excerpt at 16x, engine-level (Catch2 / ampwav): no NaN / Inf, Newton statistics reported. Also the
+  Presence knob-jump test against SPICE left from M4 (VERIFICATION §7, D-025).
+
+Step 7 — M5 report, docs.
+
+Risks:
+- Real-time: the engine runs at 2.67 µs per sample at 768 kHz (real-time factor ≈ 0.5 at 48 kHz × 16, M4
+  report); the M5 target is ≥ 10. The plugin will not run in real time at 16x; lower factors trade the
+  accuracy established at 768 kHz (D-035). SPEC M5 prescribes profiling and reporting first.
+- Newton under automation: at extreme settings (Master / Presence 1.0, hot input) first solves still fail
+  occasionally and are rescued by the fallback (D-042, D-043), but are counted as failures; the automation
+  check may report them.
+- pluginval at strictness 5 runs many render passes; at 16x the engine is slow and tests may take long.
 Notes:
 
 ## Questions for the owner

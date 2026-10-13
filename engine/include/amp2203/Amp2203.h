@@ -28,6 +28,9 @@ public:
     void prepare(const EngineConfig& cfg);  // may allocate
     void reset();                           // returns all states to the DC operating point (SPEC §3.6)
     void setParams(const Params& p);        // audio thread; values are smoothed internally
+    /// Input calibration (SPEC §6.3 Interface Level): volts at the jack per full-scale sample. Real-time safe
+    /// (DECISIONS D-012 addition, M5).
+    void setInputVoltsPerFullScale(double v) noexcept { cfg_.inputVoltsPerFullScale = v; }
 
     /// In-place, real-time safe. Samples are full-scale normalised (SPEC §3.3).
     void process(float* mono, int numSamples) noexcept;
