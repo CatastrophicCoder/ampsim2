@@ -479,6 +479,8 @@ Notes:
   J5 small-signal error). Newton at Master 1.0 / Presence 1.0 with 1.9 V guitar peaks: 1469 failures in
   30 ms in the power stage (slow convergence through OT flyback; 100 iterations converge, max 24–42); the
   acceptance signals converge in ≤ 5.
+- 2026-10-13 Q19 answered: B5 + B6 merged into `PowerAmp` (B56, D-041). Power-stage solver and the
+  source-stepping fallback (D-042). Acceptance (DC, NFB, CLEAN, overdrive): 60 PASS, 0 FAIL.
 
 ## M5 — JUCE plugin
 - [ ] Processor, parameters, oversampling, latency
@@ -542,3 +544,11 @@ _(Claude Code: add questions here and also ask them in the session.)_
   Volume 0.2 / 0.6 / 1.0 (current: −30.0 / −27.0 / −22.1 dB); speaker output −47.1 / −41.3 / −41.0 dB.
   — Answered 2026-10-13: merge B12 and B34 into one tree B1234 (D-038).
 
+- Q19 (M4): J5 (PI plates → power stage) as a J-Thevenin junction. SPICE closed-loop study
+  (`harness/partition_j5.py`, Presence 0; DEFAULT / Presence 1 not finished), ESR at the speaker vs b56:
+  provisional R_th = |Z_self|: −23 to −26 dB up to 1 V, −25 to −32 dB at 5 V, −18 to −21 dB at 20 V
+  (small-signal gain 0.45 dB low: the PI plates are cross-coupled). R_th = Z_self − Z_mutual: −46 to −68 dB
+  up to 1 V, −34 to −37 dB at 5 V, −13.7 to −18.6 dB at 20 V. Full 2×2 source: −75 / −63 dB on two small
+  sines, then ngspice failed ("timestep too small" at node y, RELTOL 1e-8 and 1e-7). Options: keep J5 with
+  Z_self − Z_mutual; 2×2 source; merge B5 + B6 into one tree (10-port root, R22 inside the tree, no NFB
+  delay); finish the study first. — Answered 2026-10-13: merge B5 and B6 into one tree B56 (D-041).

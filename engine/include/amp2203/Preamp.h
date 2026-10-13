@@ -63,6 +63,9 @@ public:
     const detail::NewtonStats& newtonStats() const noexcept { return root_.stats; }
     void clearStats() noexcept { root_.stats.clear(); }
     long sanitizeEvents() const noexcept { return root_.sanitized; }
+    /// Failed solves recovered / not recovered by the source-stepping fallback (D-042).
+    long rescuedSolves() const noexcept { return root_.rescued; }
+    long unrescuedSolves() const noexcept { return root_.unrescued; }
     long matrixUpdates() const noexcept { return updates_; }
 
     std::span<const Probe> probes() const noexcept { return probes_; }

@@ -26,6 +26,7 @@ class Block:
     output_load: float = 0.0      # ohms, for power metrics (0 = none)
     recorded: tuple = ()          # Vrec_<name> sources: need recordings from another run (M4)
     linear: bool = False          # scored with the linear-block tolerances (VERIFICATION §7)
+    engine_supplies: tuple = ()   # nodes of the block's own SPICE run fed to the engine as --supply (b56)
 
     @property
     def path(self):
@@ -72,11 +73,11 @@ BLOCKS = {
         probes=('k2b', 'tt', 'tw', 'nd', 'ne', 'mw'),
         levels={'nominal': 1.0}, engine_block='b4', linear=True),
     'b56': Block(
-        id='b56', title='B56+B7 phase inverter, power stage, supply (instantaneous NFB)', testbench='b56.cir',
-        input_node='j4s', output_node='out',
+        id='b56', title='B56 PowerAmp (phase inverter + power stage + OT in one tree, D-041); SPICE with B7',
+        testbench='b56.cir', input_node='j4s', output_node='out',
         probes=('y', 'g3a', 'g3b', 'k3', 'ng', 'p3a', 'p3b', 'ngn', 'nor', 'pa', 'pb', 'ct', 'nscr', 'bpx', 'bpa'),
         levels={'small': 0.1, 'nominal': 1.0, 'hot': 5.0, 'overdrive': 20.0}, engine_block='b56',
-        output_load=16.0),
+        output_load=16.0, engine_supplies=('bpx', 'nscr', 'ct')),
     'b5open': Block(
         id='b5open', title='B5-open phase inverter, R22 driven by recorded speaker voltage',
         testbench='b5open.cir', input_node='j4s', output_node='p3a', probes=('p3b', 'g3a', 'g3b', 'k3', 'ng'),

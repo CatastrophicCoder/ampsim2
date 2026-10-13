@@ -61,6 +61,8 @@ SCORED = {
                     'total_power_rel', 'total_thd_pp', 'stability_out_v', 'stability_growth', 'total_esr_db',
                     'total_harmonics_2_9_db', 'sag_min_v', 'nfb_delay_db', 'newton_failures',
                     'newton_median_iterations', 'newton_max_iterations'},
+           'b56': {'dc_rel_error', 'nonlinear_esr_db', 'nonlinear_esr_db_overdrive', 'harmonics_2_5_db',
+                   'newton_failures', 'newton_median_iterations', 'newton_max_iterations'},
            'b5open': {'dc_rel_error', 'nonlinear_esr_db', 'nonlinear_esr_db_overdrive', 'harmonics_2_5_db',
                       'newton_failures', 'newton_median_iterations', 'newton_max_iterations'},
            'b6': {'dc_rel_error', 'nonlinear_esr_db', 'nonlinear_esr_db_overdrive', 'harmonics_2_5_db',

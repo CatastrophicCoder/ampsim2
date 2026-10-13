@@ -62,6 +62,9 @@ public:
     long matrixUpdates() const noexcept { return updates_; }
     /// Samples where the solution was not finite and the previous state was kept (should stay 0).
     long sanitizeEvents() const noexcept { return root_.sanitized; }
+    /// Failed solves recovered / not recovered by the source-stepping fallback (D-042).
+    long rescuedSolves() const noexcept { return root_.rescued; }
+    long unrescuedSolves() const noexcept { return root_.unrescued; }
 
     std::span<const Probe> probes() const noexcept { return probes_; }
 

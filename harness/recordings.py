@@ -17,7 +17,10 @@ B56_NODES = ('out', 'ngn', 'nor', 'pa', 'pb', 'p3a', 'p3b', 'ct', 'y', 'bpx', 'n
 
 
 def render_nodes(block):
-    """Nodes rendered for a block's transients (render_spice and the source runs use the same list)."""
+    """Nodes rendered for a block's transients (render_spice and the source runs use the same list; b56 uses
+    B56_NODES, so its compare renders and the source runs share the cache)."""
+    if block.id == 'b56':
+        return list(B56_NODES)
     return [n for n in dict.fromkeys([block.output_node, block.input_node, *block.probes]) if n]
 
 
@@ -56,4 +59,4 @@ def engine_inputs(block, sig, rec):
     """(input samples for ampwav --in, {name: samples} for --supply) for a block with recorded inputs."""
     if block.id == 'b6':
         return rec['p3a'], {k: v for k, v in rec.items() if k != 'p3a'}
-    return j4_input(sig), rec
+    return j4_input(sig), rec  # b5open, b56

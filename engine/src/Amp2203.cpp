@@ -5,8 +5,7 @@
 #include <initializer_list>
 #include <utility>
 
-#include "amp2203/PhaseInverter.h"
-#include "amp2203/PowerStage.h"
+#include "amp2203/PowerAmp.h"
 #include "amp2203/Preamp.h"
 #include "amp2203/Supply.h"
 
@@ -38,23 +37,18 @@ void appendProbes(std::vector<Probe>& dst, std::span<const Probe> src, std::init
 }  // namespace
 
 Amp2203::Amp2203()
-    : preamp_(std::make_unique<Preamp>()),
-      pi_(std::make_unique<PhaseInverter>()),
-      power_(std::make_unique<PowerStage>()),
-      supply_(std::make_unique<Supply>()) {
-    // one probe list with netlist names: the PI's y is the loaded master wiper (as F's y), the preamp's
-    // open-circuit wiper is y_oc; supply nodes come from the supply; per-block Newton iterations and
-    // supply currents get a block suffix
+    : preamp_(std::make_unique<Preamp>()), power_(std::make_unique<PowerAmp>()), supply_(std::make_unique<Supply>()) {
+    // one probe list with netlist names: the power amp's y is the loaded master wiper (as F's y), the
+    // preamp's open-circuit wiper is y_oc; supply nodes come from the supply; per-block Newton iterations
+    // and supply currents get a block suffix
     probes_.push_back({"in", &vIn_});
     probes_.push_back({"out", &vOut_});
     appendProbes(probes_, preamp_->probes(), {"in", "out", "bpa", "bpx"},
                  {{"y", "y_oc"}, {"newton_iterations", "newton_iterations_preamp"},
                   {"isupply_bpa", "isupply_bpa_preamp"}, {"isupply_bpx", "isupply_bpx_preamp"}});
-    appendProbes(probes_, pi_->probes(), {"in", "out", "outb", "bpx"},
-                 {{"newton_iterations", "newton_iterations_pi"}, {"isupply_bpx", "isupply_bpx_pi"},
-                  {"rth4", "rth4_pi"}});
-    appendProbes(probes_, power_->probes(), {"in", "in_b", "out", "p3a", "p3b", "ct", "nscr", "isupply_ct", "isupply_scr"},
-                 {{"newton_iterations", "newton_iterations_power"}});
+    appendProbes(probes_, power_->probes(), {"in", "out", "bpx", "nscr", "ct", "isupply_ct", "isupply_scr"},
+                 {{"newton_iterations", "newton_iterations_power"}, {"isupply_bpx", "isupply_bpx_power"},
+                  {"rth4", "rth4_power"}});
     appendProbes(probes_, supply_->probes(), {});
     prepare(cfg_);
 }
@@ -64,8 +58,7 @@ Amp2203::~Amp2203() = default;
 void Amp2203::prepare(const EngineConfig& cfg) {
     cfg_ = cfg;
     preamp_->prepare(cfg.sampleRate, cfg.paramSmoothingMs);
-    pi_->prepare(cfg.sampleRate, cfg.paramSmoothingMs);
-    power_->prepare(cfg.sampleRate);
+    power_->prepare(cfg.sampleRate, cfg.paramSmoothingMs);
     supply_->prepare(cfg.sampleRate);
     reset();
 }
@@ -73,36 +66,27 @@ void Amp2203::prepare(const EngineConfig& cfg) {
 void Amp2203::setParams(const Params& p) {
     params_ = p;
     preamp_->setParams(p);
-    pi_->setParams(p);
+    power_->setParams(p);
 }
 
-void Amp2203::setFeedbackOptions(bool closed, int delaySamples) {
-    nfbClosed_ = closed;
-    nfbDelay_ = delaySamples < 1 ? 1 : (delaySamples > 2 ? 2 : delaySamples);
-    pi_->setFeedbackResistance(closed ? PhaseInverter::R22 : kOpenLoopR22);
-}
+void Amp2203::setFeedbackClosed(bool closed) { power_->setFeedbackResistance(closed ? PhaseInverter::R22 : kOpenLoopR22); }
 
 void Amp2203::applySupplies() noexcept {
     preamp_->setSupplyVoltages(supply_->bpA(), supply_->bpX());
-    pi_->setSupplyVoltage(supply_->bpX());
-    power_->setSupplyVoltages(supply_->ct(), supply_->screen());
+    power_->setSupplyVoltages(supply_->bpX(), supply_->screen(), supply_->ct());
 }
 
 void Amp2203::solveDc() {
     // fixed point (WDF_DESIGN §7): blocks at the supply voltages → their DC currents → supply DC
     supply_->reset({0.136, 0.018, 0.007, 0.0013});  // CIRCUIT.md §5 currents as the start
-    double out = 0.0;
     for (int k = 0; k < kDcIterations; ++k) {
         const double before[4] = {supply_->ct(), supply_->screen(), supply_->bpX(), supply_->bpA()};
         applySupplies();
         preamp_->reset(0.0);
-        pi_->setSourceResistance(preamp_->rth4());
-        pi_->setFeedbackVoltage(out);
-        pi_->reset(preamp_->output());
-        power_->reset(pi_->outputA(), pi_->outputB());
-        out = power_->output();
+        power_->setSourceResistance(preamp_->rth4());
+        power_->reset(preamp_->output());
         supply_->reset({power_->centreTapCurrent(), power_->screenCurrent(),
-                        preamp_->supplyCurrentX() + pi_->supplyCurrent(), preamp_->supplyCurrentA()});
+                        preamp_->supplyCurrentX() + power_->supplyCurrentX(), preamp_->supplyCurrentA()});
         const double after[4] = {supply_->ct(), supply_->screen(), supply_->bpX(), supply_->bpA()};
         double change = 0.0;
         for (int i = 0; i < 4; ++i)
@@ -111,15 +95,13 @@ void Amp2203::solveDc() {
             break;
     }
     applySupplies();
-    fb_[0] = fb_[1] = out;
-    vOut_ = out;
+    vOut_ = power_->output();
 }
 
 void Amp2203::reset() {
     vIn_ = 0.0;
     solveDc();
     preamp_->clearStats();
-    pi_->clearStats();
     power_->clearStats();
 }
 
@@ -127,14 +109,10 @@ double Amp2203::processSample(double x) noexcept {
     vIn_ = x * cfg_.inputVoltsPerFullScale;
     applySupplies();
     const double y = preamp_->process(vIn_);
-    pi_->setSourceResistance(preamp_->rth4());
-    pi_->setFeedbackVoltage(fb_[nfbDelay_ - 1]);  // one-sample NFB delay (SPEC §4.2; 2 for the check)
-    pi_->process(y);
-    vOut_ = power_->process(pi_->outputA(), pi_->outputB());
+    power_->setSourceResistance(preamp_->rth4());
+    vOut_ = power_->process(y);
     supply_->process({power_->centreTapCurrent(), power_->screenCurrent(),
-                      preamp_->supplyCurrentX() + pi_->supplyCurrent(), preamp_->supplyCurrentA()});
-    fb_[1] = fb_[0];
-    fb_[0] = vOut_;
+                      preamp_->supplyCurrentX() + power_->supplyCurrentX(), preamp_->supplyCurrentA()});
     const double out = vOut_ / cfg_.outputVoltsPerFullScale;
     return std::isfinite(out) ? out : 0.0;
 }
@@ -151,13 +129,14 @@ void Amp2203::process(double* mono, int numSamples) noexcept {
 
 Amp2203::Stats Amp2203::getStats() const {
     detail::NewtonStats all = preamp_->newtonStats();
-    all.add(pi_->newtonStats());
     all.add(power_->newtonStats());
     Stats s;
     s.newtonFailures = all.failures;
     s.maxIterationsUsed = all.maxIterations;
     s.newtonSolves = all.solves;
     s.medianIterations = all.medianIterations();
+    s.newtonRescued = static_cast<uint64_t>(preamp_->rescuedSolves() + power_->rescuedSolves());
+    s.newtonUnrescued = static_cast<uint64_t>(preamp_->unrescuedSolves() + power_->unrescuedSolves());
     return s;
 }
 

@@ -1,6 +1,7 @@
 #include "Runner.h"
 
 #include "amp2203/PhaseInverter.h"
+#include "amp2203/PowerAmp.h"
 #include "amp2203/PowerStage.h"
 #include "amp2203/Preamp.h"
 #include "amp2203/StageV1aV1b.h"
@@ -23,8 +24,8 @@ public:
         started_ = false;
     }
     void setParams(const amp2203::Params& p) override { amp_.setParams(p); }
-    bool setFeedback(bool closed, int delaySamples) override {
-        amp_.setFeedbackOptions(closed, delaySamples);
+    bool setFeedback(bool closed) override {
+        amp_.setFeedbackClosed(closed);
         return true;
     }
 
@@ -78,12 +79,16 @@ private:
 };
 
 /// Newton statistics of a block in the ampwav --stats form.
-amp2203::Amp2203::Stats toStats(const amp2203::detail::NewtonStats& s) {
+template <class Block>
+amp2203::Amp2203::Stats toStats(const Block& b) {
+    const auto& s = b.newtonStats();
     amp2203::Amp2203::Stats st;
     st.newtonFailures = s.failures;
     st.maxIterationsUsed = s.maxIterations;
     st.newtonSolves = s.solves;
     st.medianIterations = s.medianIterations();
+    st.newtonRescued = static_cast<uint64_t>(b.rescuedSolves());
+    st.newtonUnrescued = static_cast<uint64_t>(b.unrescuedSolves());
     return st;
 }
 
@@ -108,7 +113,7 @@ public:
     }
 
     std::span<const amp2203::Probe> probes() const noexcept override { return block_.probes(); }
-    amp2203::Amp2203::Stats stats() const override { return toStats(block_.newtonStats()); }
+    amp2203::Amp2203::Stats stats() const override { return toStats(block_); }
 
     bool setSupply(std::string_view node, double v) noexcept override {
         if (node != "bpa")
@@ -143,7 +148,7 @@ public:
     }
 
     std::span<const amp2203::Probe> probes() const noexcept override { return block_.probes(); }
-    amp2203::Amp2203::Stats stats() const override { return toStats(block_.newtonStats()); }
+    amp2203::Amp2203::Stats stats() const override { return toStats(block_); }
 
     bool setSupply(std::string_view node, double v) noexcept override {
         if (node != "bpx")
@@ -178,7 +183,7 @@ public:
     }
 
     std::span<const amp2203::Probe> probes() const noexcept override { return block_.probes(); }
-    amp2203::Amp2203::Stats stats() const override { return toStats(block_.newtonStats()); }
+    amp2203::Amp2203::Stats stats() const override { return toStats(block_); }
 
     bool setSupply(std::string_view node, double v) noexcept override {
         if (node != "bpx")
@@ -212,7 +217,7 @@ public:
     }
 
     std::span<const amp2203::Probe> probes() const noexcept override { return block_.probes(); }
-    amp2203::Amp2203::Stats stats() const override { return toStats(block_.newtonStats()); }
+    amp2203::Amp2203::Stats stats() const override { return toStats(block_); }
 
     bool setSupply(std::string_view node, double v) noexcept override {
         if (node == "bpa")
@@ -259,7 +264,7 @@ public:
     }
 
     std::span<const amp2203::Probe> probes() const noexcept override { return block_.probes(); }
-    amp2203::Amp2203::Stats stats() const override { return toStats(block_.newtonStats()); }
+    amp2203::Amp2203::Stats stats() const override { return toStats(block_); }
 
     bool setSupply(std::string_view node, double v) noexcept override {
         if (node == "bpx")
@@ -296,7 +301,7 @@ public:
     }
 
     std::span<const amp2203::Probe> probes() const noexcept override { return block_.probes(); }
-    amp2203::Amp2203::Stats stats() const override { return toStats(block_.newtonStats()); }
+    amp2203::Amp2203::Stats stats() const override { return toStats(block_); }
 
     bool setSupply(std::string_view node, double v) noexcept override {
         if (node == "p3b")
@@ -315,6 +320,56 @@ private:
     amp2203::PowerStage block_;
     bool started_ = false;
     double vocB_ = 262.270582, ct_ = amp2203::PowerStage::kSupplyCt, scr_ = amp2203::PowerStage::kSupplyScreen;
+};
+
+/// B56 PowerAmp standalone (the b56 testbench's B5 + B6; D-041): input = J4 source voltage (absolute
+/// volts), output = speaker voltage. R_th4 from the knobs (D-015); `--supply bpx= nscr= ct=` set the
+/// supply nodes (recordings of a b56 run, VERIFICATION §1).
+class PowerAmpRunner final : public Runner {
+public:
+    void prepare(double sampleRate, int) override {
+        block_.prepare(sampleRate, amp2203::EngineConfig{}.paramSmoothingMs);
+        started_ = false;
+    }
+    void setParams(const amp2203::Params& p) override {
+        using amp2203::detail::atap;
+        using amp2203::detail::ltap;
+        block_.setParams(p);
+        const double vr2b = 1e6 * atap(p.master) + 1.0;
+        const double chain = (1e6 * (1.0 - atap(p.master)) + 1.0) + 220e3 * ltap(p.treble) + (1e6 * atap(p.bass) + 1.0) + 22e3;
+        block_.setSourceResistance(1.0 / (1.0 / vr2b + 1.0 / chain));
+    }
+
+    void processVolts(double* v, int numSamples) noexcept override {
+        if (numSamples > 0 && !started_) {
+            block_.reset(v[0]);
+            started_ = true;
+        }
+        for (int n = 0; n < numSamples; ++n)
+            v[n] = block_.process(v[n]);
+    }
+
+    std::span<const amp2203::Probe> probes() const noexcept override { return block_.probes(); }
+    amp2203::Amp2203::Stats stats() const override { return toStats(block_); }
+
+    bool setSupply(std::string_view node, double v) noexcept override {
+        if (node == "bpx")
+            bpX_ = v;
+        else if (node == "nscr")
+            scr_ = v;
+        else if (node == "ct")
+            ct_ = v;
+        else
+            return false;
+        block_.setSupplyVoltages(bpX_, scr_, ct_);
+        return true;
+    }
+
+private:
+    amp2203::PowerAmp block_;
+    bool started_ = false;
+    double bpX_ = amp2203::PhaseInverter::kSupplyBpX, scr_ = amp2203::PowerStage::kSupplyScreen,
+           ct_ = amp2203::PowerStage::kSupplyCt;
 };
 
 /// M0 stand-in for a block that is not implemented yet: output = input (volts).
@@ -367,6 +422,8 @@ std::unique_ptr<Runner> makeRunner(std::string_view blockId) {
         return std::make_unique<PhaseInverterRunner>();
     if (id == "b6")
         return std::make_unique<PowerStageRunner>();
+    if (id == "b56")
+        return std::make_unique<PowerAmpRunner>();
     const auto& ids = blockIds();
     if (std::find(ids.begin(), ids.end(), id) != ids.end())
         return std::make_unique<PassThroughRunner>();

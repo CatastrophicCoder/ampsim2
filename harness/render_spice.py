@@ -47,6 +47,8 @@ def render(block, preset, signals, jobs=None, log=print):
         rec, notes = recordings.recordings(block, knobs, sig)
         x = block_input(block, sig) if block.input_node else None
         res = spice.tran(text, knobs, x, nodes, recorded=rec or None)
+        if block.engine_supplies:  # the engine block runs on this run's own supply waveforms (b56)
+            rec = {n: res[n] for n in block.engine_supplies}
         log(f'  spice {block.id}/{preset.id}/{sig.id}: {len(sig.x) / config.FS:.3f} s signal, {time.time() - t0:.1f} s')
         return sig.id, res, rec, [f'{sig.id} {n}' for n in notes]
 

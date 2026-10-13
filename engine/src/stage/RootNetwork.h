@@ -104,8 +104,12 @@ struct RootNetwork {
             v[r] += std::clamp(s.v[r] - s.vPrev[r], -newton.limitDown(r), newton.maxStep[r]);
         RVec i = s.i;
         const auto failures = s.stats.failures;
-        s.iterations = newton.solve(device, vOc, s.Z, v, i, s.stats);
-        const bool failed = s.stats.failures != failures;
+        int iterations = newton.solve(device, vOc, s.Z, v, i, s.stats);
+        bool failed = s.stats.failures != failures;
+        if (failed)
+            iterations += rescue(s, newton, device, vOc, v, i, failed);
+        s.iterations = iterations;
+        s.vOcPrev = vOc;
 
         std::array<double, N> node;
         bool finite = true;
@@ -127,6 +131,38 @@ struct RootNetwork {
         for (int k = 0; k < P; ++k)
             wave[static_cast<size_t>(k)] = 2.0 * elementVoltage(s, k, eOffset) - wave[static_cast<size_t>(k)];
         return true;
+    }
+
+    /// Source-stepping fallback after a failed solve (DECISIONS D-042): from the previous sample's solution,
+    /// the Thevenin voltages move from vOcPrev to vOc in m equal substeps (m = 2, 4, 8 until one converges),
+    /// each a full Newton solve. Bounded: at most 14 more solves. On success v, i take the result, `failed`
+    /// is cleared and `rescued` counted; otherwise v, i keep the best iterate of the first solve and
+    /// `unrescued` is counted. The first solve's failure stays in `stats` either way.
+    template <class Device>
+    int rescue(State& s, const solver::MultiportNewton<K>& newton, const Device& device, const RVec& vOc, RVec& v,
+               RVec& i, bool& failed) const noexcept {
+        int iterations = 0;
+        for (const int m : {2, 4, 8}) {
+            RVec vs = s.v, is = s.i;
+            bool ok = true;
+            for (int k = 1; k <= m && ok; ++k) {
+                RVec vk;
+                for (int r = 0; r < K; ++r)
+                    vk[r] = s.vOcPrev[r] + (vOc[r] - s.vOcPrev[r]) * (static_cast<double>(k) / m);
+                detail::NewtonStats sub;
+                iterations += newton.solve(device, vk, s.Z, vs, is, sub);
+                ok = sub.failures == 0;
+            }
+            if (ok) {
+                v = vs;
+                i = is;
+                failed = false;
+                ++s.rescued;
+                return iterations;
+            }
+        }
+        ++s.unrescued;
+        return iterations;
     }
 
     /// DC operating point: G with the capacitors open (G = 0), `sources` the DC Thevenin voltages of the
@@ -156,6 +192,7 @@ struct RootNetwork {
                 s.node[n] -= Xr[n][r] * s.i[r];
         }
         s.vPrev = s.v;
+        s.vOcPrev = vOc;
         s.iterations = 0.0;
         return dcStats.failures == 0;
     }

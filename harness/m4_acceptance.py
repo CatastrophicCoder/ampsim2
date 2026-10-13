@@ -8,8 +8,8 @@ against the full netlist F:
 4. Stability: 60 s of silence at Preamp / Master / Presence 1.0: |out| < 1 mV, no growth (engine only).
 5. Overdrive (Preamp 0.8, Master 0.3, 300 mV 220 Hz): ESR ≤ −20 dB, harmonics 2–9 within 1.5 dB, B+ sag
    minimum v(ct) within 2 V.
-6. Delayed-NFB break: engine small-signal response (SWP-lo, DEFAULT) with a 1- vs a 2-sample NFB delay;
-   a difference above 0.5 dB anywhere in 20 Hz–20 kHz is raised with the owner (SPEC §7 M4).
+6. Delayed-NFB break (SPEC §7 M4): not applicable since D-041, R22 closes the loop inside the B56 tree
+   without a delay.
 7. CRUNCH / DRIVE (VERIFICATION §4): 300 mV 220 Hz and the DI clips, ESR ≤ −20 dB, harmonics 2–9 within
    1.5 dB (sines).
 F renders of 7 share harness/cascade.py's node list (its cache), so the DI references serve both.
@@ -36,7 +36,7 @@ from .run_engine import _ampwav
 from .tolerances import status
 from .wavio import read_wav, write_wav
 
-SECTIONS = ('dc', 'nfb', 'clean', 'stability', 'overdrive', 'nfb_delay', 'crunch_drive')
+SECTIONS = ('dc', 'nfb', 'clean', 'stability', 'overdrive', 'crunch_drive')
 NFB_FREQS = (100.0, 1000.0, 5000.0)
 NFB_AMP = 0.001
 EL34 = {'ip_tube_a': '@b.x4.bp[i]', 'ip_tube_b': '@b.x6.bp[i]', 'is_tube_a': '@b.x4.bs[i]', 'is_tube_b': '@b.x6.bs[i]'}
@@ -93,6 +93,7 @@ def _harm_2_9(ref, y, f0):
 
 def _newton(rep, section, item, stats):
     rep.add(section, 'newton_failures', item, int(stats['newton_failures']))
+    rep.add(section, 'newton_unrescued', item, int(stats.get('newton_unrescued', 0)))
     if stats.get('newton_solves'):
         rep.add(section, 'newton_median_iterations', item, int(stats['median_iterations']))
         rep.add(section, 'newton_max_iterations', item, int(stats['max_iterations_used']))
@@ -188,20 +189,6 @@ def check_overdrive(rep, notes):
     return [_sine_compare(rep, 'overdrive', pid, sig, f_res, e_res, sag=True)]
 
 
-def check_nfb_delay(rep, notes):
-    knobs = PRESETS['DEFAULT'].all_knobs()
-    sig = signals.sweep(BLOCKS['full'].levels['small'], 'SWP-lo')
-    f = np.geomspace(20.0, 20000.0, 300)
-    resp = {}
-    for mode in ('closed', 'delay2'):
-        e = engine(knobs, sig.x, nfb=mode)
-        resp[mode] = metrics.sweep_response_db(sig.x, metrics.ac_part(e['out']), f)
-    diff = resp['delay2'] - resp['closed']
-    rep.add('nfb_delay', 'nfb_delay_db', '1 vs 2 samples, 20 Hz–20 kHz', float(np.max(np.abs(diff))), ' dB')
-    _, h = spice.ac(_full_text(), knobs, 'out', 'in', fstart=20.0, fstop=20000.0)
-    return {'f': f, 'resp': resp, 'diff': diff, 'f_ac': _, 'ac_db': 20 * np.log10(np.abs(h))}
-
-
 def check_crunch_drive(rep, notes, jobs):
     texts = cascade._texts()
     work = []
@@ -264,11 +251,8 @@ def write_report(rep, res, notes):
         s = res['stability']
         lines += ['', '## Stability', '', f'60 s silence at Preamp / Master / Presence 1.0: max |out| {s["peak"]:.3g} V, '
                   f'RMS first / last 10 s {s["first"]:.3g} / {s["last"]:.3g} V.']
-    if 'nfb_delay' in res:
-        d = res['nfb_delay']
-        k = np.argmax(np.abs(d['diff']))
-        lines += ['', '## Delayed-NFB break', '', f'Engine small-signal response (SWP-lo at DEFAULT) with a 2-sample NFB delay '
-                  f'minus the 1-sample design: max |difference| {abs(d["diff"][k]):.3f} dB at {d["f"][k]:.0f} Hz.']
+    lines += ['', '## Delayed-NFB break', '', 'Not applicable: since D-041 the global NFB (R22) is part of the B56 tree and '
+              'has no delay (SPEC §7 M4 asked for a 1- vs 2-sample comparison of the delayed design).']
     path = out / f'{stem}.md'
     path.write_text('\n'.join(lines) + '\n')
     return path
@@ -293,8 +277,6 @@ def main():
             res[sec] = check_stability(rep, notes)
         elif sec == 'overdrive':
             res[sec] = check_overdrive(rep, notes)
-        elif sec == 'nfb_delay':
-            res[sec] = check_nfb_delay(rep, notes)
         elif sec == 'crunch_drive':
             res[sec] = check_crunch_drive(rep, notes, a.jobs)
         else:

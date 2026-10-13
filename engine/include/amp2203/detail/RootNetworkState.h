@@ -18,9 +18,12 @@ struct RootNetworkState {
     std::array<double, K> v{};      // root port voltages (solution of the last sample)
     std::array<double, K> vPrev{};  // the sample before (predictor, D-029)
     std::array<double, K> i{};      // root port currents
+    std::array<double, K> vOcPrev{};  // root Thevenin voltages of the last sample (source-stepping fallback)
     std::array<double, N> node{};   // node voltages
     double iterations = 0.0;        // Newton iterations of the last sample (probe)
     long sanitized = 0;             // samples with a non-finite solution (state kept)
+    long rescued = 0;               // failed solves recovered by the source-stepping fallback (D-042)
+    long unrescued = 0;             // failed solves the fallback could not recover
     NewtonStats stats;
 };
 

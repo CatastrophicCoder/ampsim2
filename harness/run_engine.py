@@ -44,7 +44,7 @@ def run(block, preset, signals, log=print, recorded=None):
         sig_wav = config.RENDER_DIR / 'signals' / block.id / f'{sig.id}.wav'
         sig_wav.parent.mkdir(parents=True, exist_ok=True)
         supplies = []
-        if block.recorded:
+        if block.recorded or block.engine_supplies:
             x, aux = recordings.engine_inputs(block, sig, recorded[sig.id])
             for name, v in aux.items():
                 write_wav(d / f'rec_{name}.wav', v)
@@ -77,7 +77,10 @@ def main():
     a = ap.parse_args()
     block, preset = BLOCKS[a.block], PRESETS[a.preset]
     sigs = select_signals(block, preset, a.signal)
-    rec = {s.id: recordings.recordings(block, preset.all_knobs(), s)[0] for s in sigs} if block.recorded else None
+    rec = None
+    if block.recorded or block.engine_supplies:
+        from .render_spice import render
+        rec = render(block, preset, sigs)['recorded']
     run(block, preset, sigs, recorded=rec)
 
 

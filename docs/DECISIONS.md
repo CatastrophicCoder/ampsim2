@@ -714,3 +714,37 @@ Decision:
 Consequences: B6 uses `CoupledInductors<3>`; the coupling of B6 and B7 through the centre tap is checked
 by the M4 clean-power and sag acceptance (WDF_DESIGN §7).
 
+
+## D-041 Merge B5 and B6 into one tree B56 (no J5 junction, NFB without delay)
+Date: 2026-10-13 · Status: accepted (owner decision, PROGRESS.md Q19)
+Context: M4 step 1 (`python -m harness.partition_j5`, testbench `b56j5`, Presence 0): with J5 as J-Thevenin
+sources the speaker voltage against the joined b56 was −23 to −26 dB on 0.1–1 V sines for R_th = |Z_self|
+(the PI plates are cross-coupled, Z_ab = 32.1 kΩ, Z_ba = 25.4 kΩ at 1 kHz; small-signal gain 0.45 dB low),
+−46 to −68 dB for R_th = Z_self − Z_mutual, but −13.7 to −21 dB at 20 V for both (a PI half cuts off, the
+EL34 grids conduct). The 2×2 source could not be rendered (ngspice "timestep too small" at node y).
+Options presented: keep J5 with Z_self − Z_mutual; 2×2 source; merge; finish the study.
+Decision: `PowerAmp` (B56): the PhaseInverter and PowerStage elements in one tree (`engine/src/stage56/`: 21
+nodes, 42 element ports, R22 a resistor nG – out inside the tree) under a 10-port root (V3a, V3b, both EL34
+pair equivalents; `devices::TriodesPentodes`). `Amp2203` = Preamp → PowerAmp, Supply once per sample.
+`PhaseInverter` (b5open) and `PowerStage` (b6) stay as verified sub-blocks. The delayed-NFB check of SPEC
+§7 M4 no longer applies (no delay; D-006 superseded for the engine chain).
+Consequences: full amp at default settings, idle machine, measured in the M4 report. First acceptance run
+(engine vs F): NFB gain closed / open within 0.02 dB, overdrive ESR −68.0 dB, sag 4 mV, CLEAN 97.3 W vs
+100.2 W, THD +0.16 pp.
+
+## D-042 Power-stage Newton: free plate / screen steps, two halvings, source-stepping fallback
+Date: 2026-10-13 · Status: accepted
+Context: at Master 1.0 / Presence 1.0 with 1.9–2.2 V guitar peaks the OT flyback moves an EL34 plate by
+hundreds of volts per sample (SPICE: plates +1588 V / −462 V; the engine reproduces them). With the triode
+step limits (±50 V) and four halvings the power-stage solve stalled (1/16 steps) and 1469–3157 of 23040
+samples (30 ms) did not converge in 12 iterations. Measured (merged B56, 30 ms, 2.18 / 1.0 V at max
+settings): limits ±50 V, 4 halvings: 3157 / 2805 failures; 2 halvings: 3136 / 2782; plate / screen free,
+2 halvings: 77 / 12; free, 3 halvings: 187 / 74.
+Decision: EL34 ports: grid +50 V / −1000 V, screen and plate unlimited, at most 2 halvings
+(`devices::TwoPentodes::solver`, also used for the pentode ports of B56; the triode blocks keep D-037).
+`stage::RootNetwork` gains a fallback for any failed solve: from the previous sample's solution the
+Thevenin voltages move to the new ones in 2, then 4, then 8 substeps (bounded: at most 14 more solves).
+The first solve's failure is still counted in the Newton statistics (`newton_failures`, scored as before);
+`newton_rescued` / `newton_unrescued` report the fallback (ampwav --stats, Amp2203::Stats; D-012 addition).
+Consequences: blocks that never fail are unchanged bit for bit. At the max settings above all failed
+solves were rescued (0 unrescued); those samples cost more (6.3–6.6 µs per sample for the full amp there).

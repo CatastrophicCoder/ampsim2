@@ -396,15 +396,17 @@ Tasks:
 4. `Supply` (B7) state-space and current bookkeeping across blocks.
 5. Full chain `Amp2203`.
 Acceptance (vs full-netlist SPICE unless noted):
-- DC: EL34 plate current per tube within ±1 mA of SPICE (34.7 mA), screen ±0.3 mA (4.65 mA),
+- DC: EL34 plate current per tube within ±1 mA of SPICE (34.08 mA), screen ±0.3 mA (4.57 mA),
   `v(ct)` within 1 %, bias node within 0.2 V.
 - NFB: small-signal gain with and without R22 (R22 → 1 TΩ) matches SPICE within 0.5 dB at
   100 Hz / 1 kHz / 5 kHz.
 - Clean power (Preamp 0.2, Master 1.0, 1 kHz): output power at 25 mV peak input within ±5 % of SPICE
-  (101 W, 2.8 % THD), THD within ±0.5 percentage points.
+  (100.2 W, 3.47 % THD), THD within ±0.5 percentage points.
 - Stability: 60 s of silence at Preamp 1.0 / Master 1.0 / Presence 1.0 produces |out| < 1 mV, no growth.
 - Overdrive (Preamp 0.8, Master 0.3, 300 mV peak @ 220 Hz): ESR ≤ −20 dB, harmonics 2–9 within 1.5 dB;
-  B+ sag minimum within 2 V of SPICE (469 V).
+  B+ sag minimum within 2 V of SPICE (469.8 V).
+- (The SPICE values in parentheses are those of the current netlist, after the OT and choke data of
+  D-023 / D-024; the first version of this list had 34.7 mA, 4.65 mA, 101 W / 2.8 % and 469 V.)
 - Partition error of the delayed-NFB break reported (compare against a variant with a 2-sample delay;
   if results differ by more than 0.5 dB anywhere in 20 Hz–20 kHz small-signal response, raise
   the issue with the owner).

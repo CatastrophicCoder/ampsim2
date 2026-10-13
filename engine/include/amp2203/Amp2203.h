@@ -11,13 +11,13 @@
 namespace amp2203 {
 
 class Preamp;
-class PhaseInverter;
-class PowerStage;
+class PowerAmp;
 class Supply;
 
-/// Full amplifier (SPEC §3.2, §4.3): Preamp (B1234) → J4 → PhaseInverter (B5, NFB from the previous
-/// sample's speaker voltage) → J5 → PowerStage (B6) → speaker voltage; Supply (B7) advances once per sample
-/// with the currents of the sample just processed and sets the supply nodes of the next one.
+/// Full amplifier (SPEC §3.2, §4.3): Preamp (B1234) → J4 → PowerAmp (B56: phase inverter, power stage and
+/// output transformer in one tree, global NFB inside it; DECISIONS D-041) → speaker voltage; Supply (B7)
+/// advances once per sample with the currents of the sample just processed and sets the supply nodes of
+/// the next one.
 class Amp2203 {
 public:
     Amp2203();
@@ -34,10 +34,9 @@ public:
     /// Same as above in double precision (used by ampwav and the tests).
     void process(double* mono, int numSamples) noexcept;
 
-    /// Diagnostics for the M4 NFB checks (SPEC §7 M4; DECISIONS D-012 addition), not real-time: `closed` =
-    /// false sets R22 to 1 TΩ (loop open); `delaySamples` is the NFB delay (1 = the engine's design; 2 for
-    /// the delayed-NFB partition check). Takes effect at the next reset().
-    void setFeedbackOptions(bool closed, int delaySamples);
+    /// Diagnostic for the M4 NFB check (SPEC §7 M4; DECISIONS D-012 addition), not real-time: `closed` =
+    /// false sets R22 to 1 TΩ (loop open). Takes effect at the next reset().
+    void setFeedbackClosed(bool closed);
 
     // diagnostics (non-real-time)
     struct Stats {
@@ -45,8 +44,10 @@ public:
         double   maxIterationsUsed = 0.0;
         uint64_t newtonSolves = 0;        // DECISIONS D-012 addition (M2): Newton solves so far
         double   medianIterations = 0.0;  // median Newton iterations per solve (SPEC §7 M2 acceptance)
+        uint64_t newtonRescued = 0;       // D-042: failures recovered by the source-stepping fallback
+        uint64_t newtonUnrescued = 0;     // failures the fallback did not recover (best iterate kept)
     };
-    /// Newton statistics of all roots together (preamp, phase inverter, power stage).
+    /// Newton statistics of both roots together (preamp, power amp).
     Stats getStats() const;
 
     /// Node probes for the harness (`ampwav --dump-node`), netlist names. Values are valid after each
@@ -61,12 +62,8 @@ private:
     EngineConfig cfg_{};
     Params params_{};
     std::unique_ptr<Preamp> preamp_;
-    std::unique_ptr<PhaseInverter> pi_;
-    std::unique_ptr<PowerStage> power_;
+    std::unique_ptr<PowerAmp> power_;
     std::unique_ptr<Supply> supply_;
-    bool nfbClosed_ = true;
-    int nfbDelay_ = 1;
-    double fb_[2] = {0.0, 0.0};  // speaker voltage of the last two samples (NFB delay line)
 
     double vIn_ = 0.0;   // V at the input jack
     double vOut_ = 0.0;  // V across the 16 Ω load
