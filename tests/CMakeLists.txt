@@ -11,7 +11,9 @@ add_executable(amp2203_tests
     test_triode.cpp
     test_pentode.cpp
     test_ot.cpp
-    test_supply.cpp)
+    test_supply.cpp
+    test_phase_inverter.cpp
+    test_power_stage.cpp)
 
 target_link_libraries(amp2203_tests PRIVATE amp2203_engine Catch2::Catch2WithMain)
 # white-box tests of engine internals (engine/src) and the SPICE / Python fixtures in tests/data

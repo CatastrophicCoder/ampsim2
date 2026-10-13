@@ -29,7 +29,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
-from . import config, metrics, rth_measure, signals, spice  # noqa: E402
+from . import config, metrics, recordings, rth_measure, signals, spice  # noqa: E402
 from .blocks import BLOCKS  # noqa: E402
 from .compare import _git  # noqa: E402
 from .junctions import RTH  # noqa: E402
@@ -37,7 +37,7 @@ from .presets import PRESETS  # noqa: E402
 from .render_spice import block_input  # noqa: E402
 
 PRESET_IDS = ('PRES0', 'DEFAULT', 'PRES1')
-NODES = ('out', 'ngn', 'nor', 'pa', 'pb', 'p3a', 'p3b', 'ct', 'y')
+NODES = recordings.B56_NODES
 BANDS = ((20.0, 10000.0), (10000.0, 20000.0))
 KINDS = ('SIN', 'SWP-lo', 'TT', 'BURST', 'STEP')
 

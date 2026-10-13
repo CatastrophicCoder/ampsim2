@@ -142,7 +142,7 @@ TEST_CASE("CLI end to end: output, node dump and stats", "[ampwav]") {
     std::string err;
     REQUIRE(ampwav::writeMonoWavF64(dir.file("in.wav"), 384000.0, x, err));
 
-    for (const char* block : {"full", "b5"}) {  // pass-through blocks: output = input
+    for (const char* block : {"full", "b7"}) {  // pass-through blocks: output = input
         INFO("block " << block);
         const auto o = parse({"--block", block, "--in", dir.file("in.wav"), "--out", dir.file("out.wav"), "--rate",
                               "384000", "--dump-node", "in=" + dir.file("node_in.wav"), "--stats",

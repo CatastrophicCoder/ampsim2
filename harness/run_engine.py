@@ -7,7 +7,7 @@ import argparse
 import json
 import subprocess
 
-from . import config
+from . import config, recordings
 from .blocks import BLOCKS
 from .presets import PRESETS
 from .render_spice import block_input, select_signals
@@ -31,8 +31,9 @@ def engine_nodes(block):
     return _ampwav(['--block', block.engine_block, '--list-nodes']).stdout.split()
 
 
-def run(block, preset, signals, log=print):
-    """Returns {signal id: {'out': array, 'nodes': {node: array}, 'stats': dict}}."""
+def run(block, preset, signals, log=print, recorded=None):
+    """Returns {signal id: {'out': array, 'nodes': {node: array}, 'stats': dict}}. `recorded`: {signal id:
+    {name: samples}} for blocks driven by recordings (harness/recordings.py), passed as `--supply`."""
     available = set(engine_nodes(block))
     wanted = [n for n in dict.fromkeys([block.input_node, *block.probes, *block.dc_node_list()]) if n in available]
     params = [x for k, v in preset.all_knobs().items() for x in ('--param', f'{k}={v!r}')]
@@ -42,8 +43,16 @@ def run(block, preset, signals, log=print):
         d.mkdir(parents=True, exist_ok=True)
         sig_wav = config.RENDER_DIR / 'signals' / block.id / f'{sig.id}.wav'
         sig_wav.parent.mkdir(parents=True, exist_ok=True)
-        write_wav(sig_wav, block_input(block, sig))
-        base = ['--block', block.engine_block, '--in', str(sig_wav), '--rate', str(config.FS), *params]
+        supplies = []
+        if block.recorded:
+            x, aux = recordings.engine_inputs(block, sig, recorded[sig.id])
+            for name, v in aux.items():
+                write_wav(d / f'rec_{name}.wav', v)
+                supplies += ['--supply', f'{name}={d / f"rec_{name}.wav"}']
+        else:
+            x = block_input(block, sig)
+        write_wav(sig_wav, x)
+        base = ['--block', block.engine_block, '--in', str(sig_wav), '--rate', str(config.FS), *params, *supplies]
 
         # timing run without node dumps (block-wise processing), then a run with dumps
         _ampwav(base + ['--out', str(d / 'out.wav'), '--stats', str(d / 'stats.json')])
@@ -67,7 +76,9 @@ def main():
     ap.add_argument('--signal', help='only signals whose id contains this text')
     a = ap.parse_args()
     block, preset = BLOCKS[a.block], PRESETS[a.preset]
-    run(block, preset, select_signals(block, preset, a.signal))
+    sigs = select_signals(block, preset, a.signal)
+    rec = {s.id: recordings.recordings(block, preset.all_knobs(), s)[0] for s in sigs} if block.recorded else None
+    run(block, preset, sigs, recorded=rec)
 
 
 if __name__ == '__main__':

@@ -79,8 +79,9 @@ void printUsage(std::ostream& os) {
           "  --list-nodes  print the probe names of the block and exit\n"
           "  --knob-ramp   ramp a knob's target rotation linearly (times in s); the engine smooths it.\n"
           "                Params are then set every sample (knob-jump test, VERIFICATION §7)\n"
-          "  --supply      drive an ideal supply node of the block (bpa, bpx) from a recorded WAV of the same\n"
-          "                length and rate, set every sample (partition studies, VERIFICATION §1)\n";
+          "  --supply      drive a recorded input of the block from a WAV of the same length and rate, set every\n"
+          "                sample: supply nodes (bpa, bpx, ct, nscr), the NFB speaker voltage (b5: out) or the\n"
+          "                second PI output (b6: p3b) (partition studies and B5 / B6 tests, VERIFICATION §1)\n";
 }
 
 std::optional<Options> parseArgs(const std::vector<std::string>& args, std::string& error) {

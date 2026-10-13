@@ -16,7 +16,9 @@ class Preset:
     def signals(self, block):
         """Signal list for this preset on the given block."""
         if self.id == 'DEFAULT' or self.id.startswith(('VOL', 'PRES')):
-            return signals.standard_set(block.levels)
+            # DI clips are guitar-level: only for blocks driven from the guitar input
+            kinds = ('SIN', 'SWP-lo', 'SWP-hi', 'TT', 'BURST', 'STEP') + (('DI',) if block.input_node == 'in' else ())
+            return signals.standard_set(block.levels, include=kinds)
         if self.id == 'CLEAN':
             return [signals.sine(1000.0, 0.025)]
         if self.id in ('CRUNCH', 'DRIVE'):

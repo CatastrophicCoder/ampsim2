@@ -1,5 +1,7 @@
 #include "Runner.h"
 
+#include "amp2203/PhaseInverter.h"
+#include "amp2203/PowerStage.h"
 #include "amp2203/Preamp.h"
 #include "amp2203/StageV1aV1b.h"
 #include "amp2203/StageV2aV2b.h"
@@ -219,6 +221,92 @@ private:
     double bpA_ = amp2203::Preamp::kSupplyBpA, bpX_ = amp2203::Preamp::kSupplyBpX;
 };
 
+/// B5 PhaseInverter standalone (the b5open testbench): input = J4 source voltage (absolute volts), output =
+/// v_oc(p3a). R_th4 from the knobs with the testbench formula (DECISIONS D-015); `--supply bpx=` and
+/// `--supply out=` (the speaker voltage driving R22, a recording from a B56 run) set the other inputs.
+class PhaseInverterRunner final : public Runner {
+public:
+    void prepare(double sampleRate, int) override {
+        block_.prepare(sampleRate, amp2203::EngineConfig{}.paramSmoothingMs);
+        started_ = false;
+    }
+    void setParams(const amp2203::Params& p) override {
+        using amp2203::detail::atap;
+        using amp2203::detail::ltap;
+        block_.setParams(p);
+        const double vr2b = 1e6 * atap(p.master) + 1.0;
+        const double chain = (1e6 * (1.0 - atap(p.master)) + 1.0) + 220e3 * ltap(p.treble) + (1e6 * atap(p.bass) + 1.0) + 22e3;
+        block_.setSourceResistance(1.0 / (1.0 / vr2b + 1.0 / chain));
+    }
+
+    void processVolts(double* v, int numSamples) noexcept override {
+        if (numSamples > 0 && !started_) {
+            block_.reset(v[0]);
+            started_ = true;
+        }
+        for (int n = 0; n < numSamples; ++n)
+            v[n] = block_.process(v[n]);
+    }
+
+    std::span<const amp2203::Probe> probes() const noexcept override { return block_.probes(); }
+    amp2203::Amp2203::Stats stats() const override { return toStats(block_.newtonStats()); }
+
+    bool setSupply(std::string_view node, double v) noexcept override {
+        if (node == "bpx")
+            block_.setSupplyVoltage(v);
+        else if (node == "out")
+            block_.setFeedbackVoltage(v);
+        else
+            return false;
+        return true;
+    }
+
+private:
+    amp2203::PhaseInverter block_;
+    bool started_ = false;
+};
+
+/// B6 PowerStage standalone (the b6 testbench): input = J5 source voltage v_oc(p3a) (absolute volts),
+/// output = speaker voltage. `--supply p3b=` (the other PI output), `ct=` and `nscr=` set the other inputs.
+class PowerStageRunner final : public Runner {
+public:
+    void prepare(double sampleRate, int) override {
+        block_.prepare(sampleRate);
+        started_ = false;
+    }
+    void setParams(const amp2203::Params&) override {}
+
+    void processVolts(double* v, int numSamples) noexcept override {
+        if (numSamples > 0 && !started_) {
+            block_.reset(v[0], vocB_);
+            started_ = true;
+        }
+        for (int n = 0; n < numSamples; ++n)
+            v[n] = block_.process(v[n], vocB_);
+    }
+
+    std::span<const amp2203::Probe> probes() const noexcept override { return block_.probes(); }
+    amp2203::Amp2203::Stats stats() const override { return toStats(block_.newtonStats()); }
+
+    bool setSupply(std::string_view node, double v) noexcept override {
+        if (node == "p3b")
+            vocB_ = v;
+        else if (node == "ct")
+            ct_ = v;
+        else if (node == "nscr")
+            scr_ = v;
+        else
+            return false;
+        block_.setSupplyVoltages(ct_, scr_);
+        return true;
+    }
+
+private:
+    amp2203::PowerStage block_;
+    bool started_ = false;
+    double vocB_ = 262.270582, ct_ = amp2203::PowerStage::kSupplyCt, scr_ = amp2203::PowerStage::kSupplyScreen;
+};
+
 /// M0 stand-in for a block that is not implemented yet: output = input (volts).
 class PassThroughRunner final : public Runner {
 public:
@@ -265,6 +353,10 @@ std::unique_ptr<Runner> makeRunner(std::string_view blockId) {
         return std::make_unique<StageV2aV2bRunner>();
     if (id == "b4")
         return std::make_unique<ToneStackRunner>();
+    if (id == "b5")
+        return std::make_unique<PhaseInverterRunner>();
+    if (id == "b6")
+        return std::make_unique<PowerStageRunner>();
     const auto& ids = blockIds();
     if (std::find(ids.begin(), ids.end(), id) != ids.end())
         return std::make_unique<PassThroughRunner>();

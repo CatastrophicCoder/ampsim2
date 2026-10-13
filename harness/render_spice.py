@@ -11,17 +11,10 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from . import config, spice
+from . import config, recordings, spice
 from .blocks import BLOCKS
 from .presets import PRESETS
 from .wavio import write_wav
-
-
-def _require_standalone(block):
-    if block.recorded:
-        raise NotImplementedError(
-            f'{block.id} is driven by recordings ({", ".join(block.recorded)}) from a B56 run; '
-            'chained P renders arrive with M4')
 
 
 def block_input(block, sig):
@@ -32,31 +25,36 @@ def block_input(block, sig):
 
 
 def select_signals(block, preset, pattern=None):
-    _require_standalone(block)
     sigs = preset.signals(block)
     return [s for s in sigs if pattern is None or pattern in s.id]
 
 
 def render(block, preset, signals, jobs=None, log=print):
-    """Returns {'op': {...}, 'ac': (f, h) or None, 'tran': {signal id: {node: array}}}."""
-    _require_standalone(block)
+    """Returns {'op': {...}, 'ac': (f, h) or None, 'tran': {signal id: {node: array}}, 'recorded': {signal id:
+    {name: array}}, 'notes': [...]}. Blocks driven by recordings (b5open, b6) get them from their source runs
+    (harness/recordings.py); their SPICE AC is skipped (it would be open-loop, while the recordings carry the
+    closed-loop signal)."""
     text = block.path.read_text()
     knobs = preset.all_knobs()
-    nodes = list(dict.fromkeys([block.output_node, block.input_node, *block.probes]))
+    nodes = recordings.render_nodes(block)
 
-    result = {'op': spice.op(text, knobs, block.dc_node_list()), 'ac': None, 'tran': {}}
-    if any(s.kind == 'SWP-lo' for s in signals):
+    result = {'op': spice.op(text, knobs, block.dc_node_list()), 'ac': None, 'tran': {}, 'recorded': {}, 'notes': []}
+    if any(s.kind == 'SWP-lo' for s in signals) and not block.recorded:
         result['ac'] = spice.ac(text, knobs, block.output_node, block.input_node)
 
     def one(sig):
         t0 = time.time()
-        res = spice.tran(text, knobs, block_input(block, sig), nodes)
+        rec, notes = recordings.recordings(block, knobs, sig)
+        x = block_input(block, sig) if block.input_node else None
+        res = spice.tran(text, knobs, x, nodes, recorded=rec or None)
         log(f'  spice {block.id}/{preset.id}/{sig.id}: {len(sig.x) / config.FS:.3f} s signal, {time.time() - t0:.1f} s')
-        return sig.id, res
+        return sig.id, res, rec, [f'{sig.id} {n}' for n in notes]
 
     with ThreadPoolExecutor(max_workers=jobs or os.cpu_count()) as ex:
-        for sid, res in ex.map(one, signals):
+        for sid, res, rec, notes in ex.map(one, signals):
             result['tran'][sid] = res
+            result['recorded'][sid] = rec
+            result['notes'] += notes
     return result
 
 

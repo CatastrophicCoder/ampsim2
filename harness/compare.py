@@ -262,14 +262,14 @@ def main():
     print(f'compare: {block.id} / {preset.id} / {a.milestone}: {len(sigs)} signals')
     spice_res = render(block, preset, sigs, a.jobs)
     write_renders(block, preset, spice_res)
-    engine_res = run_engine.run(block, preset, sigs)
+    engine_res = run_engine.run(block, preset, sigs, recorded=spice_res['recorded'])
 
     report = Report(a.milestone, block)
     dc_rows = dc_table(block, spice_res, engine_res, report)
     per_signal = analyse(block, sigs, spice_res, engine_res, report)
     stem = f'{datetime.date.today().strftime("%Y%m%d")}_{block.id}_{preset.id}'
     figs = plots(block, sigs, spice_res, engine_res, per_signal, config.REPORT_DIR / a.milestone / stem, stem)
-    path = write_report(a.milestone, block, preset, sigs, report, per_signal, dc_rows, figs, a.note)
+    path = write_report(a.milestone, block, preset, sigs, report, per_signal, dc_rows, figs, a.note + spice_res['notes'])
     fails = sum(1 for r in report.rows if r[4] == 'FAIL')
     print(f'compare: wrote {path.relative_to(config.ROOT)} ({fails} FAIL)')
     raise SystemExit(1 if fails else 0)

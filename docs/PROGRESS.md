@@ -467,6 +467,11 @@ Notes:
   ≤ 0.12 dB. The study now runs the three source variants (`self`, `diff`, `2port`) on the whole signal set.
 - 2026-10-13 Steps 2, 3, 6: EL34, the OT coupled-inductor element (verified alone vs SPICE) and `Supply`
   (D-040).
+- 2026-10-13 Steps 4, 5 (blocks): `PhaseInverter` (B5, 8 nodes, 18 ports, 4-port root) and `PowerStage` (B6,
+  15 nodes, 26 ports, 6-port root, J5 sources with the provisional R_th) with Catch2 DC / silence /
+  robustness tests; ampwav `--block b5` / `b6` (recorded inputs through `--supply`). The harness renders
+  the recordings for b5open / b6 from b56 runs (`harness/recordings.py`); first b5open check (1 kHz 1 V):
+  ESR −80.5 dB. The J5 structure (keep, change R_th, 2-port source, or merge B5 + B6) waits for step 1.
 
 ## M5 — JUCE plugin
 - [ ] Processor, parameters, oversampling, latency

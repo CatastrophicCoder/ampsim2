@@ -46,6 +46,11 @@ SCORED = {
            # cascade (harness/cascade.py, D-036): partition at the loaded y, engine vs the SPICE chain
            'preamp': {'partition_esr_db_sines', 'partition_esr_db_di', 'nonlinear_esr_db', 'nonlinear_esr_db_overdrive',
                       'harmonics_2_5_db', 'newton_failures', 'newton_median_iterations', 'newton_max_iterations'}},
+    # M4: B5 / B6 block-exact on recordings (VERIFICATION §1), the nonlinear block targets as M2 / M3
+    'M4': {'b5open': {'dc_rel_error', 'nonlinear_esr_db', 'nonlinear_esr_db_overdrive', 'harmonics_2_5_db',
+                      'newton_failures', 'newton_median_iterations', 'newton_max_iterations'},
+           'b6': {'dc_rel_error', 'nonlinear_esr_db', 'nonlinear_esr_db_overdrive', 'harmonics_2_5_db',
+                  'newton_failures', 'newton_median_iterations', 'newton_max_iterations'}},
 }
 
 
