@@ -1,6 +1,7 @@
 add_library(amp2203_engine STATIC
     src/Amp2203.cpp
     src/Preamp.cpp
+    src/Supply.cpp
     src/StageV1aV1b.cpp
     src/StageV2aV2b.cpp
     src/StageV2aV2bToneStack.cpp

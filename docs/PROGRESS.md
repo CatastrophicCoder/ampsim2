@@ -378,15 +378,95 @@ Notes:
   4.3 µs/sample with all knobs moving (94 µs per matrix update). M3 stops here for review.
 
 ## M4 — B5, B6, B7, full chain
-- [ ] EL34 model (+ screen modification) and Jacobian; device unit tests
+- [x] EL34 model (+ screen modification) and Jacobian; device unit tests (D-040)
 - [ ] `PhaseInverter` (joint 4-port, delayed NFB)
-- [ ] OT linear network verified alone vs SPICE
+- [x] OT linear network verified alone vs SPICE (coupled-inductor element, D-040)
 - [ ] `PowerStage` (6-port root, bias network, J5)
 - [ ] `Supply` and current bookkeeping
 - [ ] `Amp2203` full chain; DC, NFB, clean power, stability, overdrive checks
 - [ ] M4 report
-Plan:
+Plan (2026-10-13; follows SPEC §7 M4, §4.2–4.3, WDF_DESIGN §3.2, §4, §6, §7 and VERIFICATION §1, §7):
+
+Step 1 — J5 partition in SPICE first (as J1–J3 were measured before their blocks were built)
+- New testbench `b56j5`: B5 + B6 + B7 in one netlist, but B6's C14 / C16 are fed by J5 Thevenin
+  sources (VCVS copies of B5's unloaded p3a / p3b behind R_thA / R_thB) instead of the PI plates; R22
+  stays wired to B6's out (closed loop, instantaneous NFB). Same input as b56 (J4 source).
+- `python -m harness.partition --junction j5`: b56j5 vs b56 at out, nGn / nOr, pA / pB, ct, with the B56
+  standard signal set (0.1 / 1 / 5 / 20 V) and Presence 0 / 0.5 / 1. CIRCUIT §4 already shows the PI
+  plates are strongly cross-coupled (transimpedance 0.44–0.56 of self), so J5 may fail as J1–J3 did; if
+  it does, SPEC §4.1 upgrade options go to the owner before B6 is built (a merged B56 tree would also
+  remove the NFB delay, at the cost of a 10-port root).
+
+Step 2 — EL34 model (`devices/Pentode.h`, WDF_DESIGN §3.2)
+- Koren pentode with the repository screen modification, grid diode (Rs = 1001 Ω), analytic Jacobian;
+  matched-pair equivalent (×2). Catch2 against `tests/data/el34_{plate,grid}.csv` (0.1 % / 1 nA) and
+  central finite differences (1e−5).
+
+Step 3 — Output transformer network
+- The OT's three coupled windings (same k for every pair) are a 3-port inductance matrix. Extend the MNA /
+  root-network code with a coupled-inductor element (trapezoidal companion of the inductance matrix,
+  setup-time matrices; Python reference in `harness/mna.py`). Verify the transformer network alone
+  against SPICE: plates driven by ideal current sources, AC magnitude / phase and a transient, as
+  CIRCUIT §3 requires.
+
+Step 4 — `PhaseInverter` (B5)
+- Tree: J4 source (v_oc(y), R_th4 from the preamp), C9, R17, R16, R19, C15, R20, R23, C17, VR6 Presence
+  (smoothed), R22 as a resistive source driven by out[n−1], R18 / R21 to bpX, inter-electrode
+  capacitances; 4-port root of V3a / V3b (shared cathode k3). Outputs v_oc(p3a), v_oc(p3b), bpX current.
+- Block-exact vs `b5open` (R22 and bpX driven by recordings from a b56 run) at the B56 levels with the
+  nonlinear block-exact targets (≤ −40 dB, overdrive ≤ −30 dB, harmonics 2–5 within 0.5 dB, Newton).
+
+Step 5 — `PowerStage` (B6)
+- J5 sources (or the step 1 outcome), C14, C16, C18, R24 / R25, bias Thevenin (−46.364 V, 11.59 kΩ) + C19,
+  grid stoppers 2.8 kΩ, screen resistors 500 Ω to nScr, EL34 pair equivalents with their
+  inter-electrode capacitances (×2), the OT network, 16 Ω load; 6-port root. Outputs v(out), centre-tap
+  and screen currents.
+- Block-exact vs `b6` (recorded p3a / p3b / ct / nScr) with the same targets; DC per tube within ±1 mA
+  plate / ±0.3 mA screen.
+
+Step 6 — `Supply` (B7, WDF_DESIGN §7)
+- Five-state trapezoidal state-space, inputs the previous sample's currents from all blocks; DC by fixed
+  point with the blocks' DC currents. Checked alone: driven by F's recorded supply currents vs F's
+  recorded supply voltages.
+
+Step 7 — `Amp2203` full chain (SPEC §4.3) and the M4 acceptance (vs F unless noted)
+- ampwav `--block full` / `b56` / `b5` / `b6`; the `b56` testbench's constant preamp loads become F's
+  recorded currents.
+- DC (EL34 plate / screen per tube, v(ct) 1 %, nbias 0.2 V); NFB gain with and without R22 (SPICE copy
+  with R22 = 1 TΩ in harness/cache, the reference unchanged; engine option to open the loop); CLEAN
+  power and THD; 60 s stability at Preamp / Master / Presence 1.0; overdrive 220 Hz 300 mV (ESR,
+  harmonics 2–9, B+ sag minimum); NFB delay check against a 2-sample delay variant; CRUNCH / DRIVE with
+  the DI clips (ESR ≤ −20 dB).
+- The M3 DI check that was skipped (loaded-y partition ≤ −20 dB on DI) runs now that clips exist.
+- The SPEC §7 M4 numbers in parentheses (34.7 mA, 4.65 mA, 101 W, 469 V) predate the D-023 / D-024
+  netlist changes (CIRCUIT §5 now: 34.08 mA, 4.57 mA). The checks compare with the current SPICE runs;
+  the parentheses get the measured values. The tolerances do not change.
+
+Step 8 — M4 report, costs, docs.
+
+Risks:
+- J5 partition (step 1).
+- Real-time cost: SPEC §7 M5 asks for a real-time factor ≥ 10 at 48 kHz × 16, i.e. ≤ 130 ns per sample for
+  the whole amp. The M3 report measured the preamp alone at 1.27–1.86 µs (the "1.3 µs budget" there is a
+  real-time factor of 1). So the preamp is already 10–14× over the M5 target before B5 / B6 are added.
+  SPEC M5 says to profile and report before optimising; M4 reports per-block costs.
+- OT stiffness: leakage 8 mH against 25.6 H (k = 0.9997925) makes the inductance matrix ill-conditioned
+  (≈ 5000); the setup arithmetic is double-double.
+- Supply: the centre tap sees C23 through a one-sample delay (WDF_DESIGN §7), checked by the clean-power
+  and sag acceptance.
+- Full-netlist SPICE renders of 5 s DI clips at 768 kHz / RELTOL 1e-8 take hours; they run in the
+  background.
+- DI clips: `reference/di/` has four tracks of one song (`GTR L`, `GTR LL`, `GTR R`, `GTR RR`, 44.1 kHz,
+  238 s). The harness uses the first 5 s of each (VERIFICATION §3; all four play from t ≈ 0 at about
+  −31 dBFS RMS, peaks −7 to −9 dBFS, 1.6–1.9 V at the jack).
 Notes:
+- 2026-10-13 Step 1 started: testbench `b56j5`, `python -m harness.partition_j5`. First sines with the
+  provisional J5 (R_th = |Z_self|): −23 to −26 dB at out on small sines, −18 to −21 dB at 20 V. AC: the
+  small-signal gain is 0.43–0.47 dB low because the PI plates are cross-coupled (Z_ab = 32.1 kΩ,
+  Z_ba = 25.4 kΩ at 1 kHz); with R_th = Z_self − Z_mutual or the full 2×2 source the small-signal error is
+  ≤ 0.12 dB. The study now runs the three source variants (`self`, `diff`, `2port`) on the whole signal set.
+- 2026-10-13 Steps 2, 3, 6: EL34, the OT coupled-inductor element (verified alone vs SPICE) and `Supply`
+  (D-040).
 
 ## M5 — JUCE plugin
 - [ ] Processor, parameters, oversampling, latency

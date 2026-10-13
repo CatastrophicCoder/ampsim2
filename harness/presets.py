@@ -15,7 +15,7 @@ class Preset:
 
     def signals(self, block):
         """Signal list for this preset on the given block."""
-        if self.id == 'DEFAULT' or self.id.startswith('VOL'):
+        if self.id == 'DEFAULT' or self.id.startswith(('VOL', 'PRES')):
             return signals.standard_set(block.levels)
         if self.id == 'CLEAN':
             return [signals.sine(1000.0, 0.025)]
@@ -46,6 +46,8 @@ PRESETS = {
     'CLEAN': Preset('CLEAN', {'preampVolume': 0.2, 'master': 1.0}, '25 mV peak 1 kHz (about 100 W in SPICE)'),
     'CRUNCH': Preset('CRUNCH', {'preampVolume': 0.6, 'master': 0.3}, '300 mV peak 220 Hz, DI clips'),
     'DRIVE': Preset('DRIVE', {'preampVolume': 1.0, 'master': 0.3}, '300 mV peak 220 Hz, DI clips'),
+    'PRES0': Preset('PRES0', {'presence': 0.0}, 'Presence 0; standard signal set (M4 J5 study)'),
+    'PRES1': Preset('PRES1', {'presence': 1.0}, 'Presence 1; standard signal set (M4 J5 study)'),
     'PIPE': Preset('PIPE', {}, 'Pipeline smoke test: one 50 ms nominal 1 kHz sine'),
     **_tone_presets(),
 }

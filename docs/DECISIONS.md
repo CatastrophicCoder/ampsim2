@@ -692,3 +692,25 @@ Decision: accept and report. The tolerance stays as written; the cascade report 
 explained FAIL (the numbers after the B1234 merge, D-038, are in the M3 report).
 Consequences: none on the engine. Revisit if the M6 optimisations make a higher internal rate affordable.
 
+## D-040 EL34 model, OT as a coupled-inductor element, supply discretisation
+Date: 2026-10-13 · Status: accepted
+Context: M4 steps 2, 3, 6 (PROGRESS.md plan): SPEC §5 EL34, CIRCUIT §3 OT, WDF_DESIGN §7 supply.
+Decision:
+- EL34 (`devices/Pentode.h`): WDF_DESIGN §3.2 literally (Vs' = max(Vsk, 1 mV) with d/dVsk = 0 below the
+  clamp, atan in Ip unclamped, tubes.lib's 1.5707963); grid diode Rs = 1001 Ω; `count` = 2 for the matched
+  pair. `tests/test_pentode.cpp`: 1464 plate / screen points and 5 grid points within 0.1 % / 1 nA, the
+  analytic Jacobian within 1e−5 of central differences (∂Is/∂Vpk skipped at the Vpk = 0 kink of
+  max(Vpk, 0)).
+- OT: the three windings are one coupled element (WDF_DESIGN §5.6): wave elements b = −a[n−1] with the
+  port conductance matrix (T/2)·L⁻¹ in closed form, stamped in the MNA with `mna::Mutual` (no ideal
+  transformer). `python -m harness.ot_fixtures` writes SPICE AC and transient fixtures of the transformer
+  network alone (CIRCUIT §3); `tests/test_ot.cpp` passes the linear-block limits at out, pA, pB (AC) and
+  −123 dB at out (transient). The transient fixture fades its drive in over 0.5 ms: a drive with a di/dt
+  step at t = 0 is inconsistent with the zero initial state and the trapezoidal rule alternates at fs/2
+  at the plates.
+- Supply (`Supply`, B7): five states, trapezoidal with the previous sample's load currents held over the
+  step (SPEC §4.3); DC by solving A·x = −(B·u + c). Matches the SPICE operating point to 1 µV
+  (`tests/test_supply.cpp`).
+Consequences: B6 uses `CoupledInductors<3>`; the coupling of B6 and B7 through the centre tap is checked
+by the M4 clean-power and sag acceptance (WDF_DESIGN §7).
+

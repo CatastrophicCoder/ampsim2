@@ -199,6 +199,29 @@ atomically at a sample boundary (document the choice).
   to 1e−9 relative.
 - Up-port reflection-free condition holds to 1e−12.
 
+### 5.6 Coupled inductors (output transformer)
+The OT's three windings (Lp1 pA1–ct, Lp2 ct–pB1, Ls out–sl, one coupling coefficient k for all pairs as
+in the netlist) form a 3-port element with inductance matrix L_ij = k·sqrt(L_i·L_j) (i ≠ j), L_ii = L_i.
+Trapezoidal rule per port: v[n] = R_L·i[n] + b[n] with R_L = (2/T)·L and b[n] = −(v[n−1] + R_L·i[n−1]) =
+−a[n−1]. So each winding is a one-port wave element exactly like a WDF inductor (b = −a delayed); the
+coupling sits only in the port resistance matrix, which is not diagonal. In the MNA (§4, §5.1) the element
+is stamped through its port conductance matrix G_L = R_L⁻¹ = (T/2)·L⁻¹: the diagonal entries are the
+windings' own G, the off-diagonal ones are `mna::Mutual` stamps (A_kᵀ·G_kl·A_l on the nodal matrix, and
+the Norton injection of b_l into port k), and the root-network algorithm (v = Xe·b − Xr·i, a = 2v − b) is
+unchanged. With L = (1−k)·D + k·l·lᵀ (D = diag(L_i), l_i = sqrt(L_i)), Sherman–Morrison gives
+L⁻¹_ij = δ_ij / ((1−k)·L_i) − k / ((1−k)·(1 − k + k·W)) / sqrt(L_i·L_j) for W windings, computed in closed
+form (`detail::CoupledInductors`). DC: windings are shorts; the state for DC winding currents i is
+a = R_L·i.
+Verified alone against SPICE (`python -m harness.ot_fixtures`, `tests/test_ot.cpp`): plates driven by
+ideal current sources (push-pull and pA only), AC magnitude and phase at out, pA, pB within the linear
+limits and 1°, transient at out −123 dB. A transient comparison at the plates is not meaningful for a
+piecewise-linear current drive: there the voltage is L_leak·di/dt, whose value at a sample instant is the
+left-sided slope in ngspice (it restarts integration at every sample breakpoint) and the centred one in
+the trapezoidal engine. Note for B6: the trapezoidal rule does not damp an inductive node driven by an
+ideal current source (an input with a di/dt jump produces an undamped alternation at fs/2), and the
+leakage inductance with the plate capacitances resonates near 0.9 MHz in SPICE, above the engine's
+Nyquist frequency.
+
 ---
 
 ## 6. Junctions (J-Thevenin)
@@ -233,7 +256,9 @@ C22 · dv_scr/dt = i_L − (v_scr − v_X)/R29 − I_scr
 C21b· dv_X/dt   = (v_scr − v_X)/R29 − (v_X − v_A)/R8 − I_X
 C21a· dv_A/dt   = (v_X − v_A)/R8 − I_A
 ```
-Discretise with the trapezoidal rule (precompute the discrete matrices in `prepare`). DC init: solve
+Discretise with the trapezoidal rule (precompute the discrete matrices in `prepare`): x[n+1] = Ad·x[n] +
+Bd·u[n] + cd, the load currents u of the sample just processed held over the step (`Supply`; time
+constants 5.6 ms, 42 ms (choke–C22 resonance, 10 Hz), 0.19 s and 1.33 s). DC init: solve
 the same equations with all derivatives zero, iterating with the blocks' DC currents (fixed point).
 The trees read v_ct, v_scr, v_X, v_A as ideal (time-varying) supply sources.
 

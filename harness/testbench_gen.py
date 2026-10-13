@@ -93,6 +93,7 @@ class Spec:
     notes: list
     inserts: list = field(default_factory=list)   # (comment, line) pairs
     junctions: tuple = ()                          # RTH keys used
+    renames: dict = field(default_factory=dict)    # element -> {old node: new node} (junction splits)
 
 
 def _g(v):
@@ -138,6 +139,18 @@ def _specs(v, i_pre):
               ('J4', f'Vin j4s 0 DC {_g(v["y"])} AC 1'), ('J4', 'Rth_j4 j4s y {rth_j4}'),
               ('preamp load', f'Isink_bpA bpA 0 DC {_g(i_pre["bpa"])}'),
               ('preamp load', f'Isink_bpX bpX 0 DC {_g(i_pre["bpx"])}')]),
+        Spec('b56j5', ('B5', 'B6', 'B7'),
+             ['J5 partition reference: B56+B7 as b56 (closed loop, instantaneous NFB), but C14 / C16 are fed',
+              'by J5 Thevenin sources (VCVS copies of the unloaded PI plates p3a / p3b behind R_thA / R_thB)',
+              'instead of the plates themselves (harness/partition_j5.py).',
+              'Input: J4 Thevenin source into node y. Preamp loads: constant current sinks as b56.'],
+             [('J4', f'.param rth_j4={RTH_J4_EXPR}'),
+              ('J4', f'Vin j4s 0 DC {_g(v["y"])} AC 1'), ('J4', 'Rth_j4 j4s y {rth_j4}'),
+              ('J5a', 'Ej5a j5a 0 p3a 0 1'), ('J5a', f'Rth_j5a j5a p3a6 {rth("j5a")}'),
+              ('J5b', 'Ej5b j5b 0 p3b 0 1'), ('J5b', f'Rth_j5b j5b p3b6 {rth("j5b")}'),
+              ('preamp load', f'Isink_bpA bpA 0 DC {_g(i_pre["bpa"])}'),
+              ('preamp load', f'Isink_bpX bpX 0 DC {_g(i_pre["bpx"])}')], ('j5a', 'j5b'),
+             {'c14': {'p3a': 'p3a6'}, 'c16': {'p3b': 'p3b6'}}),
         Spec('b5open', ('B5',),
              ['B5-open: phase inverter with R22 driven by the recorded speaker voltage (ideal source).',
               'Input: J4 Thevenin source into node y. Outputs: p3a, p3b (open).',
@@ -172,6 +185,20 @@ def gen_full(ref_text):
                                       'Input: Vin in 0 (replaced by a filesource for transient runs).']) + body
 
 
+def _renamed(line, renames):
+    """The element line with node tokens replaced (renames: {old: new}, case-insensitive)."""
+    if not renames:
+        return line
+    tok = line.split()
+    low = {k.lower(): v for k, v in renames.items()}
+    hits = [i for i, t in enumerate(tok[1:], 1) if t.lower() in low]
+    if len(hits) != len(low):
+        raise ValueError(f'cannot rename {renames} in {line!r}')
+    for i in hits:
+        tok[i] = low[tok[i].lower()]
+    return ' '.join(tok)
+
+
 def gen_block(spec, ref, ref_text, rth=RTH):
     by = ref.by_name()
     out = [_header(spec.name, ref_text, spec.notes).rstrip()]
@@ -183,7 +210,7 @@ def gen_block(spec, ref, ref_text, rth=RTH):
         out.append(f'.param rth_{k}={rth[k]!r}' if rth[k] is not None else f'.param rth_{k}=1')
     for b in spec.blocks:
         out.append(f'\n*** {b} (from the reference netlist)')
-        out += [by[n].line for n in _elements(b)]
+        out += [_renamed(by[n].line, spec.renames.get(n, {})) for n in _elements(b)]
     last = None
     for comment, line in spec.inserts:
         if comment != last:

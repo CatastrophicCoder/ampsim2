@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <span>
 #include <type_traits>
 
 #include "mna/DoubleDouble.h"
@@ -16,6 +17,15 @@ inline constexpr int kGround = -1;
 template <int P, int N>
 struct PortNetwork {
     std::array<std::array<int, 2>, P> ports{};
+};
+
+/// Mutual conductance between element ports k and l (k ≠ l, listed once; the stamp is symmetric): the
+/// off-diagonal entry G[k][l] = G[l][k] of a coupled element's port conductance matrix, e.g. the
+/// trapezoidal companion (T/2)·L⁻¹ of coupled inductors (WDF_DESIGN §5.6). The diagonal entries are the
+/// ports' own G.
+struct Mutual {
+    int k = 0, l = 0;
+    double g = 0.0;
 };
 
 namespace detail {
@@ -74,6 +84,23 @@ std::array<std::array<DD, N>, N> nodal(const PortNetwork<P, N>& net,
         }
     }
     return Y;
+}
+
+/// Adds the mutual stamps to the nodal matrix: the port-conductance block A_kᵀ·g·A_l + A_lᵀ·g·A_k.
+template <int P, int N>
+void addMutual(const PortNetwork<P, N>& net, std::span<const Mutual> mutual,
+               std::type_identity_t<std::array<std::array<DD, N>, N>>& Y) noexcept {
+    for (const auto& m : mutual) {
+        const DD g(m.g);
+        for (const auto& [x, y] : {std::array<int, 2>{m.k, m.l}, std::array<int, 2>{m.l, m.k}}) {
+            const int t[2] = {net.ports[x][0], net.ports[x][1]};
+            const int u[2] = {net.ports[y][0], net.ports[y][1]};
+            for (int i = 0; i < 2; ++i)
+                for (int j = 0; j < 2; ++j)
+                    if (t[i] != kGround && u[j] != kGround)
+                        Y[t[i]][u[j]] += i == j ? g : -g;
+        }
+    }
 }
 
 template <int N>
@@ -139,20 +166,30 @@ bool scattering(const PortNetwork<P, N>& net, const std::type_identity_t<std::ar
 /// reflected wave b_k behind its port resistance, conductance G[k]; G[k] = 0 leaves the port open, as
 /// for capacitors at DC); root port r draws the current i_r into its node+ and returns it at node−. Then
 /// the node voltages are v = Xe·b − Xr·i. Returns false if the network is singular.
+///
+/// `mutual` adds coupled elements (off-diagonal port conductances): the Norton injection of b_j is then
+/// Σ_k G[k][j]·b_j into every coupled port k.
 template <int P, int K, int N>
 bool rootTransfer(const PortNetwork<P, N>& elements, const PortNetwork<K, N>& root,
                   const std::type_identity_t<std::array<double, P>>& G, std::type_identity_t<double[N][P]>& Xe,
-                  std::type_identity_t<double[N][K]>& Xr) noexcept {
+                  std::type_identity_t<double[N][K]>& Xr, std::span<const Mutual> mutual = {}) noexcept {
     std::array<DD, P> g{};
     for (int k = 0; k < P; ++k)
         g[k] = DD(G[k]);
     auto Y = detail::nodal(elements, g);
+    detail::addMutual(elements, mutual, Y);
     std::array<std::array<DD, N>, P + K> rhs{};
-    for (int j = 0; j < P; ++j) {  // Norton injection G_j·b_j for b_j = 1
-        if (elements.ports[j][0] != kGround)
-            rhs[j][elements.ports[j][0]] += g[j];
-        if (elements.ports[j][1] != kGround)
-            rhs[j][elements.ports[j][1]] -= g[j];
+    auto inject = [&](int column, int port, const DD& value) {
+        if (elements.ports[port][0] != kGround)
+            rhs[column][elements.ports[port][0]] += value;
+        if (elements.ports[port][1] != kGround)
+            rhs[column][elements.ports[port][1]] -= value;
+    };
+    for (int j = 0; j < P; ++j)  // Norton injection G_j·b_j for b_j = 1
+        inject(j, j, g[j]);
+    for (const auto& m : mutual) {
+        inject(m.l, m.k, DD(m.g));
+        inject(m.k, m.l, DD(m.g));
     }
     for (int r = 0; r < K; ++r) {  // 1 A drawn out of node+ and returned at node− is a −1 / +1 injection;
                                    // Xr is stored with the opposite sign (v = Xe·b − Xr·i)

@@ -60,6 +60,8 @@ python -m harness.rth_measure                              # junction R_th (AC i
 python -m harness.partition --junction j2                  # SPICE partition error of one junction
 python -m harness.device_sweeps                            # tests/data device DC sweep CSVs (--check)
 python -m harness.ot_fit                                   # OT fit to the 1750U datasheet (--check: netlist)
+python -m harness.ot_fixtures                              # M4: OT network alone, SPICE fixtures for tests/test_ot.cpp (--check)
+python -m harness.partition_j5 --variants self,diff,2port  # M4: J5 partition error in SPICE, closed loop (hours)
 python -m harness.mna --fixtures                           # R-type S fixtures for the C++ cross-check (--check)
 python -m harness.tonestack_check --tran                   # M1: B4 magnitude (375 settings), sweeps, R_th4
 python -m harness.knob_jump [--block b12|b34|b1234]       # knob-jump test vs SPICE (D-025): B4 (M1), B12 (M2), B34 / B1234 (M3)

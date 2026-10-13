@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <span>
 #include <tuple>
 
 #include "amp2203/detail/RootNetworkState.h"
@@ -63,10 +64,11 @@ struct RootNetwork {
                           (root.ports[r][1] != mna::kGround ? Xr[root.ports[r][1]][c] : 0.0);
     }
 
-    /// Recomputes Xe, Xr and Z for the element conductances G. Returns false (state unchanged) if singular.
-    bool updateMatrices(State& s, const EVec& G) const noexcept {
+    /// Recomputes Xe, Xr and Z for the element conductances G (plus the mutual conductances of coupled
+    /// elements). Returns false (state unchanged) if singular.
+    bool updateMatrices(State& s, const EVec& G, std::span<const mna::Mutual> mutual = {}) const noexcept {
         double Xe[N][P], Xr[N][K];
-        if (!mna::rootTransfer(elements, root, G, Xe, Xr))
+        if (!mna::rootTransfer(elements, root, G, Xe, Xr, mutual))
             return false;
         for (int n = 0; n < N; ++n) {
             for (int j = 0; j < P; ++j)
