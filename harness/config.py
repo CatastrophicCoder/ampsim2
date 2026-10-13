@@ -1,7 +1,11 @@
 """Paths and constants shared by the harness modules."""
+import os
 from pathlib import Path
 
-FS = 768000                    # verification rate (DECISIONS D-035; was 384 kHz, D-007)
+DEFAULT_FS = 768000            # verification rate (DECISIONS D-035; was 384 kHz, D-007)
+# AMP2203_FS overrides it for rate studies (M5: the engine at 8x, 384 kHz, against SPICE at the same rate);
+# reports of such runs carry the rate in their file name
+FS = int(os.environ.get('AMP2203_FS', DEFAULT_FS))
 INPUT_VOLTS_PER_FS = 4.361     # 0 dBFS = +12 dBu at the jack (D-010); scales DI recordings
 
 ROOT = Path(__file__).resolve().parent.parent

@@ -83,14 +83,30 @@ struct RootNetwork {
     /// Open-root node voltages u = Xe·(b − offset) and the root Thevenin voltages (the first part of process()).
     void openCircuit(const State& s, const EVec& wave, const EVec& eOffset, const RVec& rOffset,
                      std::array<double, N>& u, RVec& vOc) const noexcept {
-        for (int n = 0; n < N; ++n) {
-            double acc = 0.0;
-            for (int j = 0; j < P; ++j)
-                acc += s.Xe[n][j] * (wave[static_cast<size_t>(j)] - eOffset[static_cast<size_t>(j)]);
-            u[n] = acc;
-        }
+        std::array<double, P> b;
+        for (int j = 0; j < P; ++j)
+            b[static_cast<size_t>(j)] = wave[static_cast<size_t>(j)] - eOffset[static_cast<size_t>(j)];
+        for (int n = 0; n < N; ++n)
+            u[n] = dot<P>(s.Xe[n], b.data());
         for (int r = 0; r < K; ++r)
             vOc[r] = across(root.ports[r], u) + rOffset[r];
+    }
+
+    /// Σ a[j]·b[j] with four independent partial sums (lets the compiler use SIMD without reassociating a
+    /// single chain; the rounding differs from the plain loop at the last-bit level, D-047).
+    template <int M>
+    static double dot(const double* a, const double* b) noexcept {
+        double s0 = 0.0, s1 = 0.0, s2 = 0.0, s3 = 0.0;
+        int j = 0;
+        for (; j + 3 < M; j += 4) {
+            s0 += a[j] * b[j];
+            s1 += a[j + 1] * b[j + 1];
+            s2 += a[j + 2] * b[j + 2];
+            s3 += a[j + 3] * b[j + 3];
+        }
+        for (; j < M; ++j)
+            s0 += a[j] * b[j];
+        return (s0 + s1) + (s2 + s3);
     }
 
     /// One sample. `wave` holds the elements' reflected waves on entry and the incident waves for them on
@@ -127,9 +143,7 @@ struct RootNetwork {
         std::array<double, N> node;
         bool finite = true;
         for (int n = 0; n < N; ++n) {
-            double acc = u[n];
-            for (int r = 0; r < K; ++r)
-                acc -= s.Xr[n][r] * i[r];
+            const double acc = u[n] - dot<K>(s.Xr[n], i.data());
             node[n] = acc;
             finite = finite && std::isfinite(acc);
         }

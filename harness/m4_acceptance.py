@@ -209,9 +209,12 @@ def check_crunch_drive(rep, notes, jobs):
 
 
 def write_report(rep, res, notes):
-    out = config.REPORT_DIR / 'M4'
+    # rate studies (AMP2203_FS, M5) go to the M5 folder with the rate in the name
+    out = config.REPORT_DIR / ('M4' if config.FS == config.DEFAULT_FS else 'M5')
     out.mkdir(parents=True, exist_ok=True)
     stem = f'{datetime.date.today().strftime("%Y%m%d")}_full_acceptance'
+    if config.FS != config.DEFAULT_FS:
+        stem += f'_fs{config.FS}'
     npass = sum(r[6] == 'PASS' for r in rep.rows)
     nfail = sum(r[6] == 'FAIL' for r in rep.rows)
     lines = [f'# M4 acceptance: full amplifier vs the full netlist', '',

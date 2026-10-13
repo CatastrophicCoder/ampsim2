@@ -827,3 +827,15 @@ full amp 5 kHz 0.5 V, b56 5 kHz 20 V):
   61994 first-solve failures on the four cases, ESR −15 dB at every knob 1.0.
 Consequences: `amp2203_bench` on 60 s of DI 3114 → 2436 ns per engine sample (real-time factor 0.42 → 0.53);
 Preamp 1263–1857 → 1111–1586 ns, PowerAmp 1699–2286 → 1181–1673 ns (5 kHz 20 V 3558 → 2593 ns).
+
+## D-047 SIMD-friendly network products; rate study at 384 kHz
+Date: 2026-10-14 · Status: accepted (owner direction after Q22: SIMD + tables, also study lower rates)
+Decision: `RootNetwork` computes the open-circuit and node products with a four-accumulator dot product
+(vectorised by the compiler; rounding differs at the last bit: ESR vs the previous engine −169 to −223 dB on
+the fixed checks). Tried and not kept: two-accumulator residual (no gain at K = 8–10), full-row LU updates
+(no gain). The harness rate is overridable (`AMP2203_FS`); `AMP2203_FS=384000 python -m harness.m4_acceptance`
+writes `harness/reports/M5/20261014_full_acceptance_fs384000.md`: 107 PASS, 0 FAIL (DI −60.8 to −62.7 dB;
+768 kHz −61.0 to −63.0 dB). Plugin real-time factor on 20 s of DI (idle machine): 16x 0.55–0.61, 8x
+0.97–1.17, 4x 1.71–2.27.
+Consequences: the earlier "8x vs 16x render" comparison (−42 to −47 dB) mixed two oversampling filter chains
+and is not a measure of the engine's accuracy; the SPICE comparison at each rate is.
