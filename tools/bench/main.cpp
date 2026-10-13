@@ -9,6 +9,7 @@
 //   amp2203_bench preamp     Preamp B1234 (one tree, 8-port root) at the B12 levels
 //   amp2203_bench b5         PhaseInverter at the B56 levels (J4 source), NFB input at its DC value
 //   amp2203_bench b6         PowerStage driven push-pull at the PI plates
+//   amp2203_bench b56        PowerAmp (B56, the engine's PI + power stage, D-041) at the B56 levels
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -21,6 +22,7 @@
 
 #include "amp2203/Amp2203.h"
 #include "amp2203/PhaseInverter.h"
+#include "amp2203/PowerAmp.h"
 #include "amp2203/PowerStage.h"
 #include "amp2203/Preamp.h"
 #include "amp2203/StageV1aV1b.h"
@@ -310,6 +312,29 @@ int benchPowerStage() {
     return 0;
 }
 
+int benchPowerAmp() {
+    const long n = static_cast<long>(5.0 * kRate);
+    double sink = 0.0;
+    std::printf("PowerAmp (B56, 10-port root) at %.0f Hz (default knobs):\n", kRate);
+    for (const auto& [freq, amp] : {std::pair{1000.0, 0.1}, {1000.0, 1.0}, {1000.0, 5.0}, {1000.0, 20.0}, {5000.0, 20.0}}) {
+        amp2203::PowerAmp st;
+        st.prepare(kRate, amp2203::EngineConfig{}.paramSmoothingMs);
+        st.setSourceResistance(43000.0);
+        st.reset(0.0);
+        const double dphi = 2.0 * std::numbers::pi * freq / kRate;
+        const auto t0 = Clock::now();
+        for (long i = 0; i < n; ++i)
+            sink += st.process(amp * std::sin(dphi * static_cast<double>(i)));
+        const double ns = seconds(t0) / static_cast<double>(n) * 1e9;
+        const auto& s = st.newtonStats();
+        std::printf("  %5.0f Hz %5.1f V: %6.1f ns/sample, Newton median %d max %d failures %llu (rescued %ld)\n", freq,
+                    amp, ns, s.medianIterations(), s.maxIterations, static_cast<unsigned long long>(s.failures),
+                    st.rescuedSolves());
+    }
+    std::printf("  checksum %g\n", sink);
+    return 0;
+}
+
 int main(int argc, char** argv) {
     if (argc > 1 && std::strcmp(argv[1], "b4") == 0)
         return benchToneStack();
@@ -325,8 +350,10 @@ int main(int argc, char** argv) {
         return benchPhaseInverter();
     if (argc > 1 && std::strcmp(argv[1], "b6") == 0)
         return benchPowerStage();
+    if (argc > 1 && std::strcmp(argv[1], "b56") == 0)
+        return benchPowerAmp();
     if (argc > 1) {
-        std::fprintf(stderr, "usage: amp2203_bench [b4|b12|b3|b34|preamp|b5|b6]\n");
+        std::fprintf(stderr, "usage: amp2203_bench [b4|b12|b3|b34|preamp|b5|b6|b56]\n");
         return 1;
     }
     return benchFull();

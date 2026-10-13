@@ -92,7 +92,8 @@ M1/M4 and documented in `DECISIONS.md`).
 | R18 | 82 kΩ | bpX – p3a | |
 | R21 | 100 kΩ | bpX – p3b | |
 
-Output junction J5: `v_oc(p3a)`, `v_oc(p3b)`, `R_thA`, `R_thB`.
+Output junction J5: `v_oc(p3a)`, `v_oc(p3b)`, `R_thA`, `R_thB` — used only for the standalone B6
+verification. In the engine B5 and B6 form one block B56 with no junction at the PI plates (§4, D-041).
 
 ### B6 — Output stage and output transformer
 | Ref | Value | Between | Notes |
@@ -174,7 +175,8 @@ SPICE vs engine) in M4.
 Measured with `python -m harness.rth_measure` (DECISIONS D-016; report
 `harness/reports/M0/20261013_junctions.md`), default parameters, upstream block testbench with the output
 open and the input AC-grounded. The value used by the testbenches and the engine is |Z(1 kHz)|
-(`harness/junctions.py`; DECISIONS D-018); J5 is provisional until its partition error is measured in M4.
+(`harness/junctions.py`; DECISIONS D-018). J5 was removed from the engine after its M4 partition study
+(D-041; `harness/reports/M4/20261013_partition_j5.md`).
 
 | Junction | Node | R_th (DC small-signal) | Z @ 1 kHz | Spread over presets (\|Z\| @ 1 kHz) | Method / notes |
 |---|---|---|---|---|---|

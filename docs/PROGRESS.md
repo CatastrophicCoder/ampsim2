@@ -379,12 +379,12 @@ Notes:
 
 ## M4 — B5, B6, B7, full chain
 - [x] EL34 model (+ screen modification) and Jacobian; device unit tests (D-040)
-- [ ] `PhaseInverter` (joint 4-port, delayed NFB)
+- [x] `PhaseInverter` (joint 4-port) — sub-block of B56 (D-041)
 - [x] OT linear network verified alone vs SPICE (coupled-inductor element, D-040)
-- [ ] `PowerStage` (6-port root, bias network, J5)
-- [ ] `Supply` and current bookkeeping
-- [ ] `Amp2203` full chain; DC, NFB, clean power, stability, overdrive checks
-- [ ] M4 report
+- [x] `PowerStage` (6-port root, bias network, J5) — sub-block; B5 + B6 merged into `PowerAmp` (Q19, D-041)
+- [x] `Supply` and current bookkeeping (D-040)
+- [x] `Amp2203` full chain; DC, NFB, clean power, stability, overdrive checks (107 PASS)
+- [x] M4 report: `harness/reports/M4/20261013_M4_report.md` — awaiting owner review
 Plan (2026-10-13; follows SPEC §7 M4, §4.2–4.3, WDF_DESIGN §3.2, §4, §6, §7 and VERIFICATION §1, §7):
 
 Step 1 — J5 partition in SPICE first (as J1–J3 were measured before their blocks were built)
@@ -481,6 +481,12 @@ Notes:
   acceptance signals converge in ≤ 5.
 - 2026-10-13 Q19 answered: B5 + B6 merged into `PowerAmp` (B56, D-041). Power-stage solver and the
   source-stepping fallback (D-042). Acceptance (DC, NFB, CLEAN, overdrive): 60 PASS, 0 FAIL.
+- 2026-10-13 M4 report: full-amp acceptance 107 PASS / 0 FAIL (DI clips −61 to −63 dB); M3 DI check PASS
+  (−81 to −86 dB); block-exact B5 88 / 0, B56 105 / 1, B6 94 / 3 (all failures on SIN-5000Hz-20V: Q20).
+  Full amp 2.48 µs per sample (real-time factor 0.5). M4 stops here for review.
+- Q20 (M4): block-exact at 5 kHz 20 V (J4 source): B56 Newton median 5 (≤ 3); B6 (sub-block) harmonics 2–5
+  1.48 dB (≤ 0.5), 1 Newton failure (rescued), median 4. Accept and report, analyse further (e.g. the
+  engine at 2× rate for the harmonic difference, a better predictor for the median), or other? — Open.
 
 ## M5 — JUCE plugin
 - [ ] Processor, parameters, oversampling, latency

@@ -85,7 +85,12 @@ def _render(text, knobs, sig):
     except spice.SpiceError as e:
         if 'Timestep too small' not in str(e):
             raise
+    try:
         return spice.tran(text, knobs, x, list(NODES), reltol=1e-7), 'rendered at RELTOL 1e-7 (timestep too small)'
+    except spice.SpiceError as e:
+        if 'Timestep too small' not in str(e):
+            raise
+        return None, 'not rendered: ngspice timestep too small at RELTOL 1e-8 and 1e-7'
 
 
 def _row(sig, ref, p):
@@ -117,8 +122,10 @@ def run(variants=('self',), jobs=None, log=print):
                 rows, notes = [], []
                 for s in sigs:
                     (ref, n1), (p, n2) = fut[(pid, s.id, 'b56')].result(), fut[(pid, s.id, v)].result()
-                    rows.append(_row(s, ref, p))
                     notes += [f'{s.id} {k}: {n}' for k, n in (('b56', n1), (v, n2)) if n]
+                    if ref is None or p is None:
+                        continue  # listed in the notes
+                    rows.append(_row(s, ref, p))
                     log(f'  partition j5 {v} {pid}/{s.id}: out {rows[-1]["esr"]["out"]:.1f} dB')
                 _, h_p = spice.ac(texts[v], knobs, 'out', 'j4s')
                 out[v][pid] = {'rows': rows, 'notes': notes, 'f': f, 'ac_err': 20 * np.log10(np.abs(h_p) / np.abs(h_ref)),

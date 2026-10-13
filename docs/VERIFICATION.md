@@ -23,7 +23,10 @@ Feedback and supply exceptions:
 - B5 and B6 are coupled by the NFB, and all blocks are coupled to B7. The P reference therefore
   simulates **B56+B7 as one testbench** (driven by the J4 source), with instantaneous feedback and a
   directly connected supply. The engine's one-sample delays (NFB, supply) appear as part of the
-  block-exact error of B56.
+  block-exact error of B56. Since D-041 the engine's B56 is one tree with the NFB inside (no delay); its
+  block-exact check (`compare --block b56`) runs `PowerAmp` on the b56 run's own recorded bpX / nScr / ct,
+  so only the supply coupling differs from P; the full chain with `Supply` is checked against F
+  (`python -m harness.m4_acceptance`).
 - For isolated unit verification, two open-loop testbenches exist: **B5-open** (R22 driven by the
   recorded speaker voltage from the B56 run, as an ideal source) and **B6** (driven by the recorded
   PI open-circuit outputs). Supply node voltages in these are the recorded B56 supply waveforms.

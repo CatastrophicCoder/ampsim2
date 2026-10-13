@@ -135,7 +135,7 @@ public:
 Each signal block (section 4) is also a class with the same `prepare / reset / process` shape and its
 own parameter setters, so that the CLI and tests can run a single block in isolation:
 `StageV1aV1b`, `StageV2aV2bToneStack` (built from the verified `StageV2aV2b` and `ToneStackMaster`;
-DECISIONS D-033), `PhaseInverter`, `PowerStage`,
+DECISIONS D-033), `PhaseInverter`, `PowerStage` (verified sub-blocks of `PowerAmp`, D-041),
 `Supply`. `Amp2203` composes them.
 
 ### 3.3 Units and signal levels
@@ -210,8 +210,9 @@ exceeds tolerance, upgrade it in this order: (a) add the reactive part of the so
 | (B34) | `StageV2aV2bToneStack` | B3 + B4 behind J2 (verification, M3) | Joint 4-port | `v_oc(y)`, `R_th4` |
 | (B3) | `StageV2aV2b` | B3 alone behind J2, output `v_oc(k2b)` (verification of the V2a/V2b root, M3) | Joint 4-port | `v_oc(k2b)` |
 | (B4) | `ToneStackMaster` | B4 alone behind J3 (R_th3), output `v_oc(y)` (verification of the tone stack, M1) | none (R-type) | `v_oc(y)`, `R_th4` |
-| B5 | `PhaseInverter` | J4 source, C9, R17, R16, R19, C15, R20, R23, C17, VR6 Presence, R22 (NFB, delayed), V3a, V3b, R18, R21 | Joint 4-port (two triodes) | `v_oc(p3a)`, `v_oc(p3b)`, `R_thA`, `R_thB` |
-| B6 | `PowerStage` | J5 sources, C14, C16, C18, R24, R25, bias network (Thevenin + C19), grid stoppers, 2 EL34 equivalents, screen resistors, output transformer, 16 Ω load | Joint 6-port (two pentodes x 3 ports) | `v(out)` speaker voltage, supply currents |
+| B56 | `PowerAmp` | B5 and B6 in one tree (no J5; R22 inside the tree, NFB without delay; D-041) | Joint 10-port (two triodes, two pentode pairs × 3 ports) | `v(out)` speaker voltage, supply currents |
+| (B5) | `PhaseInverter` | J4 source, C9, R17, R16, R19, C15, R20, R23, C17, VR6 Presence, R22 (NFB, delayed), V3a, V3b, R18, R21 | Joint 4-port (two triodes) | `v_oc(p3a)`, `v_oc(p3b)`, `R_thA`, `R_thB` |
+| (B6) | `PowerStage` | J5 sources, C14, C16, C18, R24, R25, bias network (Thevenin + C19), grid stoppers, 2 EL34 equivalents, screen resistors, output transformer, 16 Ω load | Joint 6-port (two pentodes x 3 ports) | `v(out)` speaker voltage, supply currents |
 | B7 | `Supply` | Source resistance, C23, choke, C22, R29, C21b, R8, C21a | none (small linear state-space) | `v(ct)`, `v(nScr)`, `v(bpX)`, `v(bpA)` |
 
 Notes per block (details in `CIRCUIT.md` / `WDF_DESIGN.md`):
@@ -244,6 +245,13 @@ Notes per block (details in `CIRCUIT.md` / `WDF_DESIGN.md`):
   recomputed on parameter change. Document the exact formula chosen.
 - **B5 NFB:** R22 connects the speaker output to node `nG`. Use the previous sample's output voltage
   (one-sample delay at the oversampled rate). This is the only intentional delay-free-loop break in v1.
+  (Superseded for the engine chain by D-041: B5 and B6 form one tree B56, R22 is an ordinary resistor in
+  it and the loop has no delay. The standalone `PhaseInverter` keeps R22 as a source driven by a
+  recorded speaker voltage.)
+- **B56 (B5 + B6 in one tree, 10-port root):** M4 measured the J5 partition error in SPICE at the speaker
+  (closed loop, `harness/partition_j5.py`): −23 to −26 dB on small sines with R_th = |Z_self| (the PI plates
+  are cross-coupled), −46 to −68 dB with R_th = Z_self − Z_mutual, but −14 to −21 dB at 20 V at the J4 source
+  for both (owner decision Q19, DECISIONS D-041).
 - **B6 matched pairs:** V4‖V5 and V6‖V7 are each modelled as one equivalent pentode with doubled
   current (equivalently: identical tubes with identical drive), halving the root dimension. Grid
   stoppers 5.6 kΩ‖5.6 kΩ = 2.8 kΩ and screen resistors 1 kΩ‖1 kΩ = 500 Ω are combined accordingly. Keep
@@ -257,8 +265,8 @@ Notes per block (details in `CIRCUIT.md` / `WDF_DESIGN.md`):
 
 ### 4.3 Processing order per sample
 ```
-supply voltages (from state)  ->  B1234 -> B5 (uses out[n-1]) -> B6 -> output
-                                   \__________ currents reported to B7, B7.update() ___________/
+supply voltages (from state)  ->  B1234 -> B56 -> output
+                                   \___ currents reported to B7, B7.update() ___/
 ```
 
 ---

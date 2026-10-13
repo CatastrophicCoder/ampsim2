@@ -128,6 +128,7 @@ Port maps:
 | B3 | 4 | V2a (g2a−k2a, p2a−k2a), V2b (p2a−k2b, bpX−k2b) |
 | B5 | 4 | V3a (g3a−k3, p3a−k3), V3b (g3b−k3, p3b−k3) |
 | B6 | 6 | side A (g−k, s−k, p−k), side B (g−k, s−k, p−k); cathodes at ground |
+| B56 | 10 | the B5 ports, then the B6 ports (D-041) |
 
 Algorithm (per sample):
 1. Initial guess: linear extrapolation from the two previous solutions, v = v[n−1] + (v[n−1] − v[n−2]),
@@ -234,7 +235,8 @@ J4 (master wiper): v_oc(y) is the wiper voltage with no PI load. R_th4 is the re
 wiper with the J3 source shorted, from a DC MNA solve of the B4 network (recompute on parameter change).
 Document whether the reactive part is ignored (default: ignored; check partition error in M3/M4).
 
-J5 (PI plates): R_thA and R_thB from the M0 SPICE measurement (constants). The LTP output resistance
+J5 (PI plates; removed from the engine chain by D-041, still used by the standalone `PowerStage` / b6):
+R_thA and R_thB from the M0 SPICE measurement (constants). The LTP output resistance
 depends on the other half and the tail; the constants are linearised at the operating point.
 
 Upgrade path if partition error exceeds tolerance: (a) frequency-dependent source impedance (add the
