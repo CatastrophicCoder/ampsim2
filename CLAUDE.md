@@ -51,7 +51,7 @@ python3 reference/spice/spice_tools.py           # prints the SPICE DC operating
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release   # add -DAMP2203_BUILD_PLUGIN=OFF to skip JUCE
 cmake --build build
 ctest --test-dir build --output-on-failure
-./build/tools/bench/amp2203_bench                          # real-time factor, 60 s at 48 kHz x 16 (b4 / b12 / b3 / b34 / preamp / b5 / b6 / b56: block costs)
+./build/tools/bench/amp2203_bench                          # real-time factor, 60 s of a DI clip at 48 kHz x 16 (b4 / b12 / b3 / b34 / preamp / b5 / b6 / b56: block costs)
 ./build/tools/ampwav/ampwav --block full --in in.wav --out out.wav --rate 768000 --param preampVolume=0.6   # --help for all options
 source .venv/bin/activate                                  # harness commands below need the venv
 python -m harness.testbench_gen                            # regenerate harness/testbenches/*.cir (--check)
@@ -63,9 +63,14 @@ python -m harness.ot_fit                                   # OT fit to the 1750U
 python -m harness.ot_fixtures                              # M4: OT network alone, SPICE fixtures for tests/test_ot.cpp (--check)
 python -m harness.partition_j5 --variants self,diff,2port  # M4: J5 partition error in SPICE, closed loop (hours)
 python -m harness.m4_acceptance                            # M4: full amp vs F (DC, NFB, CLEAN, stability, overdrive, CRUNCH / DRIVE + DI)
+python -m harness.plugin_null                              # M5: plugin (amp2203_render) vs ampwav at 768 kHz with the same resampling
+python -m harness.automation                               # M5: every knob at audio rate, NaN / Newton check
+./build/plugin/amp2203_render_artefacts/Release/amp2203_render plugin --in x.wav --out y.wav --factor 16   # offline plugin render
+/Applications/pluginval.app/Contents/MacOS/pluginval --strictness-level 5 --validate <plugin>   # after copying to ~/Library/Audio/Plug-Ins
+auval -v aufx A223 Ctcd
 python -m harness.mna --fixtures                           # R-type S fixtures for the C++ cross-check (--check)
 python -m harness.tonestack_check --tran                   # M1: B4 magnitude (375 settings), sweeps, R_th4
-python -m harness.knob_jump [--block b12|b34|b1234]       # knob-jump test vs SPICE (D-025): B4 (M1), B12 (M2), B34 / B1234 (M3)
+python -m harness.knob_jump [--block b12|b34|b1234|b56]   # knob-jump test vs SPICE (D-025): B4 (M1), B12 (M2), B34 / B1234 (M3), Presence B56 (M5)
 python -m harness.diagnostics --block b12                  # M2: diode CJO/TT, engine-rate and SPICE-RELTOL convergence
 python -m harness.cascade                                  # M3: preamp B1234 vs F / P / P56 at p1b, k2b, y (hours)
 python -m harness.merge_study                              # M3 Q18: loaded-y partition with B12 + B34 merged (SPICE only)

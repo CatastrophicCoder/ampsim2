@@ -319,13 +319,22 @@ int run(const Options& o, std::ostream& log) {
     std::vector<std::vector<double>> dumps(o.dumps.size(), std::vector<double>(total));
 
     // knob ramps: the target of each ramped knob at sample n (before the ramp: `from`)
+    // each knob follows its latest ramp that has started; before its first ramp it holds that ramp's `from`
+    // (several ramps per knob make a piecewise-linear trajectory, e.g. the M5 automation test)
     auto paramsAt = [&](size_t n) {
         amp2203::Params p = o.params;
         const double t = static_cast<double>(n) / rate;
-        for (const auto& r : o.ramps) {
-            const double u = r.duration > 0.0 ? std::clamp((t - r.start) / r.duration, 0.0, 1.0)
-                                              : (t >= r.start ? 1.0 : 0.0);
-            *knob(p, r.knob) = r.from + (r.to - r.from) * u;
+        for (const char* name : {"preampVolume", "treble", "middle", "bass", "master", "presence"}) {
+            const KnobRamp* use = nullptr;
+            for (const auto& r : o.ramps)
+                if (r.knob == name && (use == nullptr || (r.start <= t && r.start >= use->start) ||
+                                       (use->start > t && r.start < use->start)))
+                    use = &r;
+            if (use == nullptr)
+                continue;
+            const double u = use->duration > 0.0 ? std::clamp((t - use->start) / use->duration, 0.0, 1.0)
+                                                 : (t >= use->start ? 1.0 : 0.0);
+            *knob(p, use->knob) = use->from + (use->to - use->from) * u;
         }
         return p;
     };

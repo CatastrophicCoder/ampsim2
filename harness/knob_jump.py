@@ -1,5 +1,7 @@
 """Knob-jump test (SPEC §6.2, VERIFICATION §7, DECISIONS D-025) for B4 ToneStackMaster (M1) and Preamp
-Volume in B12 StageV1aV1b (M2) and the tone knobs in B34 StageV2aV2bToneStack (M3).
+Volume in B12 StageV1aV1b (M2), the tone knobs in B34 StageV2aV2bToneStack (M3) and Presence in B56 PowerAmp
+(left from M4, run in M5; the engine block runs on the SPICE run's own supply waveforms, as its block-exact
+check).
 
 Each case ramps knob targets 0 → 1 in 10 ms during a 1 kHz tone (B4: 1 V on the J3 DC level; B12: the
 nominal 0.1 V at the guitar input). The engine runs
@@ -9,7 +11,7 @@ rotation nodes that follow the same smoothed trajectory continuously. Pass: no N
 over the ramp and the 20 ms after it. Peak error and error energy above 5 kHz are reported as information.
 Writes harness/reports/M<n>/<YYYYMMDD>_<block>_knob_jump.md.
 
-    python -m harness.knob_jump [--block b4|b12|b34|b1234]
+    python -m harness.knob_jump [--block b4|b12|b34|b1234|b56]
 """
 import argparse
 import datetime
@@ -55,6 +57,9 @@ SETUPS = {
     'b1234': {'milestone': 'M3', 'tone_v': 0.1, 'output': 'y', 'knobs': ('preampVolume',) + B4_KNOBS,
               'cases': [(k,) for k in ('preampVolume',) + B4_KNOBS] + [('preampVolume',) + B4_KNOBS],
               'level': 'at the guitar input', 'pots': 'b12+b4'},
+    'b56': {'milestone': 'M5', 'tone_v': 1.0, 'output': 'out', 'knobs': ('presence',), 'cases': [('presence',)],
+            'level': 'on the J4 DC level', 'supplies': ('ct', 'nscr', 'bpx'),
+            'pots': {'RVR6': ('npr 0', '22k*(1-' + LTAP + ')+1', 'presence')}},
     'b12': {'milestone': 'M2', 'tone_v': 0.1, 'output': 'p1b', 'knobs': ('preampVolume',),
             'cases': [('preampVolume',)], 'level': 'at the guitar input',
             'pots': {
@@ -110,8 +115,10 @@ def run_case(block_id, case, x, workdir):
     n = len(x)
     rot = {k: smoothed(targets(n, case, k)) for k in knobs}
     out_node = setup['output']
-    ref = spice.tran(spice_testbench(block_id), {}, x, [out_node],
-                     recorded={_node(k): rot[k] for k in knobs})[out_node]
+    supplies = setup.get('supplies', ())
+    res = spice.tran(spice_testbench(block_id), {}, x, [out_node, *supplies],
+                     recorded={_node(k): rot[k] for k in knobs})
+    ref = res[out_node]
 
     d = Path(workdir)
     tag = '_'.join(case)
@@ -120,6 +127,9 @@ def run_case(block_id, case, x, workdir):
     args = ['--block', block_id, '--in', str(inp), '--out', str(out), '--rate', str(config.FS)]
     args += [a for k in knobs if k not in case for a in ('--param', f'{k}={DEFAULT_KNOBS[k]!r}')]
     args += [a for k in case for a in ('--knob-ramp', f'{k}={T_START!r},{T_RAMP!r},0,1')]
+    for sname in supplies:  # the engine block on the SPICE run's own supply waveforms (b56)
+        write_wav(d / f'{sname}_{tag}.wav', res[sname])
+        args += ['--supply', f'{sname}={d / f"{sname}_{tag}.wav"}']
     _ampwav(args)
     y = read_wav(out)[0]
 

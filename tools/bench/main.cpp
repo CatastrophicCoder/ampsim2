@@ -1,5 +1,6 @@
 // amp2203_bench — real-time factor of the full engine, and per-block costs.
-//   amp2203_bench            full engine, 60 s at 48 kHz x 16 (M0: synthetic input; DI clips in M5.4)
+//   amp2203_bench [di.wav]   full engine, 60 s at 48 kHz x 16 on a DI clip (SPEC §7 M5.4; default: the first
+//                            WAV in reference/di/, else a 220 Hz sine), linearly interpolated to 768 kHz while running
 //   amp2203_bench b4         ToneStackMaster: ns per sample (static knobs, knobs moving) and µs per
 //                            scattering-matrix update (SPEC §7 M1 acceptance, §6.2)
 //   amp2203_bench b12        StageV1aV1b: ns per sample at several input levels, with Preamp Volume
@@ -11,6 +12,8 @@
 //   amp2203_bench b6         PowerStage driven push-pull at the PI plates
 //   amp2203_bench b56        PowerAmp (B56, the engine's PI + power stage, D-041) at the B56 levels
 #include <chrono>
+#include <filesystem>
+#include <string>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -29,6 +32,7 @@
 #include "amp2203/StageV2aV2b.h"
 #include "amp2203/StageV2aV2bToneStack.h"
 #include "amp2203/ToneStackMaster.h"
+#include "src/WavIO.h"
 
 namespace {
 
@@ -37,7 +41,7 @@ constexpr double kRate = 48000.0 * 16;  // verification / default internal rate 
 
 double seconds(Clock::time_point t0) { return std::chrono::duration<double>(Clock::now() - t0).count(); }
 
-int benchFull() {
+int benchFull(const std::string& diPath) {
     constexpr double secs = 60.0;
     constexpr int blockSize = 512;
     amp2203::EngineConfig cfg;
@@ -46,23 +50,42 @@ int benchFull() {
     amp2203::Amp2203 amp;
     amp.prepare(cfg);
 
+    ampwav::MonoWav di;
+    std::string err, source = "220 Hz sine at 0.1 FS";
+    if (!diPath.empty()) {
+        if (!ampwav::readMonoWav(diPath, di, err)) {
+            std::fprintf(stderr, "amp2203_bench: %s\n", err.c_str());
+            return 1;
+        }
+        source = diPath + " (" + std::to_string(static_cast<int>(di.sampleRate)) + " Hz, looped if shorter than 60 s)";
+    }
     const auto total = static_cast<long long>(secs * cfg.sampleRate);
-    std::vector<float> block(blockSize);
-    double phase = 0.0;
-    const double dphi = 2.0 * std::numbers::pi * 220.0 / cfg.sampleRate;
+    std::vector<double> block(blockSize);
     double sink = 0.0;
+    long long n = 0;
     const auto t0 = Clock::now();
     for (long long done = 0; done < total; done += blockSize) {
         for (auto& s : block) {
-            s = static_cast<float>(0.1 * std::sin(phase));
-            phase += dphi;
+            const double t = static_cast<double>(n++) / cfg.sampleRate;
+            if (di.samples.empty()) {
+                s = 0.1 * std::sin(2.0 * std::numbers::pi * 220.0 * t);
+            } else {  // linear interpolation of the clip to the engine rate
+                const double pos = std::fmod(t * di.sampleRate, static_cast<double>(di.samples.size() - 1));
+                const auto k = static_cast<size_t>(pos);
+                s = di.samples[k] + (pos - static_cast<double>(k)) * (di.samples[k + 1] - di.samples[k]);
+            }
         }
         amp.process(block.data(), blockSize);
         sink += block[0];
     }
     const double elapsed = seconds(t0);
-    std::printf("processed %.1f s at %.0f Hz in %.3f s: real-time factor %.1f (checksum %g)\n", secs,
-                cfg.sampleRate, elapsed, secs / elapsed, sink);
+    const auto st = amp.getStats();
+    std::printf("full engine at %.0f Hz on %s:\n", cfg.sampleRate, source.c_str());
+    std::printf("  processed %.1f s in %.3f s: real-time factor %.2f (%.0f ns per sample)\n", secs, elapsed, secs / elapsed,
+                elapsed / static_cast<double>(total) * 1e9);
+    std::printf("  Newton: %llu solves, median %.0f, max %.0f, failures %llu (rescued %llu)  (checksum %g)\n",
+                static_cast<unsigned long long>(st.newtonSolves), st.medianIterations, st.maxIterationsUsed,
+                static_cast<unsigned long long>(st.newtonFailures), static_cast<unsigned long long>(st.newtonRescued), sink);
     return 0;
 }
 
@@ -352,9 +375,18 @@ int main(int argc, char** argv) {
         return benchPowerStage();
     if (argc > 1 && std::strcmp(argv[1], "b56") == 0)
         return benchPowerAmp();
-    if (argc > 1) {
-        std::fprintf(stderr, "usage: amp2203_bench [b4|b12|b3|b34|preamp|b5|b6|b56]\n");
+    if (argc > 1 && std::string(argv[1]).find(".wav") == std::string::npos) {
+        std::fprintf(stderr, "usage: amp2203_bench [di.wav|b4|b12|b3|b34|preamp|b5|b6|b56]\n");
         return 1;
     }
-    return benchFull();
+    std::string di;
+    if (argc > 1) {
+        di = argv[1];
+    } else {
+        std::error_code ec;
+        for (const auto& e : std::filesystem::directory_iterator(AMP2203_DI_DIR, ec))
+            if (e.path().extension() == ".wav" && (di.empty() || e.path().string() < di))
+                di = e.path().string();
+    }
+    return benchFull(di);
 }

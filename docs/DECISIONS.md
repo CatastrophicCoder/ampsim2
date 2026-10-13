@@ -773,3 +773,27 @@ per sample (was 2.48). Max settings (Master / Presence 1.0, 2.18 / 1.0 V input):
 18 / 12 → 0 in 30 ms, all rescued, 4.0–4.3 µs per sample there (was 6.3–6.6). The standalone `PowerStage`
 (B6, a verified sub-block not used in the chain) has no half-steps; its three 5 kHz 20 V FAILs remain,
 explained as discretisation by the rate study.
+
+## D-044 JUCE plugin structure, offline render tool, M5 checks
+Date: 2026-10-13 · Status: accepted
+Context: SPEC §7 M5, §6.3; PROGRESS.md M5 plan.
+Decision:
+- `Amp2203Processor` (plugin/src): APVTS parameters per SPEC §6.3 (knobs 0–10 shown, rotation = value / 10;
+  Interface Level 0..+24 dBu, default +12, sets `Amp2203::setInputVoltsPerFullScale` (new real-time setter,
+  D-012 addition); Input Trim ±24 dB and Output Level −48..+12 dB as smoothed gains in the wrapper);
+  Oversampling Auto / 2x / 4x / 8x / 16x (Auto = SPEC §3.4 by host rate); Oversampling Filter linear-phase
+  FIR or polyphase IIR (`juce::dsp::Oversampling<double>`, maximum quality, integer latency). Latency via
+  `setLatencySamples` (FIR 67, IIR 6 samples at 16x / 48 kHz). Mono: the left (or only) input channel, the
+  output on every channel. A factor or filter change rebuilds on the message thread (10 Hz timer,
+  `suspendProcessing`). Double-precision processing supported. State through the APVTS.
+- Minimal editor: nine rotary sliders, two combo boxes (APVTS attachments).
+- `amp2203_render` (JUCE console app, plugin/render): the processor offline, and the oversampler's up / down
+  stages alone; `python -m harness.plugin_null` compares the plugin with down(ampwav full(up(x))).
+- `amp2203_bench` (default mode): 60 s of the first DI clip, interpolated linearly to 768 kHz while running.
+- pluginval 1.0.4 (the owner's installed app, /Applications/pluginval.app) and macOS auval; the plugins are
+  installed in ~/Library/Audio/Plug-Ins/{VST3,Components} by copying the build artefacts (owner decision:
+  install and keep).
+- `python -m harness.automation`: every knob at audio rate (10 Hz triangles, 0 ↔ 1 jumps) on the engine at
+  768 kHz. ampwav `--knob-ramp` now follows each knob's latest started ramp (piecewise-linear trajectories;
+  single ramps unchanged).
+Consequences: see the M5 report (`harness/reports/M5/20261013_M5_report.md`).

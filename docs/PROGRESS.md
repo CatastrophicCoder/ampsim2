@@ -493,12 +493,12 @@ Notes:
   per sample. The B6 sub-block keeps its three 5 kHz 20 V FAILs (no half-steps there; discretisation).
 
 ## M5 — JUCE plugin
-- [ ] Processor, parameters, oversampling, latency
-- [ ] Minimal editor
-- [ ] `amp2203_bench` real-time factor
-- [ ] pluginval (VST3, AU), auval
-- [ ] Wrapper null test vs `ampwav`
-- [ ] M5 report
+- [x] Processor, parameters, oversampling, latency (D-044)
+- [x] Minimal editor
+- [x] `amp2203_bench` real-time factor: 0.42 (≥ 10 not met; profiled, Q22)
+- [x] pluginval (VST3, AU), auval: pass
+- [x] Wrapper null test vs `ampwav`: −92.6 to −110.9 dB
+- [x] M5 report: `harness/reports/M5/20261013_M5_report.md` — awaiting owner review
 Plan (2026-10-13; follows SPEC §7 M5, §3.3–3.5, §6.3, D-035):
 
 Step 1 — Processor (`plugin/src/`, the only JUCE code)
@@ -548,6 +548,9 @@ Risks:
   check may report them.
 - pluginval at strictness 5 runs many render passes; at 16x the engine is slow and tests may take long.
 Notes:
+- 2026-10-13 M5: processor, editor, render tool, null test 26 / 26 PASS, pluginval VST3 / AU and auval PASS
+  (AU installed in ~/Library/Audio/Plug-Ins: owner decision), Presence knob jump −77 dB, automation: no NaN,
+  6367 first-solve Newton failures all rescued (Q21), real-time factor 0.42 (Q22). M5 stops here for review.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
@@ -609,3 +612,10 @@ _(Claude Code: add questions here and also ask them in the session.)_
   sines, then ngspice failed ("timestep too small" at node y, RELTOL 1e-8 and 1e-7). Options: keep J5 with
   Z_self − Z_mutual; 2×2 source; merge B5 + B6 into one tree (10-port root, R22 inside the tree, no NFB
   delay); finish the study first. — Answered 2026-10-13: merge B5 and B6 into one tree B56 (D-041).
+- Q21 (M5): under automation at high Master the power amp's first solves exceed 12 iterations (6367 in 56 runs,
+  all rescued by the D-042 fallback, 0 unrescued; static every-knob-at-1.0 DI: 865 / 5 s). A B56 limit of 16 /
+  20 iterations: 10 / 7 at the same cost. Options: count rescued solves as converged; raise the B56
+  iteration limit (and the "max ≤ configured limit" check with it); keep as reported; other. — Open.
+- Q22 (M5): real-time factor 0.42 at 48 kHz × 16 (target ≥ 10); profile in the M5 report. Which direction:
+  optimise the solver / device code first (structure-exploiting solve, chord Newton, tables), lower the internal
+  rate (accuracy table in the report, unverified against SPICE), both, or other? — Open.
