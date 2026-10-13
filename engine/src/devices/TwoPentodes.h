@@ -10,9 +10,10 @@ namespace amp2203::devices {
 /// (Vgk, Vsk, Vpk) per side → (Ig, Is, Ip) and the block-diagonal 3×3 Jacobians.
 struct TwoPentodes {
     enum Port : int { gA, sA, pA, gB, sB, pB };
+    static constexpr int kBlockBegin[6] = {0, 0, 0, 3, 3, 3};  // 3×3 blocks (solver::BlockDevice)
+    static constexpr int kBlockEnd[6] = {3, 3, 3, 6, 6, 6};
 
     void operator()(const solver::Vec<6>& v, solver::Vec<6>& i, solver::Mat<6>& d) const noexcept {
-        d = {};
         for (int side = 0; side < 2; ++side) {
             const int o = 3 * side;
             const auto c = kEL34Pair.eval(v[o], v[o + 1], v[o + 2]);
@@ -20,6 +21,8 @@ struct TwoPentodes {
             i[o + 1] = c.is;
             i[o + 2] = c.ip;
             d[o][o] = c.dig_dvgk;
+            d[o][o + 1] = 0.0;
+            d[o][o + 2] = 0.0;
             d[o + 1][o] = c.dis_dvgk;
             d[o + 1][o + 1] = c.dis_dvsk;
             d[o + 1][o + 2] = c.dis_dvpk;

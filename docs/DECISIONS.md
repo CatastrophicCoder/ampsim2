@@ -808,3 +808,22 @@ Decision: `PowerAmp` uses `TriodesPentodes::solver(16)` (maxIter 16; the DC solv
 12). The Newton maximum check ("≤ the configured limit") is 16 for b56 and the full amp
 (`harness/tolerances.py` OVERRIDES); first-solve failures still count as failures.
 Consequences: M4 / M5 reports for b56 and the full amp regenerated with the new limit.
+
+## D-046 Solver and device optimisations without accuracy change (M5, Q22)
+Date: 2026-10-14 · Status: accepted (owner decision Q22: optimise the solver first)
+Context: M5 real-time factor 0.42 at 48 kHz × 16 (target ≥ 10); profile in the M5 report.
+Decision (each step checked against the previous engine on fixed inputs: DI 2 s at default / every knob 1.0,
+full amp 5 kHz 0.5 V, b56 5 kHz 20 V):
+- `RootNetwork::openCircuit` / `solve`: the power amp's half-step trigger reuses the open-circuit product
+  instead of computing it twice (bit-identical).
+- Block-diagonal device Jacobians (`solver::BlockDevice`: per column the rows that can be nonzero): J = I +
+  Z·∂i/∂v from those entries only, and the devices no longer clear the whole matrix (bit-identical).
+- `solveLinear`: one reciprocal per pivot, no update of the eliminated column (outputs within 2.3e-8 V at
+  default knobs, 1.2e-6 V at every knob 1.0; ESR against the previous engine −169 to −231 dB).
+- Devices: the grid diode's constant part of z precomputed (`GridDiode` constructor; the device instances
+  are `inline const` instead of `constexpr`), softplus and sigmoid from one exponential (same tolerance as
+  above; the device unit tests pass unchanged).
+- Tried and rejected: chord Newton (the first iteration's factorisation reused within the sample): 858 to
+  61994 first-solve failures on the four cases, ESR −15 dB at every knob 1.0.
+Consequences: `amp2203_bench` on 60 s of DI 3114 → 2436 ns per engine sample (real-time factor 0.42 → 0.53);
+Preamp 1263–1857 → 1111–1586 ns, PowerAmp 1699–2286 → 1181–1673 ns (5 kHz 20 V 3558 → 2593 ns).

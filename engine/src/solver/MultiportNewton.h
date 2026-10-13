@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cmath>
+#include <concepts>
 #include <utility>
 
 #include "amp2203/detail/NewtonStats.h"
@@ -19,18 +20,22 @@ template <int K>
 bool solveLinear(Mat<K>& J, Vec<K>& r) noexcept {
     for (int k = 0; k < K; ++k) {
         int p = k;
+        double best = std::fabs(J[k][k]);
         for (int i = k + 1; i < K; ++i)
-            if (std::fabs(J[i][k]) > std::fabs(J[p][k]))
+            if (const double a = std::fabs(J[i][k]); a > best) {
+                best = a;
                 p = i;
-        if (!(std::fabs(J[p][k]) > 0.0) || !std::isfinite(J[p][k]))
+            }
+        if (!(best > 0.0) || !std::isfinite(best))
             return false;
         if (p != k) {
             std::swap(J[p], J[k]);
             std::swap(r[p], r[k]);
         }
+        const double inv = 1.0 / J[k][k];  // one division per pivot (D-046)
         for (int i = k + 1; i < K; ++i) {
-            const double f = J[i][k] / J[k][k];
-            for (int j = k; j < K; ++j)
+            const double f = J[i][k] * inv;
+            for (int j = k + 1; j < K; ++j)  // column k below the pivot is not used again
                 J[i][j] -= f * J[k][j];
             r[i] -= f * r[k];
         }
@@ -62,6 +67,15 @@ struct NewtonConfig {
 /// `maxStep` (keeps the Newton direction); if ‖f‖∞ grows, the step is halved up to maxHalvings times.
 /// Converged when ‖f‖∞ < residualTol or ‖Δv‖∞ < stepTol·max(1, ‖v‖∞). Otherwise the iterate with the
 /// lowest ‖f‖∞ is kept and the failure is counted. On return `i` holds the currents at `v`.
+/// A device whose ∂i/∂v is block-diagonal declares, per column c, the row range [kBlockBegin[c], kBlockEnd[c])
+/// that can be nonzero; the Jacobian J = I + Z·∂i/∂v is then built from those entries only (D-046). Entries
+/// outside the blocks are never read, so such a device need not clear them.
+template <class Device, int K>
+concept BlockDevice = requires {
+    { Device::kBlockBegin[0] } -> std::convertible_to<int>;
+    { Device::kBlockEnd[0] } -> std::convertible_to<int>;
+};
+
 template <int K>
 class MultiportNewton {
 public:
@@ -88,8 +102,14 @@ public:
             for (int r = 0; r < K; ++r)
                 for (int c = 0; c < K; ++c) {
                     double s = r == c ? 1.0 : 0.0;
-                    for (int m = 0; m < K; ++m)
-                        s += Z[r][m] * didv[m][c];
+                    if constexpr (BlockDevice<Device, K>) {
+                        // same terms in the same order as the dense sum without its exact zeros
+                        for (int m = Device::kBlockBegin[c]; m < Device::kBlockEnd[c]; ++m)
+                            s += Z[r][m] * didv[m][c];
+                    } else {
+                        for (int m = 0; m < K; ++m)
+                            s += Z[r][m] * didv[m][c];
+                    }
                     J[r][c] = s;
                 }
             Vec<K> dv;

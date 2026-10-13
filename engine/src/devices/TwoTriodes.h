@@ -10,6 +10,8 @@ namespace amp2203::devices {
 /// Used by B12 (V1a, V1b), B3 (V2a, V2b) and B5 (V3a, V3b).
 struct TwoTriodes {
     enum Port : int { gA, pA, gB, pB };
+    static constexpr int kBlockBegin[4] = {0, 0, 2, 2};  // 2×2 blocks (solver::BlockDevice)
+    static constexpr int kBlockEnd[4] = {2, 2, 4, 4};
 
     void operator()(const solver::Vec<4>& v, solver::Vec<4>& i, solver::Mat<4>& d) const noexcept {
         const auto a = k12AX7.eval(v[gA], v[pA]);

@@ -253,17 +253,18 @@ double PowerAmp::process(double vIn) noexcept {
     Wave wave;
     stage::reflected(elements(), wave);
     const Wave eOff = elementOffsets();
+    std::array<double, kNumNodes> u;
+    std::array<double, kNumRootPorts> vOc;
+    kNet.openCircuit(root_, wave, eOff, kNoRootOffsets, u, vOc);
     bool half = false;
-    if (halfStepTrigger_ > 0.0) {
-        const auto vOc = kNet.thevenin(root_, wave, eOff, kNoRootOffsets);
+    if (halfStepTrigger_ > 0.0)
         for (int r = 0; r < kNumRootPorts; ++r)
             half = half || std::fabs(vOc[r] - root_.vOcPrev[r]) > halfStepTrigger_;
-    }
     if (half) {
         halfStep(vIn);
         updateOutputs(vIn);
     } else {
-        const bool ok = kNet.process(root_, kRootSolver, TriodesPentodes{}, wave, eOff, kNoRootOffsets);
+        const bool ok = kNet.solve(root_, kRootSolver, TriodesPentodes{}, u, vOc, wave, eOff);
         stage::incident(elements(), wave);  // on failure wave = reflected: states unchanged
         if (ok)
             updateOutputs(vIn);

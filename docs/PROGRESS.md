@@ -620,4 +620,6 @@ _(Claude Code: add questions here and also ask them in the session.)_
 - Q22 (M5): real-time factor 0.42 at 48 kHz × 16 (target ≥ 10); profile in the M5 report. Which direction:
   optimise the solver / device code first (structure-exploiting solve, chord Newton, tables), lower the internal
   rate (accuracy table in the report, unverified against SPICE), both, or other? — Answered 2026-10-13:
-  optimise the solver first (accuracy unchanged; measured per step).
+  optimise the solver first (accuracy unchanged; measured per step). Done (D-046): real-time factor 0.42 → 0.53;
+  re-verification (B56, cascade, M4 acceptance, null test) unchanged; automation 90 first-solve failures, all
+  rescued. M5 stops here for review.

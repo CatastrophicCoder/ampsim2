@@ -36,12 +36,12 @@ struct Pentode {
         const bool clamped = !(vsk > 1e-3);
         const double vs = clamped ? 1e-3 : vsk;
         const double u = kp * (1.0 / mu + vgk / vs);
-        const double sp = softplus(u);
+        double sp, sg;
+        softplusSigmoid(u, sp, sg);
         const double e1 = vs * sp / kp;
         if (e1 > 0.0) {
             const double f = 2.0 * std::pow(e1, ex);
             const double df_de1 = ex * f / e1;
-            const double sg = sigmoid(u);
             const double df_dvgk = df_de1 * sg;
             const double df_dvsk = clamped ? 0.0 : df_de1 * (sp / kp - sg * vgk / vs);
 
@@ -70,8 +70,8 @@ struct Pentode {
 };
 
 /// EL34 with the tubes.lib parameters (mu=11 ex=1.35 kg1=650 kg2=4200 kp=60 kvb=24 rgi=1000).
-inline constexpr Pentode kEL34{};
+inline const Pentode kEL34{};
 /// Matched EL34 pair with identical drive (V4 ‖ V5, V6 ‖ V7): every current doubled.
-inline constexpr Pentode kEL34Pair{11.0, 1.35, 650.0, 4200.0, 60.0, 24.0, {1e-9, 1.0, 1000.0 + 1.0}, 2.0};
+inline const Pentode kEL34Pair{11.0, 1.35, 650.0, 4200.0, 60.0, 24.0, {1e-9, 1.0, 1000.0 + 1.0}, 2.0};
 
 }  // namespace amp2203::devices

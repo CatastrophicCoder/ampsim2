@@ -80,19 +80,17 @@ struct RootNetwork {
         return true;
     }
 
-    /// Thevenin voltages of the root ports for the elements' reflected waves (the first part of process()).
-    RVec thevenin(const State& s, const EVec& wave, const EVec& eOffset, const RVec& rOffset) const noexcept {
-        std::array<double, N> u{};
+    /// Open-root node voltages u = Xe·(b − offset) and the root Thevenin voltages (the first part of process()).
+    void openCircuit(const State& s, const EVec& wave, const EVec& eOffset, const RVec& rOffset,
+                     std::array<double, N>& u, RVec& vOc) const noexcept {
         for (int n = 0; n < N; ++n) {
             double acc = 0.0;
             for (int j = 0; j < P; ++j)
                 acc += s.Xe[n][j] * (wave[static_cast<size_t>(j)] - eOffset[static_cast<size_t>(j)]);
             u[n] = acc;
         }
-        RVec vOc;
         for (int r = 0; r < K; ++r)
             vOc[r] = across(root.ports[r], u) + rOffset[r];
-        return vOc;
     }
 
     /// One sample. `wave` holds the elements' reflected waves on entry and the incident waves for them on
@@ -101,17 +99,17 @@ struct RootNetwork {
     template <class Device>
     bool process(State& s, const solver::MultiportNewton<K>& newton, const Device& device, EVec& wave,
                  const EVec& eOffset, const RVec& rOffset) const noexcept {
-        std::array<double, N> u{};
-        for (int n = 0; n < N; ++n) {
-            double acc = 0.0;
-            for (int j = 0; j < P; ++j)
-                acc += s.Xe[n][j] * (wave[static_cast<size_t>(j)] - eOffset[static_cast<size_t>(j)]);
-            u[n] = acc;
-        }
+        std::array<double, N> u;
         RVec vOc;
-        for (int r = 0; r < K; ++r)
-            vOc[r] = across(root.ports[r], u) + rOffset[r];
+        openCircuit(s, wave, eOffset, rOffset, u, vOc);
+        return solve(s, newton, device, u, vOc, wave, eOffset);
+    }
 
+    /// The rest of process() for open-circuit voltages from openCircuit(): Newton, node voltages, incident
+    /// waves.
+    template <class Device>
+    bool solve(State& s, const solver::MultiportNewton<K>& newton, const Device& device, const std::array<double, N>& u,
+               const RVec& vOc, EVec& wave, const EVec& eOffset) const noexcept {
         // predictor: linear extrapolation from the two previous solutions (D-029), each port's step
         // clamped to its Newton step limit; after a failed sample the trend restarts at zero (D-034)
         RVec v = s.v;

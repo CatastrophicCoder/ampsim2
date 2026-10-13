@@ -8,23 +8,36 @@ namespace amp2203::devices {
 /// The B56 root (D-041): V3a / V3b (ports 0–3, as TwoTriodes) and the two EL34 pairs (ports 4–9, as
 /// TwoPentodes). The Jacobian is block-diagonal.
 struct TriodesPentodes {
+    // 2×2 triode blocks, then 3×3 pentode-pair blocks (solver::BlockDevice)
+    static constexpr int kBlockBegin[10] = {0, 0, 2, 2, 4, 4, 4, 7, 7, 7};
+    static constexpr int kBlockEnd[10] = {2, 2, 4, 4, 7, 7, 7, 10, 10, 10};
+
     void operator()(const solver::Vec<10>& v, solver::Vec<10>& i, solver::Mat<10>& d) const noexcept {
-        solver::Vec<4> vt{v[0], v[1], v[2], v[3]}, it;
-        solver::Mat<4> dt;
-        TwoTriodes{}(vt, it, dt);
-        solver::Vec<6> vp{v[4], v[5], v[6], v[7], v[8], v[9]}, ip;
-        solver::Mat<6> dp;
-        TwoPentodes{}(vp, ip, dp);
-        d = {};
-        for (int r = 0; r < 4; ++r) {
-            i[r] = it[r];
-            for (int c = 0; c < 4; ++c)
-                d[r][c] = dt[r][c];
+        for (int t = 0; t < 2; ++t) {
+            const int g = 2 * t, p = 2 * t + 1;
+            const auto c = k12AX7.eval(v[g], v[p]);
+            i[g] = c.ig;
+            i[p] = c.ip;
+            d[g][g] = c.dig_dvgk;
+            d[g][p] = 0.0;
+            d[p][g] = c.dip_dvgk;
+            d[p][p] = c.dip_dvpk;
         }
-        for (int r = 0; r < 6; ++r) {
-            i[4 + r] = ip[r];
-            for (int c = 0; c < 6; ++c)
-                d[4 + r][4 + c] = dp[r][c];
+        for (int side = 0; side < 2; ++side) {
+            const int o = 4 + 3 * side;
+            const auto c = kEL34Pair.eval(v[o], v[o + 1], v[o + 2]);
+            i[o] = c.ig;
+            i[o + 1] = c.is;
+            i[o + 2] = c.ip;
+            d[o][o] = c.dig_dvgk;
+            d[o][o + 1] = 0.0;
+            d[o][o + 2] = 0.0;
+            d[o + 1][o] = c.dis_dvgk;
+            d[o + 1][o + 1] = c.dis_dvsk;
+            d[o + 1][o + 2] = c.dis_dvpk;
+            d[o + 2][o] = c.dip_dvgk;
+            d[o + 2][o + 1] = c.dip_dvsk;
+            d[o + 2][o + 2] = c.dip_dvpk;
         }
     }
 
