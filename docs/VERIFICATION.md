@@ -57,7 +57,7 @@ Feedback and supply exceptions:
 | SWP-hi | Same sweep at nominal block level | Nonlinear frequency behaviour |
 | TT | Two tones 220 Hz + 330 Hz, equal level, 300 ms | Intermodulation (power-chord-like) |
 | BURST | 1 kHz: 50 ms low, 300 ms high (+30 dB), 300 ms low | Blocking / bias-shift recovery |
-| STEP | 0 → nominal DC-free pulse train (5 ms on/off) | Transient settling |
+| STEP | 0 → nominal DC-free pulse train (5 ms on/off), edges band-limited by a causal 4th-order Bessel low-pass (−3 dB at 20 kHz) | Transient settling (DECISIONS D-030) |
 | DI | Owner's DI guitar recordings in `reference/di/` (mono WAV), resampled to 384 kHz with `scipy.signal.resample_poly`, scaled by `inputVoltsPerFullScale` | 5–10 s excerpts; most representative test |
 
 DI recordings are not included in the repository by default (owner provides them; see

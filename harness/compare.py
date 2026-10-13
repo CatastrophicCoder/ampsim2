@@ -212,8 +212,8 @@ def write_report(milestone, block, preset, signals, report, per_signal, dc_rows,
         f'- Engine commit: `{_git()}`',
         f'- Testbench: `harness/testbenches/{block.testbench}` sha256 `{_sha(block.path)}`; netlist sha256 '
         f'`{_sha(config.NETLIST)}`; tubes.lib sha256 `{_sha(config.TUBES)}`',
-        f'- ngspice {spice.ngspice_version()}, fs = {config.FS} Hz, reference: F (full netlist)'
-        if block.id == 'full' else f'- ngspice {spice.ngspice_version()}, fs = {config.FS} Hz',
+        f'- ngspice {spice.ngspice_version()}, fs = {config.FS} Hz, SPICE reltol {config.SPICE_RELTOL}, reference: F (full netlist)'
+        if block.id == 'full' else f'- ngspice {spice.ngspice_version()}, fs = {config.FS} Hz, SPICE reltol {config.SPICE_RELTOL}',
         '',
     ]
     lines += [f'> {n}' for n in notes] + ([''] if notes else [])

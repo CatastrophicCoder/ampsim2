@@ -82,7 +82,12 @@ class TestSignals(unittest.TestCase):
 
         st = signals.step(1.0)
         self.assertAlmostEqual(np.mean(st.x), 0.0, delta=1e-3)
-        self.assertEqual(set(np.unique(st.x)), {-1.0, 0.0, 1.0})
+        self.assertEqual(st.x[0], 0.0)
+        self.assertLess(np.max(np.abs(st.x)), 1.02)                    # Bessel edges: about 1 % overshoot
+        self.assertAlmostEqual(st.x[int(0.004 * config.FS)], 1.0, places=6)  # settled within the pulse
+        spec = np.abs(np.fft.rfft(st.x)) ** 2
+        f = np.fft.rfftfreq(len(st.x), 1 / config.FS)
+        self.assertLess(10 * np.log10(spec[f > 80e3].sum() / spec.sum()), -60.0)  # band-limited edges
 
         sw = signals.sweep(1.0, 'SWP-lo')
         tail = int(signals.SWEEP_TAIL * config.FS)

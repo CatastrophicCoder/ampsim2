@@ -237,7 +237,7 @@ Notes:
 - [x] Generic multiport Newton root (first user N = 4) — Thevenin form (D-028), predictor (D-029)
 - [x] `StageV1aV1b` tree (Preamp Volume inside), DC initialisation (D-028)
 - [x] Block-exact checks, Newton statistics
-- [x] M2 report: `harness/reports/M2/20261013_M2_report.md` — awaiting owner review (Q12, Q13 open)
+- [x] M2 report: `harness/reports/M2/20261013_M2_report.md` — awaiting owner review
 Plan (2026-10-13; follows SPEC §7 M2, WDF_DESIGN §3.1, §4, §5.3 and VERIFICATION §5–7):
 
 Step 1 — 12AX7 device model (`engine/src/devices/`)
@@ -313,6 +313,9 @@ Notes:
   DEFAULT and VOL1.0: all PASS. VOL0.2: two FAILs raised with the owner (Q12 STEP ESR −34.5 dB from
   > 20 kHz content, converges with the engine rate; Q13 H3 at 5 kHz 0.1 V 0.54 dB, the SPICE reference is
   not converged at RELTOL 1e-6).
+- 2026-10-13 Owner decisions Q12 / Q13: STEP edges band-limited (D-030), RELTOL 1e-8 for every reference
+  transient (D-031). M1 and M2 re-rendered: B12 DEFAULT / VOL0.2 / VOL1.0 all PASS (VOL0.2 STEP −48.3 dB,
+  H3 0.09 dB); B4 17 PASS, sweeps worst −79.9 dB, knob jumps unchanged. M2 stops here for review.
 
 ## M3 — B3, preamp cascade
 - [ ] `StageV2aV2b` (joint 4-port root)
@@ -373,7 +376,8 @@ _(Claude Code: add questions here and also ask them in the session.)_
   arithmetic; exact-rational Python reference) (D-026).
 - Q12 (M2): STEP at Preamp Volume 0.2 gives ESR −34.5 dB (≤ −40 dB); the error lies above 20 kHz
   (−50.7 dB after a 20 kHz low-pass) and shrinks with the engine rate (−44.4 / −52.6 dB at 2× / 4×):
-  bilinear discretisation of an ideal step through the C5 bright-cap path. How to treat it? — Open.
+  bilinear discretisation of an ideal step through the C5 bright-cap path. How to treat it? — Answered
+  2026-10-13: band-limit the STEP edges for all blocks (causal 4th-order Bessel, −3 dB at 20 kHz; D-030).
 - Q13 (M2): H3 of the 5 kHz 0.1 V sine at Preamp Volume 0.2 differs by 0.54 dB (≤ 0.5 dB); the SPICE
   reference is not converged at RELTOL 1e-6 (−70.68 dBc; −71.13 at 1e-8; engine −71.23). How to treat
-  it? — Open.
+  it? — Answered 2026-10-13: RELTOL 1e-8 for all reference transients; M1 and M2 re-rendered (D-031).

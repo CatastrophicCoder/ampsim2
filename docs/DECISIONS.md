@@ -143,7 +143,8 @@ Addition (2026-10-13, M2): dr_wav rejects rates above 384 kHz by default; ampwav
 which the M2 discretisation check uses.
 
 ## D-014 SPICE transient setup: sample-aligned input, sweep tail, configurable RELTOL
-Date: 2026-10-12 · Status: accepted (RELTOL 1e-6: owner decision 2026-10-12, PROGRESS.md Q4)
+Date: 2026-10-12 · Status: accepted (RELTOL 1e-6: owner decision 2026-10-12, PROGRESS.md Q4); RELTOL
+superseded by D-031 (1e-8)
 Context: M0 step 3 measurements (ngspice 47):
 - An XSPICE filesource creates no breakpoints, so ngspice's internal steps drift off the 384 kHz grid
   and the input is interpolated twice (filesource, then `option interp`). The circuit input was
@@ -508,3 +509,31 @@ SPEC §7 M2 (median ≤ 3, zero failures) this one changes only step 1. WDF_DESI
 as a later optimisation "only with harness evidence"; the table is that evidence. It also lowers the
 cost (e.g. 1 kHz 0.01 V: median 2 → 1).
 Consequences: The blocks keep the previous two root solutions; `reset()` sets both to the DC solution.
+
+## D-030 STEP test signal with band-limited edges
+Date: 2026-10-13 · Status: accepted (owner decision, PROGRESS.md Q12)
+Context: B12 at Preamp Volume 0.2 scored STEP ESR −34.5 dB (≤ −40 dB). The error lay above 20 kHz
+(−50.7 dB after a 20 kHz low-pass on both signals) and shrank with the engine rate (−44.4 / −52.6 dB at
+768 kHz / 1.536 MHz): the bilinear discretisation at 384 kHz of an ideal step, whose spectrum reaches
+Nyquist, passed by the C5 bright cap at low volume. Options presented: accept as known; band-limit the
+STEP edges; score STEP after a 20 kHz low-pass; run B12 at 2× internally.
+Decision: the STEP pulse train (VERIFICATION §3) is filtered by a causal 4th-order Bessel low-pass with
+−3 dB at 20 kHz (`harness/signals.py: STEP_EDGE_HZ`, `STEP_EDGE_ORDER`), for every block. The signal
+still starts at exactly 0 V and stays DC-free; overshoot is about 1 %; energy above 80 kHz is below
+−85 dB of the total.
+Consequences: STEP tests the audio band; content above about 20 kHz is no longer exercised by STEP. M1
+(B4) and M2 (B12) STEP references re-rendered.
+
+## D-031 SPICE RELTOL 1e-8 for all reference transients
+Date: 2026-10-13 · Status: accepted (owner decision, PROGRESS.md Q13); supersedes the RELTOL part of D-014
+Context: B12 at Preamp Volume 0.2, 5 kHz 0.1 V: H3 (−70.7 dBc) differed by 0.54 dB (≤ 0.5 dB). The
+engine gives −71.23 dBc at 384 kHz, 768 kHz and 1.536 MHz; SPICE gives −71.28 / −70.68 / −71.03 /
+−71.13 dBc at RELTOL 1e-5 / 1e-6 / 1e-7 / 1e-8, so the reference was not converged at 1e-6 (difference
+at 1e-8: 0.10 dB). Options presented: 1e-8 for B12; 1e-8 everywhere; accept as known; skip unconverged
+harmonics.
+Decision: `harness/config.py: SPICE_RELTOL = 1e-8` for every reference transient. SPICE run time is
+2–3× that at 1e-6 (B12 5 kHz sine 8 s → 25 s, 2 s sweep 58 s → 121 s). op and ac are unaffected.
+Consequences: All M1 and M2 transient references re-rendered and their reports regenerated. The M0
+reports and the M0 J1/J2 partition studies stay as recorded at 1e-6 (the M0 report and the partition
+reports state it; `compare` reports state the RELTOL from M2 on).
+

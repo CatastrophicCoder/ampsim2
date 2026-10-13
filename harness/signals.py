@@ -17,6 +17,8 @@ SIN_SECONDS = 0.150
 SWEEP_SECONDS = 2.0
 SWEEP_TAIL = 0.050
 TT_SECONDS = 0.300
+STEP_EDGE_HZ = 20e3       # STEP edges: causal 4th-order Bessel low-pass, -3 dB here (DECISIONS D-030)
+STEP_EDGE_ORDER = 4
 DI_SECONDS = 5.0
 LEVEL_NAMES = ('small', 'nominal', 'hot', 'overdrive')
 
@@ -69,12 +71,20 @@ def burst(amp_high, freq=1000.0):
 
 
 def step(amp, period=0.005, seconds=0.100):
-    """DC-free pulse train: +amp, 0, -amp, 0, each `period` long."""
+    """DC-free pulse train: +amp, 0, -amp, 0, each `period` long, with band-limited edges: a causal
+    4th-order Bessel low-pass (-3 dB at 20 kHz, about 1 % overshoot) so the test covers the audio band
+    rather than the discretisation of an ideal step near Nyquist (DECISIONS D-030). Causal, so the
+    signal still starts at exactly 0 V."""
+    from scipy.signal import bessel, sosfilt
+
     t = _t(seconds)
     phase = np.floor(t / period).astype(int) % 4
     x = np.choose(phase, [amp, 0.0, -amp, 0.0]).astype(float)
     x[0] = 0.0
-    return Signal(f'STEP-{_fmt(amp)}V', 'STEP', x, {'amp': amp, 'period': period})
+    sos = bessel(STEP_EDGE_ORDER, STEP_EDGE_HZ, fs=config.FS, norm='mag', output='sos')
+    x = sosfilt(sos, x)
+    return Signal(f'STEP-{_fmt(amp)}V', 'STEP', x,
+                  {'amp': amp, 'period': period, 'edge_hz': STEP_EDGE_HZ, 'edge_order': STEP_EDGE_ORDER})
 
 
 def di_signals(volts_per_fs=config.INPUT_VOLTS_PER_FS, seconds=DI_SECONDS, di_dir=config.DI_DIR):
