@@ -5,6 +5,8 @@ add_executable(amp2203_tests
     test_tonestack.cpp
     test_newton.cpp
     test_stage12.cpp
+    test_stage3.cpp
+    test_stage34.cpp
     test_triode.cpp)
 
 target_link_libraries(amp2203_tests PRIVATE amp2203_engine Catch2::Catch2WithMain)

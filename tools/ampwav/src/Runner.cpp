@@ -1,6 +1,9 @@
 #include "Runner.h"
 
+#include "amp2203/Preamp.h"
 #include "amp2203/StageV1aV1b.h"
+#include "amp2203/StageV2aV2b.h"
+#include "amp2203/StageV2aV2bToneStack.h"
 #include "amp2203/ToneStackMaster.h"
 
 #include <algorithm>
@@ -62,6 +65,16 @@ private:
     bool started_ = false;
 };
 
+/// Newton statistics of a block in the ampwav --stats form.
+amp2203::Amp2203::Stats toStats(const amp2203::detail::NewtonStats& s) {
+    amp2203::Amp2203::Stats st;
+    st.newtonFailures = s.failures;
+    st.maxIterationsUsed = s.maxIterations;
+    st.newtonSolves = s.solves;
+    st.medianIterations = s.medianIterations();
+    return st;
+}
+
 /// B12 StageV1aV1b: input = guitar source voltage at node `in`, output = v_oc(p1b). The block starts
 /// from the DC operating point of the first input sample (every harness signal starts there).
 class StageV1aV1bRunner final : public Runner {
@@ -83,18 +96,124 @@ public:
     }
 
     std::span<const amp2203::Probe> probes() const noexcept override { return block_.probes(); }
-    amp2203::Amp2203::Stats stats() const override {
-        const auto& s = block_.newtonStats();
-        amp2203::Amp2203::Stats st;
-        st.newtonFailures = s.failures;
-        st.maxIterationsUsed = s.maxIterations;
-        st.newtonSolves = s.solves;
-        st.medianIterations = s.medianIterations();
-        return st;
+    amp2203::Amp2203::Stats stats() const override { return toStats(block_.newtonStats()); }
+
+    bool setSupply(std::string_view node, double v) noexcept override {
+        if (node != "bpa")
+            return false;
+        block_.setSupplyVoltage(v);
+        return true;
     }
 
 private:
     amp2203::StageV1aV1b block_;
+    bool started_ = false;
+};
+
+/// B3 StageV2aV2b: input = J2 source voltage v_oc(p1b) (absolute volts), output = v_oc(k2b). The block
+/// starts from the DC operating point of the first input sample.
+class StageV2aV2bRunner final : public Runner {
+public:
+    void prepare(double sampleRate, int) override {
+        block_.prepare(sampleRate);
+        started_ = false;
+    }
+    void setParams(const amp2203::Params&) override {}
+
+    void processVolts(double* v, int numSamples) noexcept override {
+        if (numSamples > 0 && !started_) {
+            block_.reset(v[0]);
+            block_.clearStats();
+            started_ = true;
+        }
+        for (int n = 0; n < numSamples; ++n)
+            v[n] = block_.process(v[n]);
+    }
+
+    std::span<const amp2203::Probe> probes() const noexcept override { return block_.probes(); }
+    amp2203::Amp2203::Stats stats() const override { return toStats(block_.newtonStats()); }
+
+    bool setSupply(std::string_view node, double v) noexcept override {
+        if (node != "bpx")
+            return false;
+        block_.setSupplyVoltage(v);
+        return true;
+    }
+
+private:
+    amp2203::StageV2aV2b block_;
+    bool started_ = false;
+};
+
+/// B34 StageV2aV2bToneStack (B3 + B4 merged, D-033): input = J2 source voltage v_oc(p1b), output =
+/// v_oc(y). Starts from the DC operating point of the first input sample.
+class StageV2aV2bToneStackRunner final : public Runner {
+public:
+    void prepare(double sampleRate, int) override {
+        block_.prepare(sampleRate, amp2203::EngineConfig{}.paramSmoothingMs);
+        started_ = false;
+    }
+    void setParams(const amp2203::Params& p) override { block_.setParams(p); }
+
+    void processVolts(double* v, int numSamples) noexcept override {
+        if (numSamples > 0 && !started_) {
+            block_.reset(v[0]);
+            block_.clearStats();
+            started_ = true;
+        }
+        for (int n = 0; n < numSamples; ++n)
+            v[n] = block_.process(v[n]);
+    }
+
+    std::span<const amp2203::Probe> probes() const noexcept override { return block_.probes(); }
+    amp2203::Amp2203::Stats stats() const override { return toStats(block_.newtonStats()); }
+
+    bool setSupply(std::string_view node, double v) noexcept override {
+        if (node != "bpx")
+            return false;
+        block_.setSupplyVoltage(v);
+        return true;
+    }
+
+private:
+    amp2203::StageV2aV2bToneStack block_;
+    bool started_ = false;
+};
+
+/// Preamp cascade B12 → B34: input = guitar source voltage, output = v_oc(y). Starts from the DC
+/// operating point of the first input sample.
+class PreampRunner final : public Runner {
+public:
+    void prepare(double sampleRate, int) override {
+        block_.prepare(sampleRate, amp2203::EngineConfig{}.paramSmoothingMs);
+        started_ = false;
+    }
+    void setParams(const amp2203::Params& p) override { block_.setParams(p); }
+
+    void processVolts(double* v, int numSamples) noexcept override {
+        if (numSamples > 0 && !started_) {
+            block_.reset(v[0]);
+            started_ = true;
+        }
+        for (int n = 0; n < numSamples; ++n)
+            v[n] = block_.process(v[n]);
+    }
+
+    std::span<const amp2203::Probe> probes() const noexcept override { return block_.probes(); }
+    amp2203::Amp2203::Stats stats() const override { return toStats(block_.newtonStats()); }
+
+    bool setSupply(std::string_view node, double v) noexcept override {
+        if (node == "bpa")
+            block_.b12().setSupplyVoltage(v);
+        else if (node == "bpx")
+            block_.b34().setSupplyVoltage(v);
+        else
+            return false;
+        return true;
+    }
+
+private:
+    amp2203::Preamp block_;
     bool started_ = false;
 };
 
@@ -126,7 +245,7 @@ std::string lower(std::string_view s) {
 }  // namespace
 
 const std::vector<std::string>& blockIds() {
-    static const std::vector<std::string> ids = {"full", "b12", "b3", "b4", "b5", "b6", "b7", "b56"};
+    static const std::vector<std::string> ids = {"full", "preamp", "b12", "b3", "b34", "b4", "b5", "b6", "b7", "b56"};
     return ids;
 }
 
@@ -136,6 +255,12 @@ std::unique_ptr<Runner> makeRunner(std::string_view blockId) {
         return std::make_unique<FullRunner>();
     if (id == "b12")
         return std::make_unique<StageV1aV1bRunner>();
+    if (id == "preamp")
+        return std::make_unique<PreampRunner>();
+    if (id == "b34")
+        return std::make_unique<StageV2aV2bToneStackRunner>();
+    if (id == "b3")
+        return std::make_unique<StageV2aV2bRunner>();
     if (id == "b4")
         return std::make_unique<ToneStackRunner>();
     const auto& ids = blockIds();

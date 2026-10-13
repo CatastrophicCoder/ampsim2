@@ -107,6 +107,24 @@ TEST_CASE("Newton step limit and failure handling", "[newton][m2]") {
     REQUIRE(s2.failures == 1);
 }
 
+TEST_CASE("Newton asymmetric step limits", "[newton][m3]") {
+    // a single diode driven far negative: the step into cutoff may be large, a step up stays limited
+    MultiportNewton<1> root;
+    root.maxStep = {0.1};
+    root.maxStepDown = {100.0};
+    root.config.maxIter = 1;
+    Vec<1> v{0.0}, i{};
+    NewtonStats stats;
+    root.solve(Diodes<1>{}, Vec<1>{-50.0}, Mat<1>{{{1e3}}}, v, i, stats);
+    REQUIRE(v[0] < -10.0);  // one step, not limited to 0.1 V downwards
+    REQUIRE(root.limitDown(0) == 100.0);
+    Vec<1> w{-1.0}, j{};
+    root.solve(Diodes<1>{}, Vec<1>{5.0}, Mat<1>{{{1e3}}}, w, j, stats);
+    REQUIRE(w[0] <= -1.0 + 0.1 + 1e-15);  // upward step limited
+    root.maxStepDown = {0.0};
+    REQUIRE(root.limitDown(0) == 0.1);  // 0 = symmetric
+}
+
 TEST_CASE("Newton statistics median", "[newton][m2]") {
     NewtonStats s;
     REQUIRE(s.medianIterations() == 0);

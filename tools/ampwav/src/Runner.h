@@ -19,6 +19,8 @@ public:
     virtual void processVolts(double* v, int numSamples) noexcept = 0;
     virtual std::span<const amp2203::Probe> probes() const noexcept = 0;
     virtual amp2203::Amp2203::Stats stats() const { return {}; }
+    /// Sets an ideal supply node (e.g. "bpa", "bpx") for the next samples; false if the block has none.
+    virtual bool setSupply(std::string_view, double) noexcept { return false; }
     /// Volts per full-scale sample at the input and output (only meaningful for the full amp).
     virtual double inputVoltsPerFullScale() const { return 1.0; }
     virtual double outputVoltsPerFullScale() const { return 1.0; }

@@ -61,11 +61,12 @@ with evidence.
 
 ## D-006 Global NFB closed with a one-sample delay (v1)
 Date: 2026-10-12 · Status: accepted
-Decision: B5 uses the previous sample's speaker voltage at the oversampled rate (≈ 2.6 µs at 384 kHz).
+Decision: B5 uses the previous sample's speaker voltage at the oversampled rate (≈ 2.6 µs at 384 kHz;
+1.3 µs at 768 kHz, D-035).
 Consequences: Small HF phase error in the feedback loop; checked in M4 against a two-sample variant.
 
 ## D-007 Verify at 384 kHz without resampling
-Date: 2026-10-12 · Status: accepted
+Date: 2026-10-12 · Status: superseded by D-035 (768 kHz)
 Decision: Harness signals are generated at 384 kHz; SPICE output is sampled at the same fixed step; the
 engine runs at 384 kHz. Resampling and aliasing are verified separately at the plugin level (M5).
 
@@ -536,4 +537,126 @@ Decision: `harness/config.py: SPICE_RELTOL = 1e-8` for every reference transient
 Consequences: All M1 and M2 transient references re-rendered and their reports regenerated. The M0
 reports and the M0 J1/J2 partition studies stay as recorded at 1e-6 (the M0 report and the partition
 reports state it; `compare` reports state the RELTOL from M2 on).
+
+
+## D-032 StageV2aV2b (B3) and the shared root-network code
+Date: 2026-10-13 · Status: accepted
+Context: SPEC §7 M3.1. B3 has the same structure as B12 (two triodes on a 4-port root), and B5 / B6 follow.
+V2b's plate is the supply node bpX, an ideal source rather than a network node.
+Decision:
+- The per-sample algorithm of D-028 (element waves → open-root node voltages → Newton → incident waves),
+  the matrix update and the DC solve live in `engine/src/stage/RootNetwork.h` (template on nodes, element
+  ports and root ports); the state is `detail::RootNetworkState`. The two-triode device and its solver
+  limits are `devices::TwoTriodes`. B12 was moved onto it; its outputs are bit-identical to M2 (five
+  renders compared, including a Preamp Volume ramp).
+- Ports with a terminal on an ideal supply node are stored against ground with an exact offset:
+  v_port = v(node+) − v(node−) + offset, offset = (supply at +) − (supply at −); an element's Thevenin
+  source b becomes b − offset, a root port's Thevenin voltage gains + offset. In B3: V2b's plate port
+  (bpX − k2b) and V2b's Cgp (p2a − bpX) and Cpk (bpX − k2b). A Catch2 test checks KCL at p2a, k2a, k2b at
+  three supply voltages to 1e-12 A.
+- B3 network (`engine/src/stage3/Stage3Network.h`): 6 nodes, 13 element ports (J2 source with
+  R_th2 = 89732.8 Ω, C7, R10‖C8, R11, R9, (bpX, R12), R13, six inter-electrode capacitances); output
+  v_oc(k2b); supply current through R12 and V2b's plate; DC start as B12.
+Consequences: B3 block-exact vs its testbench passes (M3 report). B3 is kept as a verified block; the engine
+chain uses B34 (D-033).
+
+## D-033 Merge B3 and B4 into B34 (no J3 junction)
+Date: 2026-10-13 · Status: accepted (owner decision, PROGRESS.md Q14)
+Context: First M3 cascade runs: the SPICE chain b12 → b3 → b4 (J-Thevenin J3 with R_th3 = 360 Ω, B3's
+output k2b unloaded) differed from the full netlist at y by −2.2 to −7.5 dB ESR from 0.1 V input upwards
+(−18 dB even at 0.01 V with Preamp Volume 1.0), while the engine matched that chain to −60 dB. On large
+swings V2b cuts off into the tone stack; its output resistance jumps from 360 Ω to R13 = 100 kΩ and F's
+k2b swing is 179 V pp against 248 V pp unloaded (1 kHz 0.1 V, Volume 0.6). SPICE variants at y (1 kHz
+0.01 / 0.1 / 0.5 / 2 V at Volume 0.2 / 0.6 / 1.0, plus 100 Hz and 5 kHz at 0.1 V):
+J3 as is −2.2 … −64.6 dB (−2.2 to −7.5 from 0.1 V up); B3 with an AC-coupled 43.6 kΩ load (|Z_in(1 kHz)|
+of the tone stack) driving B4 −10.7 to −18.5 dB from 0.1 V up; B3 and B4 joined −27.7 to −42.5 dB.
+SPEC §4.1 step (a), the reactive part of the source impedance, does not address a cutoff nonlinearity.
+Options presented: merge; keep J3 and report; fixed load; analyse more first.
+Decision: B3 and B4 form one block B34, `StageV2aV2bToneStack`: the tone stack and master are part of B3's
+linear network under the V2a/V2b root (`engine/src/stage34/Stage34Network.h`: 13 nodes, 24 element ports).
+Treble, Middle, Bass and Master are smoothed as in D-027, and the matrices are recomputed every
+kParamUpdateInterval = 32 samples while one moves. Output v_oc(y); R_th4 by the D-015 formula (unchanged).
+The engine cascade is `Preamp`: B12 → B34. `StageV2aV2b` and `ToneStackMaster` stay as verified blocks
+with their own testbenches (b3, b4); the SPICE testbench `b34` (B3 and B4 joined, J2 source, y open) is
+the block-exact reference of B34, and the P chain of the cascade study is b12 → b34.
+Consequences: Remaining junctions upstream of the PI: J2 (p1b) and J4 (y). A tone-knob update recomputes
+the larger matrices (cost in the M3 report). SPEC §4.2 / §4.3, CIRCUIT.md §1 / §4 and VERIFICATION §4
+updated.
+
+## D-034 Newton predictor clamp, trend reset and asymmetric step limits
+Date: 2026-10-13 · Status: accepted; refines D-029 and the WDF_DESIGN §4 step limits
+Context: B34 (D-033) at 5 kHz 10 V / 50 V (B3's hot / overdrive levels) had 142 / 13853 Newton failures and
+diverged at 50 V (ESR +220 dB). Traces: (1) at V2b's exit from cutoff the extrapolated grid voltage
+overshot to +13.7 V against a solution of −1.7 V (the grid port had risen 17 V/sample while the cathode
+was held by the tone stack); (2) repeated failures fed the extrapolation, which grew without bound; (3) in
+deep cutoff V2b's grid port has to fall by tens of volts per sample, and the 2 V grid limit (applied as a
+uniform step scale) shrank every port's step. With maxIter 100 the 50 V case converges (−37.7 dB, max 30
+iterations), so the loss was the solver giving up, not the discretisation alone. Measured (failures /
+max iterations; ESR):
+
+| Variant | B34 5 kHz 10 V | B34 5 kHz 50 V | B3 5 kHz 50 V | B12 5 kHz 2 V |
+|---|---|---|---|---|
+| D-029 as in M2 | 142 / 12 | 13853 / 12 (+220 dB) | 0 / 9 | 0 / 10 |
+| start from the lower-residual of extrapolation and warm start | 691 / 12 | 3415 / 12 (−24.7 dB) | 4 / 12 | 4213 / 12 (−7.9 dB) |
+| extrapolation clamped to the step limits, trend reset after a failure | 27 / 12 | 6433 / 12 (−15.8 dB) | 0 / 8 | 0 / 11 |
+| + grid down-limit unlimited | 27 / 12 | 4483 / 12 (−17.2 dB) | 0 / 8 | 0 / 11 |
+| + grid up-limit 5 V | 0 / 9 | 566 / 12 (−37.7 dB) | 0 / 6 | 0 / 9 |
+| + grid up-limit 10 V (chosen) | 0 / 8 | 0 / 11 (−37.7 dB) | 0 / 6 | 0 / 10 |
+| grid up 2 V, no step halving | 92 / 12 | 4372 / 12 (−16.7 dB) | 0 / 6 | 0 / 7 |
+
+Decision: the extrapolated step of each port is clamped to its step limit; after a failed solve the trend
+restarts at zero; `MultiportNewton` has separate upward / downward limits (`maxStep`, `maxStepDown`); the
+triode blocks use grid ports +10 V / −1000 V and plate ports ±20 V per iteration. maxIter stays 12.
+The remaining B34 error at 5 kHz 50 V (−37.7 dB at 384 kHz; −46.0 / −55.0 dB with the engine at 2× / 4×
+the rate on the same input) is the fixed-step discretisation of V2b's fast cutoff transitions into the
+tone stack (p2a: a few pF against R12, τ ≈ 0.5 µs < T = 2.6 µs).
+Consequences: B12, B3 and B34 reports regenerated with these settings (M2 values change only in the Newton
+statistics; converged solutions are the same).
+
+## D-035 Verification and default internal rate 768 kHz
+Date: 2026-10-13 · Status: accepted (owner decision, PROGRESS.md Q16); supersedes D-007
+Context: In the M3 cascade at 384 kHz, 5 kHz sines at 0.5–2 V guitar input (B12's output slewing up to
+57 V per sample) gave E vs P −21 to −33 dB at y with 1376–2630 Newton failures per signal. With up to 200
+iterations everything converged (max 31) but the error stayed (−24 dB): the fixed-step discretisation
+did not resolve V2a / V2b cutoff transitions (p2a: a few pF against R12, τ ≈ 0.5 µs). The engine at 2× /
+4× the rate gave −31 to −39 / −33 to −44 dB. Options presented: maxIter 32 and report; oversample the
+preamp 2× internally; keep the limit and report; verify at 768 kHz.
+Decision: `harness/config.py: FS = 768000`; signals, SPICE references (step 1/768000 s, breakpoints at
+every sample) and engine runs at 768 kHz. `EngineConfig::sampleRate` defaults to 768 kHz; the plugin's
+default oversampling becomes 16x at 44.1/48 kHz, 8x at 88.2/96 kHz, 4x at 176.4/192 kHz (SPEC §3.4, M5).
+kParamUpdateInterval stays 32 samples (≈ 42 µs). ampwav accepts up to 3.072 MHz (D-013) for the 4×
+discretisation checks. All M1–M3 references re-rendered; the M0 reports stay as recorded (384 kHz).
+Consequences: SPICE time about doubles. The per-sample budget halves to 1.3 µs at 48 kHz × 16: the M3
+report gives the block costs against it; the M6 optimisations (WDF_DESIGN §4) become necessary for real
+time. The R-type fixtures are regenerated at 768 kHz. The harness RC reference-accuracy test uses the
+configured RELTOL (1e-8: −127 / −104 dB at 5 / 15 kHz at 768 kHz; RELTOL 1e-6 would give −73 dB).
+
+## D-036 M3 partition scoring at the loaded master wiper
+Date: 2026-10-13 · Status: accepted (owner decision, PROGRESS.md Q15)
+Context: SPEC §7 M3 compares the cascade's v_oc(y) (no PI load) with F's y, which carries the PI load
+behind the master pot's high source impedance. At 5 kHz the load alone gives −19 to −24 dB. Driving the
+b56 testbench (J4 source R_th4 into the PI, power stage and supply) with the SPICE chain's v_oc(y) and
+comparing its loaded y with F gave −25.1 to −64.4 dB on 15 tested points (384 kHz). Options presented:
+score the loaded y; score v_oc(y) as in SPEC; defer y to M4.
+Decision: `python -m harness.cascade` scores (tolerances.py, block `preamp`):
+- partition error: P56 vs F at the loaded y (P = b12 → b34 SPICE chain on F's recorded supplies; P56 =
+  b56 driven by P's v_oc(y)), ESR ≤ −26 dB on sines, ≤ −20 dB on DI (VERIFICATION §7);
+- engine: E (ampwav `preamp` on F's recorded supplies) vs P at y with the block-exact limits by level
+  (≤ −40 dB; 2 V sines ≤ −30 dB; harmonics 2–5 within 0.5 dB) and the Newton checks.
+P vs F and E vs F at the open-circuit y, the speaker voltage of P56 and the loaded p1b / k2b are reported.
+Consequences: The engine's own loaded y (with B5) is compared with F in M4. VERIFICATION §7 updated.
+
+## D-037 Triode step limits at 768 kHz: grid +50 V / −1000 V, plate ±50 V
+Date: 2026-10-13 · Status: accepted; refines D-034
+Context: At 768 kHz (D-035) the preamp cascade still had Newton failures at 5 kHz 2 V (B34; 919 at
+Volume 0.6, 442 at Volume 1.0 in 0.15 s). Trace: when V2a cuts off, p2a rises 136 V within one sample and
+V2b's plate port falls by about 100 V; with ±20 V plate steps (and V2b's grid port climbing out of deep
+cutoff in +10 V steps) the iteration needed more than 12 steps. Measured (preamp cascade, total
+failures over 5 kHz 2 V at Volume 0.6 and 1.0, 5 kHz 0.5 V, SWP-hi and 1 kHz 2 V; converged results equal):
+plate ±20 V: 1361; ±50 V: 371; ±200 V / unlimited: 412; plate ±50 V with grid up +20 V: 25, +50 V: 0,
+unlimited: 0.
+Decision: grid ports +50 V / −1000 V, plate ports ±50 V per iteration (`devices::TwoTriodes::solver`).
+Checked on the hard block cases (B12 5 kHz 2 V, B3 / B34 5 kHz 50 V): 0 failures, max 7 iterations,
+ESR unchanged. Preamp cascade: 0 failures, max 12 (Volume 1.0, 5 kHz 2 V).
+Consequences: B12, B3, B34 reports and the cascade regenerated with these limits.
 

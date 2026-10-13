@@ -66,7 +66,10 @@ template <int K>
 class MultiportNewton {
 public:
     NewtonConfig config;
-    Vec<K> maxStep{};
+    Vec<K> maxStep{};      // largest increase of each port voltage per iteration
+    Vec<K> maxStepDown{};  // largest decrease (0: same as maxStep)
+
+    double limitDown(int r) const noexcept { return maxStepDown[r] > 0.0 ? maxStepDown[r] : maxStep[r]; }
 
     template <class Device>
     int solve(const Device& device, const Vec<K>& vOc, const Mat<K>& Z, Vec<K>& v, Vec<K>& i,
@@ -96,8 +99,8 @@ public:
                 break;
             double scale = 1.0;
             for (int r = 0; r < K; ++r)
-                if (std::fabs(dv[r]) * scale > maxStep[r])
-                    scale = maxStep[r] / std::fabs(dv[r]);
+                if (const double lim = dv[r] >= 0.0 ? maxStep[r] : limitDown(r); std::fabs(dv[r]) * scale > lim)
+                    scale = lim / std::fabs(dv[r]);
             for (auto& d : dv)
                 d *= scale;
 

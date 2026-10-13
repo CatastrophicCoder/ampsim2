@@ -30,8 +30,8 @@ behaves identically to the library's resistor.
 | Resistive voltage source (Vs, Rs) | Rs | b = Vs |
 | Ideal voltage source (root only) | — | b = 2Vs − a |
 
-Frequency warping of the bilinear transform is negligible below 20 kHz at fs ≈ 384 kHz (about 0.2 % at
-20 kHz), which is why verification runs at the oversampled rate.
+Frequency warping of the bilinear transform is negligible below 20 kHz at fs = 768 kHz (about 0.05 % at
+20 kHz; 0.2 % at 384 kHz), which is why verification runs at the oversampled rate (D-035).
 
 ---
 
@@ -130,11 +130,14 @@ Port maps:
 | B6 | 6 | side A (g−k, s−k, p−k), side B (g−k, s−k, p−k); cathodes at ground |
 
 Algorithm (per sample):
-1. Initial guess: linear extrapolation from the two previous solutions, v = 2·v[n−1] − v[n−2]
-   (DECISIONS D-029; the plain warm start v[n−1] failed at V1b's exit from cutoff at 5 kHz 2 V).
-2. Up to `maxIter` (default 12) iterations; per-port step limit (default 2 V for grid ports, 20 V for
-   screen/plate ports) to keep the exponential terms well-behaved. The step is scaled uniformly so that
-   no port exceeds its limit (this keeps the Newton direction).
+1. Initial guess: linear extrapolation from the two previous solutions, v = v[n−1] + (v[n−1] − v[n−2]),
+   with each port's extrapolated step clamped to its step limit; after a sample whose solve failed, the
+   trend restarts at zero (v[n−2] := v[n−1]) (DECISIONS D-029, D-034).
+2. Up to `maxIter` (default 12) iterations; per-port step limits, upward and downward separately
+   (triode blocks: grid ports +50 V / −1000 V, plate ports ±50 V, D-034, D-037). Steps into cutoff are harmless
+   and the device equations cannot overflow (closed-form ω, stable softplus), so the limits only shape
+   convergence. The step is scaled uniformly so that no port exceeds its limit (this keeps the Newton
+   direction).
 3. Convergence when ‖Δv‖∞ < 1e−9 · max(1, ‖v‖∞) or ‖f‖∞ < 1e−9 V.
 4. If an iteration increases ‖f‖, halve the step (up to 4 times) before accepting it.
 5. If not converged after `maxIter`: keep the best iterate (lowest ‖f‖), increment the failure counter.
@@ -242,5 +245,5 @@ one-sample coupling through B7 is the approximation. Check it in M4 (clean-power
 ## 8. Oversampling and aliasing
 
 The engine itself does not resample. The plugin wraps it with `juce::dsp::Oversampling`; the harness
-runs it directly at 384 kHz. Report aliasing in M5 with a high-frequency sine sweep (e.g. 1–20 kHz at
+runs it directly at 768 kHz (D-035). Report aliasing in M5 with a high-frequency sine sweep (e.g. 1–20 kHz at
 high gain) and a spectrogram, comparing 4x/8x/16x.

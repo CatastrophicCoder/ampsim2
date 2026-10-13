@@ -10,6 +10,7 @@
 #include "amp2203/Probe.h"
 #include "amp2203/detail/DcCapacitor.h"
 #include "amp2203/detail/NewtonStats.h"
+#include "amp2203/detail/RootNetworkState.h"
 #include "amp2203/detail/Tapers.h"
 
 namespace amp2203 {
@@ -51,14 +52,16 @@ public:
     /// One sample: input source voltage in, v_oc(p1b) out. Real-time safe.
     double process(double vIn) noexcept;
 
+    /// The last output v_oc(p1b) (after reset(): the DC value).
+    double output() const noexcept { return out_; }
     /// Current drawn from bpA (A), through R4 and R7, for the supply model (M4).
     double supplyCurrent() const noexcept { return iSupply_; }
-    const detail::NewtonStats& newtonStats() const noexcept { return stats_; }
-    void clearStats() noexcept { stats_.clear(); }
+    const detail::NewtonStats& newtonStats() const noexcept { return root_.stats; }
+    void clearStats() noexcept { root_.stats.clear(); }
     /// Number of matrix computations so far (cost measurement).
     long matrixUpdates() const noexcept { return updates_; }
     /// Samples where the solution was not finite and the previous state was kept (should stay 0).
-    long sanitizeEvents() const noexcept { return sanitized_; }
+    long sanitizeEvents() const noexcept { return root_.sanitized; }
 
     std::span<const Probe> probes() const noexcept { return probes_; }
 
@@ -66,8 +69,6 @@ private:
     using Wave = std::array<double, kElements>;
 
     void applyKnobs() noexcept;
-    Wave reflectedWaves() noexcept;
-    void incidentWaves(const Wave& a) noexcept;
     Wave conductances(bool dc) const noexcept;
 
     // linear elements (port order of engine/src/stage12/Stage12Network.h)
@@ -93,30 +94,22 @@ private:
                         cgp1b_, cpk1b_);
     }
 
-    // open-root transfer: node voltages = Xe·b − Xr·i; root-port Thevenin resistance matrix Z
-    double Xe_[kNodes][kElements]{};
-    double Xr_[kNodes][kRootPorts]{};
-    std::array<std::array<double, kRootPorts>, kRootPorts> Z_{};
-
-    std::array<double, kRootPorts> v_{};      // root port voltages: Vgk1a, Vpk1a, Vgk1b, Vpk1b
-    std::array<double, kRootPorts> vPrev_{};  // the sample before (for the predictor)
-    std::array<double, kRootPorts> i_{};  // Ig1a, Ip1a, Ig1b, Ip1b
-    std::array<double, kNodes> node_{};
+    // matrices, root solution (Vgk1a, Vpk1a, Vgk1b, Vpk1b → Ig1a, Ip1a, Ig1b, Ip1b), node voltages
+    detail::RootNetworkState<kNodes, kElements, kRootPorts> root_;
 
     detail::KnobSmoother volume_;
     int sinceUpdate_ = 0;
     long updates_ = 0;
-    long sanitized_ = 0;
     double vbpA_ = kSupplyBpA;
-    detail::NewtonStats stats_;
 
     // probe values (volts, amperes)
-    double vIn_ = 0.0, out_ = 0.0, iSupply_ = 0.0, iters_ = 0.0;
-    Probe probes_[17] = {{"in", &vIn_},        {"out", &out_},       {"g1a", &node_[0]},   {"k1a", &node_[1]},
-                         {"p1a", &node_[2]},   {"na", &node_[3]},    {"vtop", &node_[4]},  {"w1", &node_[5]},
-                         {"k1b", &node_[6]},   {"p1b", &node_[7]},   {"ig1a", &i_[0]},     {"ip1a", &i_[1]},
-                         {"ig1b", &i_[2]},     {"ip1b", &i_[3]},     {"isupply", &iSupply_},
-                         {"bpa", &vbpA_},      {"newton_iterations", &iters_}};
+    double vIn_ = 0.0, out_ = 0.0, iSupply_ = 0.0;
+    Probe probes_[17] = {{"in", &vIn_},          {"out", &out_},          {"g1a", &root_.node[0]},
+                         {"k1a", &root_.node[1]}, {"p1a", &root_.node[2]}, {"na", &root_.node[3]},
+                         {"vtop", &root_.node[4]}, {"w1", &root_.node[5]}, {"k1b", &root_.node[6]},
+                         {"p1b", &root_.node[7]}, {"ig1a", &root_.i[0]},   {"ip1a", &root_.i[1]},
+                         {"ig1b", &root_.i[2]},   {"ip1b", &root_.i[3]},   {"isupply", &iSupply_},
+                         {"bpa", &vbpA_},         {"newton_iterations", &root_.iterations}};
 };
 
 }  // namespace amp2203

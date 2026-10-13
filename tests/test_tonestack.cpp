@@ -16,7 +16,7 @@ using Catch::Matchers::WithinAbs;
 using Catch::Matchers::WithinRel;
 
 namespace {
-constexpr double kFs = 384000.0;
+constexpr double kFs = 768000.0;  // verification rate (D-035)
 constexpr double kVk2b = 231.6858;  // CIRCUIT.md §5 k2b (J3 source DC level)
 
 double sine(int n, double f, double amp) { return amp * std::sin(2.0 * std::numbers::pi * f * n / kFs); }

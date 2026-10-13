@@ -134,7 +134,8 @@ public:
 
 Each signal block (section 4) is also a class with the same `prepare / reset / process` shape and its
 own parameter setters, so that the CLI and tests can run a single block in isolation:
-`StageV1aV1b`, `StageV2aV2b`, `ToneStackMaster`, `PhaseInverter`, `PowerStage`,
+`StageV1aV1b`, `StageV2aV2bToneStack` (built from the verified `StageV2aV2b` and `ToneStackMaster`;
+DECISIONS D-033), `PhaseInverter`, `PowerStage`,
 `Supply`. `Amp2203` composes them.
 
 ### 3.3 Units and signal levels
@@ -151,10 +152,12 @@ own parameter setters, so that the CLI and tests can run a single block in isola
 ### 3.4 Sample rate and oversampling
 - The engine runs at whatever rate `prepare()` receives. The JUCE plugin layer wraps it with
   `juce::dsp::Oversampling` and passes the oversampled rate.
-- Default plugin oversampling: 8x at 44.1/48 kHz, 4x at 88.2/96 kHz, 2x at 176.4/192 kHz, so the
-  internal rate is about 350–400 kHz. Exposed as a parameter (2x/4x/8x/16x).
-- Verification runs the engine directly at 384 kHz (8 x 48 kHz) on signals generated at that rate, so
-  no resampler sits between SPICE and the engine. See `VERIFICATION.md`.
+- Default plugin oversampling: 16x at 44.1/48 kHz, 8x at 88.2/96 kHz, 4x at 176.4/192 kHz, so the
+  internal rate is about 700–770 kHz (DECISIONS D-035; was 8x / about 384 kHz). Exposed as a parameter
+  (2x/4x/8x/16x).
+- Verification runs the engine directly at 768 kHz (16 x 48 kHz) on signals generated at that rate, so
+  no resampler sits between SPICE and the engine. See `VERIFICATION.md`. (At 384 kHz the preamp's
+  fastest cutoff transitions were not resolved: D-034, D-035.)
 - Optimisation (later): linear blocks may run at the base rate. Not required for v1.
 
 ### 3.5 Real-time rules (engine `process` and plugin `processBlock`)
@@ -203,8 +206,9 @@ exceeds tolerance, upgrade it in this order: (a) add the reactive part of the so
 | # | Block | Contents | Nonlinear root | Output |
 |---|---|---|---|---|
 | B12 | `StageV1aV1b` | Input source, R2, R3, V1a, R1‖C1, R4, C3, R5‖C4, C5, VR1 (Preamp Volume), V1b, R6, R7; plate loads to supply node `bpA` | Joint 4-port (two triodes) | `v_oc(p1b)`, `R_th2` |
-| B3 | `StageV2aV2b` | J2 source, C7, R10‖C8, R11, V2a, R9, R12, V2b (direct-coupled cathode follower), R13 | Joint 4-port (two triodes) | `v_oc(k2b)`, `R_th3` |
-| B4 | `ToneStackMaster` | J3 source, C10, R15, C11, C12, VR3 Treble, VR5 Bass, VR4 Middle, VR2 Master (linear) | none (R-type adaptor, linear) | `v_oc(y)`, `R_th4` (master-dependent) |
+| B34 | `StageV2aV2bToneStack` | J2 source, C7, R10‖C8, R11, V2a, R9, R12, V2b (direct-coupled cathode follower), R13; C10, R15, C11, C12, VR3 Treble, VR5 Bass, VR4 Middle, VR2 Master | Joint 4-port (two triodes) | `v_oc(y)`, `R_th4` (knob-dependent) |
+| (B3) | `StageV2aV2b` | B3 alone behind J2, output `v_oc(k2b)` (verification of the V2a/V2b root, M3) | Joint 4-port | `v_oc(k2b)` |
+| (B4) | `ToneStackMaster` | B4 alone behind J3 (R_th3), output `v_oc(y)` (verification of the tone stack, M1) | none (R-type) | `v_oc(y)`, `R_th4` |
 | B5 | `PhaseInverter` | J4 source, C9, R17, R16, R19, C15, R20, R23, C17, VR6 Presence, R22 (NFB, delayed), V3a, V3b, R18, R21 | Joint 4-port (two triodes) | `v_oc(p3a)`, `v_oc(p3b)`, `R_thA`, `R_thB` |
 | B6 | `PowerStage` | J5 sources, C14, C16, C18, R24, R25, bias network (Thevenin + C19), grid stoppers, 2 EL34 equivalents, screen resistors, output transformer, 16 Ω load | Joint 6-port (two pentodes x 3 ports) | `v(out)` speaker voltage, supply currents |
 | B7 | `Supply` | Source resistance, C23, choke, C22, R29, C21b, R8, C21a | none (small linear state-space) | `v(ct)`, `v(nScr)`, `v(bpX)`, `v(bpA)` |
@@ -220,10 +224,16 @@ Notes per block (details in `CIRCUIT.md` / `WDF_DESIGN.md`):
   audible on V1a with its 68 kΩ grid stopper.
 - **B3 joint root:** V2a's plate is V2b's grid with no coupling capacitor, and V2b grid current flows
   through R12. Solve both triodes together (4 unknowns). Do not split this junction.
-- **B4 tone stack:** bridge topology, cannot be expressed with series/parallel adaptors; use one
+- **B34 (B3 + B4 in one tree):** originally two blocks joined by J3 at the cathode follower k2b. M3
+  measured the J3 partition error in SPICE at −2.2 to −7.5 dB ESR at y from 0.1 V input upwards: V2b cuts
+  off on large swings into the tone stack, its output resistance jumps from 360 Ω to R13 = 100 kΩ, and a
+  constant R_th3 with an unloaded upstream output cannot represent that. The tone stack and master are
+  therefore part of B3's linear network under the V2a/V2b root (DECISIONS D-033, owner decision Q14).
+  B3 and B4 remain as separately verified classes.
+- **Tone stack (B4 part of B34):** bridge topology, cannot be expressed with series/parallel adaptors; use one
   adaptable R-type adaptor. The middle pot is wired as drawn (C12 to the Middle wiper, Bass pot's
   bottom to the Middle pot's top lug); see `CIRCUIT.md` open item O2.
-- **B4 → B5 junction (J4):** compute the open-circuit wiper voltage in B4 (no PI load) and drive B5
+- **B34 → B5 junction (J4):** compute the open-circuit wiper voltage in B34 (no PI load) and drive B5
   with `R_th4 = R_master_top ‖ R_master_bottom` plus the stack's resistance seen from the master top,
   recomputed on parameter change. Document the exact formula chosen.
 - **B5 NFB:** R22 connects the speaker output to node `nG`. Use the previous sample's output voltage
@@ -241,7 +251,7 @@ Notes per block (details in `CIRCUIT.md` / `WDF_DESIGN.md`):
 
 ### 4.3 Processing order per sample
 ```
-supply voltages (from state)  ->  B1 -> B2 -> B3 -> B4 -> B5 (uses out[n-1]) -> B6 -> output
+supply voltages (from state)  ->  B12 -> B34 -> B5 (uses out[n-1]) -> B6 -> output
                                    \__________ currents reported to B7, B7.update() ___________/
 ```
 
@@ -287,7 +297,7 @@ Must reproduce `reference/spice/tubes.lib` exactly (same equations and parameter
 ### 6.2 Smoothing and update rate
 - Smooth knob rotations (not resistances) with a one-pole filter, time constant `paramSmoothingMs`.
 - Blocks with R-type adaptors recompute scattering matrices at most every `kParamUpdateInterval`
-  samples (default 32 at the oversampled rate, about 83 µs at 384 kHz), and only while a smoothed value
+  samples (default 32 at the oversampled rate, about 42 µs at 768 kHz), and only while a smoothed value
   is still moving. Measure the cost and record the chosen interval in `DECISIONS.md`.
 - Abrupt full-range knob jumps must not produce NaN/Inf or audible clicks above the level of the
   real-circuit transient (unit test: sweep every knob 0→1 in 10 ms during a 1 kHz tone).
@@ -311,7 +321,7 @@ Tasks:
 1. Top-level CMake with targets: `amp2203_engine` (static library), `amp2203_tests` (Catch2),
    `ampwav` (CLI), `amp2203_bench`, and `amp2203_plugin` (JUCE, behind option `AMP2203_BUILD_PLUGIN`,
    default ON on macOS). Pinned FetchContent for chowdsp_wdf, Catch2, JUCE (and Eigen if used).
-2. `ampwav` CLI: `ampwav --block <name|full> --in in.wav --out out.wav --rate 384000
+2. `ampwav` CLI: `ampwav --block <name|full> --in in.wav --out out.wav --rate 768000
    [--param name=value ...] [--dump-node name=file.wav ...]`. Reads/writes 64-bit float WAV.
    For M0 the engine is a pass-through so the pipeline can be tested.
 3. Harness (Python): signal generator, SPICE renderer for block testbenches and the full amp,
@@ -363,7 +373,7 @@ Acceptance:
 ### M3 — B3, preamp cascade
 Tasks:
 1. `StageV2aV2b` (B3) with a joint 4-port root.
-2. Cascade B12→B3→B4; dump intermediate nodes.
+2. Cascade B12→B3→B4; dump intermediate nodes. (Became B12→B34 after the J3 partition study, D-033.)
 Acceptance:
 - Block-exact targets as in M2 for B3 (at its own nominal and overdrive levels as defined in
   `VERIFICATION.md`).
@@ -399,12 +409,12 @@ Tasks:
    oversampled rate, latency reported via `setLatencySamples`.
 2. Oversampling filter choice exposed (linear-phase FIR or low-latency polyphase IIR).
 3. Minimal functional editor: six knobs, input calibration, output level, oversampling selector.
-4. `amp2203_bench`: processes 60 s of a DI clip at 48 kHz/8x and reports the real-time factor.
+4. `amp2203_bench`: processes 60 s of a DI clip at 48 kHz/16x and reports the real-time factor.
 Acceptance:
 - `pluginval --strictness-level 5` passes for VST3 and AU; `auval -v aufx ...` passes.
-- Offline render through the plugin at 8x matches `ampwav --block full` at 384 kHz followed by the
+- Offline render through the plugin at 16x matches `ampwav --block full` at 768 kHz followed by the
   same resampling within ESR ≤ −60 dB (proves the wrapper adds nothing unintended).
-- Real-time factor ≥ 10 (single thread, owner's Mac, 48 kHz, 8x). If not met, profile and report the
+- Real-time factor ≥ 10 (single thread, owner's Mac, 48 kHz, 16x; D-035). If not met, profile and report the
   per-block cost before optimising.
 - Automation of every knob over its full range at audio rate produces no NaN/Inf and no Newton failures.
 

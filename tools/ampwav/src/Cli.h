@@ -36,6 +36,7 @@ struct Options {
     amp2203::Params params;
     std::vector<NodeDump> dumps;
     std::vector<KnobRamp> ramps;  // --knob-ramp; params are then set every sample
+    std::vector<NodeDump> supplies;  // --supply node=file.wav: recorded supply voltages, set every sample
     std::string statsPath;       // optional JSON with timing and Newton statistics
     Units units = Units::Volts;
     int blockSize = 512;

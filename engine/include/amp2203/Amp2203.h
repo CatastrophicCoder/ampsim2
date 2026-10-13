@@ -18,7 +18,7 @@ struct Params {
 };
 
 struct EngineConfig {
-    double sampleRate = 384000.0;           // the rate process() is called at (already oversampled)
+    double sampleRate = 768000.0;           // the rate process() is called at (already oversampled; D-035)
     int    maxBlockSize = 512;
     double inputVoltsPerFullScale  = 4.361; // 0 dBFS input = +12 dBu at the jack (DECISIONS D-010)
     double outputVoltsPerFullScale = 60.0;  // 60 V peak across 16 Ω = 0 dBFS output

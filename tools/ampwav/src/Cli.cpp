@@ -64,7 +64,7 @@ void printUsage(std::ostream& os) {
     os << "usage: ampwav --block <id> --in in.wav --out out.wav [--rate Hz]\n"
           "              [--param name=value ...] [--dump-node node=file.wav ...]\n"
           "              [--units volts|fs] [--block-size N] [--stats stats.json] [--list-nodes]\n"
-          "              [--knob-ramp knob=start,duration,from,to ...]\n"
+          "              [--knob-ramp knob=start,duration,from,to ...] [--supply node=file.wav ...]\n"
           "\n"
           "  --block       full, b12, b3 .. b7, b56 (M0: every block except full is a pass-through)\n"
           "  --in          mono WAV; 64-bit float is read bit-exact, other formats via 32-bit float\n"
@@ -78,7 +78,9 @@ void printUsage(std::ostream& os) {
           "  --stats       write timing and Newton statistics as JSON\n"
           "  --list-nodes  print the probe names of the block and exit\n"
           "  --knob-ramp   ramp a knob's target rotation linearly (times in s); the engine smooths it.\n"
-          "                Params are then set every sample (knob-jump test, VERIFICATION §7)\n";
+          "                Params are then set every sample (knob-jump test, VERIFICATION §7)\n"
+          "  --supply      drive an ideal supply node of the block (bpa, bpx) from a recorded WAV of the same\n"
+          "                length and rate, set every sample (partition studies, VERIFICATION §1)\n";
 }
 
 std::optional<Options> parseArgs(const std::vector<std::string>& args, std::string& error) {
@@ -148,6 +150,15 @@ std::optional<Options> parseArgs(const std::vector<std::string>& args, std::stri
                 return std::nullopt;
             }
             *k = x;
+        } else if (a == "--supply") {
+            std::string v;
+            if (!value(v)) return std::nullopt;
+            NodeDump d;
+            if (!splitPair(v, d.node, d.path)) {
+                error = "--supply expects node=file.wav, got '" + v + "'";
+                return std::nullopt;
+            }
+            o.supplies.push_back(d);
         } else if (a == "--knob-ramp") {
             if (!value(v)) return std::nullopt;
             KnobRamp r;
@@ -211,7 +222,7 @@ int run(const Options& o, std::ostream& log) {
     }
 
     if (o.listNodes) {
-        runner->prepare(o.rate.value_or(384000.0), o.blockSize);
+        runner->prepare(o.rate.value_or(768000.0), o.blockSize);
         for (const auto& p : runner->probes())
             log << p.name << "\n";
         return 0;
@@ -250,6 +261,24 @@ int run(const Options& o, std::ostream& log) {
         dumpSrc.push_back(src);
     }
 
+    std::vector<std::vector<double>> supply;
+    for (const auto& s : o.supplies) {
+        MonoWav w;
+        if (!readMonoWav(s.path, w, err)) {
+            log << "ampwav: " << err << "\n";
+            return 1;
+        }
+        if (w.sampleRate != rate || w.samples.size() != in.samples.size()) {
+            log << "ampwav: --supply " << s.node << ": rate and length must equal the input's\n";
+            return 1;
+        }
+        if (!runner->setSupply(s.node, w.samples[0])) {
+            log << "ampwav: block '" << o.block << "' has no supply node '" << s.node << "'\n";
+            return 1;
+        }
+        supply.push_back(std::move(w.samples));
+    }
+
     std::vector<double> y = in.samples;
     if (o.units == Units::FullScale)
         for (double& s : y)
@@ -273,9 +302,12 @@ int run(const Options& o, std::ostream& log) {
         runner->setParams(paramsAt(0));
 
     const auto t0 = std::chrono::steady_clock::now();
-    if (!o.ramps.empty()) {
+    if (!o.ramps.empty() || !supply.empty()) {
         for (size_t n = 0; n < total; ++n) {
-            runner->setParams(paramsAt(n));
+            if (!o.ramps.empty())
+                runner->setParams(paramsAt(n));
+            for (size_t k = 0; k < supply.size(); ++k)
+                runner->setSupply(o.supplies[k].node, supply[k][n]);
             runner->processVolts(y.data() + n, 1);
             for (size_t k = 0; k < dumps.size(); ++k)
                 dumps[k][n] = *dumpSrc[k];

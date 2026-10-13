@@ -11,7 +11,7 @@
 using amp2203::StageV1aV1b;
 
 namespace {
-constexpr double kFs = 384000.0;
+constexpr double kFs = 768000.0;  // verification rate (D-035)
 
 double probe(const StageV1aV1b& s, const std::string& name) {
     for (const auto& p : s.probes())
