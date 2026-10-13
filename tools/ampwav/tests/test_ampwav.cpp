@@ -6,6 +6,8 @@
 #include <chrono>
 #include <cmath>
 #include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <numbers>
 #include <sstream>
 
@@ -140,7 +142,7 @@ TEST_CASE("CLI end to end: output, node dump and stats", "[ampwav]") {
     std::string err;
     REQUIRE(ampwav::writeMonoWavF64(dir.file("in.wav"), 384000.0, x, err));
 
-    for (const char* block : {"full", "b12"}) {
+    for (const char* block : {"full", "b3"}) {  // pass-through blocks: output = input
         INFO("block " << block);
         const auto o = parse({"--block", block, "--in", dir.file("in.wav"), "--out", dir.file("out.wav"), "--rate",
                               "384000", "--dump-node", "in=" + dir.file("node_in.wav"), "--stats",
@@ -161,6 +163,33 @@ TEST_CASE("CLI end to end: output, node dump and stats", "[ampwav]") {
         REQUIRE(fs::file_size(dir.file("stats.json")) > 0);
         REQUIRE(log.str().find("ns/sample=") != std::string::npos);
     }
+}
+
+TEST_CASE("CLI end to end: b12 runs the StageV1aV1b block and reports Newton statistics", "[ampwav]") {
+    TempDir dir;
+    const auto x = testSignal(2000);
+    std::string err;
+    REQUIRE(ampwav::writeMonoWavF64(dir.file("in.wav"), 384000.0, x, err));
+    const auto o = parse({"--block", "b12", "--in", dir.file("in.wav"), "--out", dir.file("out.wav"), "--rate",
+                          "384000", "--dump-node", "p1b=" + dir.file("p1b.wav"), "--stats", dir.file("stats.json")},
+                         err);
+    REQUIRE(o);
+    std::ostringstream log;
+    REQUIRE(ampwav::run(*o, log) == 0);
+    ampwav::MonoWav out, p1b;
+    REQUIRE(ampwav::readMonoWav(dir.file("out.wav"), out, err));
+    REQUIRE(ampwav::readMonoWav(dir.file("p1b.wav"), p1b, err));
+    REQUIRE(out.samples.size() == x.size());
+    for (size_t i = 0; i < x.size(); ++i) {
+        REQUIRE(std::isfinite(out.samples[i]));
+        REQUIRE(out.samples[i] == p1b.samples[i]);  // output = v_oc(p1b)
+    }
+    REQUIRE(out.samples[0] > 300.0);  // plate DC operating point (CIRCUIT.md §5: 352.4 V)
+    std::ifstream f(dir.file("stats.json"));
+    const std::string stats((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    REQUIRE(stats.find("\"newton_solves\": 2000") != std::string::npos);
+    REQUIRE(stats.find("\"median_iterations\"") != std::string::npos);
+    REQUIRE(stats.find("\"newton_failures\": 0") != std::string::npos);
 }
 
 TEST_CASE("CLI end to end: rate mismatch and unknown node fail", "[ampwav]") {

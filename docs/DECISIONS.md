@@ -122,6 +122,8 @@ point at members the blocks update anyway, so they cost nothing in the plugin; t
 non-copyable because of these pointers. The M0 pass-through is the identity in volts
 (v_speaker = v_in), so normalised output = input · inputVoltsPerFullScale / outputVoltsPerFullScale.
 Consequences: SPEC §3.2 remains the minimum API; the plugin uses only the float overload.
+Addition (2026-10-13, M2): `Stats` also has `newtonSolves` and `medianIterations` (SPEC §7 M2 acceptance);
+ampwav `--stats` writes them as `newton_solves` and `median_iterations`.
 
 ## D-013 ampwav I/O conventions
 Date: 2026-10-12 · Status: accepted
@@ -136,6 +138,9 @@ are dumped, the engine is called one sample at a time; otherwise in `--block-siz
 512), so timing figures should come from runs without dumps.
 Alternatives: Full-scale samples everywhere (the harness would have to know each block's scaling).
 Consequences: SPICE renders and engine outputs are directly comparable without scaling.
+Addition (2026-10-13, M2): dr_wav rejects rates above 384 kHz by default; ampwav sets
+`DRWAV_MAX_SAMPLE_RATE` to 1.536 MHz so it also runs the 16x rates of SPEC §3.4 (768 kHz at 48 kHz),
+which the M2 discretisation check uses.
 
 ## D-014 SPICE transient setup: sample-aligned input, sweep tail, configurable RELTOL
 Date: 2026-10-12 · Status: accepted (RELTOL 1e-6: owner decision 2026-10-12, PROGRESS.md Q4)
@@ -435,3 +440,71 @@ Cost (amp2203_bench b4, Apple M-series, Release, 384 kHz): 31.7 ns/sample with s
 the 2.6 µs/sample budget); one matrix update ≈ 7.3 µs (double-double, D-026); with knobs moving
 continuously 262 ns/sample (≈ 10 % of the budget, only while a knob moves). This fits the audio thread,
 so no worker thread (WDF_DESIGN §5.4); the interval stays at 32.
+
+## D-028 StageV1aV1b (B12): joint 4-port root in Thevenin form, device model, DC start
+Date: 2026-10-13 · Status: accepted
+Context: SPEC §7 M2, WDF_DESIGN §3.1, §4 and §5.3. WDF_DESIGN §4 writes the root equation as
+f_k = v_k + R_k·i_k(v) − a_k with one port resistance per root port. That holds when the adaptor's
+root-port block S_rr is zero, which K port resistances cannot achieve for K > 1 coupled ports: in B12
+V1a's grid and plate ports share k1a (R1‖C1) and Cgp couples grid and plate, so the incident waves
+depend on all reflected root waves.
+Decision:
+- Root equation in exact K-port Thevenin form: the linear network seen from the root ports gives
+  v = v_oc − Z·i(v), with v_oc a linear function of the element waves and Z the K×K resistance matrix;
+  f(v) = v + Z·i(v) − v_oc, J = I + Z·∂i/∂v (`engine/src/solver/MultiportNewton.h`, template on K).
+  This is the R-type adaptor with the root ports eliminated; WDF_DESIGN §4's diagonal form is the
+  special case of uncoupled ports, and the root-port resistances of §5.3 cancel out. The matrices come
+  from `mna::rootTransfer` (double-double, D-026): node voltages = Xe·b − Xr·i for element waves b and
+  root currents i, with Z = the root-port rows of Xr.
+- B12 linear network: 15 element ports between 8 nodes (`engine/src/stage12/Stage12Network.h`):
+  (Vin, R3), (bpA, R4), (bpA, R7) as `ResistiveVoltageSourceT`; R1‖C1, R5‖C4, C5‖VR1a as library
+  `WDFParallelT`; C3, VR1b, R6; the six inter-electrode capacitances of tubes.lib. R2 sits across the
+  ideal input source and changes no node voltage, so it is not modelled. Per sample: element reflected
+  waves → open-root node voltages → v_oc → Newton → node voltages with the root currents → incident
+  waves 2·v − b to the elements.
+- 12AX7 (`engine/src/devices/Triode.h`): tubes.lib equations with the analytic Jacobian; the grid diode
+  in closed form with an own double-precision Wright omega (initial guess plus Fritsch–Shafer–Crowley
+  iterations; chowdsp's `Omega::omega4` is a fast approximation). Omitted as in WDF_DESIGN §3.1 and
+  SPEC §5: Re1/Rcp (1 GΩ), the diode's CJO/TT. Measured in M2 (scratch copy of tubes.lib with
+  CJO = TT = 0, reference files unchanged): CJO accounts for −57 dB ESR at 5 kHz, −70 dB at 1 kHz at
+  p1b; the 1 GΩ Rcp is about 1e-4 of the 100 kΩ plate loads (≈ −80 dB).
+- `reset(vInDc)`: DC operating point with the capacitors open, from the same network (open ports for
+  the capacitors) and the same root solved with up to 500 iterations from Vgk = −1 V, Vpk = bpA/2,
+  written into the capacitor states and the warm start (SPEC §3.6 option 1).
+- Preamp Volume: one-pole smoothing (`paramSmoothingMs`), matrices recomputed every
+  kParamUpdateInterval = 32 samples while it moves (as D-027). Supply bpA is a settable ideal source
+  (default 389.349603 V, the F operating point); `supplyCurrent()` reports the current through R4 + R7
+  for B7 (M4). A non-finite solution keeps the previous state and is counted (`sanitizeEvents()`).
+- Newton statistics (`detail::NewtonStats`: histogram, median, max, failures) are reported through
+  ampwav `--stats` (D-012 addition).
+Cost (amp2203_bench b12, Apple M-series, Release, 384 kHz): 323 ns/sample at 0.01 V, 420 ns at 0.1 V,
+468 ns at 2 V (1 kHz), 617 ns at 5 kHz 2 V (12–24 % of the 2.6 µs/sample budget); one matrix update
+≈ 8.4 µs; 683 ns/sample with Preamp Volume moving continuously. Fits the audio thread; no worker thread.
+Alternatives: R-type adaptor with chosen root-port resistances and the root solved in wave variables
+(equivalent, but the S_rr block makes the root equation implicit in the same way, with more arithmetic);
+a chowdsp `RtypeAdaptor` (single up-port only).
+Consequences: B3, B5 and B6 reuse the solver and `rootTransfer`. WDF_DESIGN §4 updated.
+
+## D-029 Newton predictor: linear extrapolation (WDF_DESIGN §4 step 1)
+Date: 2026-10-13 · Status: accepted
+Context: With the warm start of WDF_DESIGN §4 (previous solution), B12 at 5 kHz 2 V (DEFAULT) had 4213
+Newton failures and ESR −7.9 dB. V1b leaves cutoff at 6–7 V/sample on its grid; there the plate current
+is exponential in Vgk (scale s/(ex·kp) ≈ 0.46 V), the full Newton step overshoots, the halving rule
+cuts each step to 1/16 and 12 iterations do not reach the solution. Measured variants (DEFAULT,
+failures / median / max iterations; ESR identical where converged):
+
+| Variant | 5 kHz 2 V | 5 kHz 0.5 V | 1 kHz 2 V |
+|---|---|---|---|
+| §4 as written (warm start, halving) | 4213 / 4 / 12 (−7.9 dB) | 0 / 3 / 11 | 0 / 3 / 6 |
+| grid step limit 5 V or 20 V instead of 2 V | 7155–7492 failures | — | — |
+| warm start, no halving | 0 / 4 / 8 | 0 / 3 / 5 | 0 / 3 / 4 |
+| warm start, maxIter 100 (diagnostic) | 0 / 4 / 23 | 0 / 3 / 11 | 0 / 3 / 6 |
+| linear extrapolation, halving (chosen) | 0 / 3 / 10 | 0 / 3 / 5 | 0 / 2 / 4 |
+| linear extrapolation, no halving | 0 / 3 / 10 | 0 / 3 / 5 | 0 / 2 / 4 |
+
+Decision: initial guess v[n] = 2·v[n−1] − v[n−2] (the two previous solutions); everything else in §4 is
+unchanged (step limits 2 V / 20 V, halving up to 4 times, maxIter 12). Of the two variants that meet
+SPEC §7 M2 (median ≤ 3, zero failures) this one changes only step 1. WDF_DESIGN §4 listed the predictor
+as a later optimisation "only with harness evidence"; the table is that evidence. It also lowers the
+cost (e.g. 1 kHz 0.01 V: median 2 → 1).
+Consequences: The blocks keep the previous two root solutions; `reset()` sets both to the DC solution.

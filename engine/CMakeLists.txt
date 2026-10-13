@@ -1,5 +1,6 @@
 add_library(amp2203_engine STATIC
     src/Amp2203.cpp
+    src/StageV1aV1b.cpp
     src/ToneStackMaster.cpp)
 
 target_include_directories(amp2203_engine

@@ -52,7 +52,9 @@ void writeStats(const std::string& path, const Options& o, double rate, size_t s
       << "  \"ns_per_sample\": " << (samples ? 1e9 * seconds / static_cast<double>(samples) : 0.0) << ",\n"
       << "  \"realtime_factor\": " << (seconds > 0 ? static_cast<double>(samples) / rate / seconds : 0.0) << ",\n"
       << "  \"newton_failures\": " << st.newtonFailures << ",\n"
-      << "  \"max_iterations_used\": " << st.maxIterationsUsed << "\n"
+      << "  \"max_iterations_used\": " << st.maxIterationsUsed << ",\n"
+      << "  \"newton_solves\": " << st.newtonSolves << ",\n"
+      << "  \"median_iterations\": " << st.medianIterations << "\n"
       << "}\n";
 }
 

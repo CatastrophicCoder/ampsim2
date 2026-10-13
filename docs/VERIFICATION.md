@@ -99,7 +99,10 @@ Full-chain presets (tone controls 0.5, presence 0.5 unless stated):
 
 ### 5.2 Jacobians
 Analytic vs central finite differences at all sweep points: 1e−5 relative (skip points where the
-derivative is below 1e−12 A/V).
+derivative is below 1e−12 A/V). Points at Vpk = 0 are skipped as well: there E1 = 0 and the plate
+current (∝ E1^ex, ex = 1.4) is once but not twice differentiable, so a central difference across it has
+an error ∝ h^0.4 (the analytic derivative there is 0). `tests/test_triode.cpp` checks the remaining
+7 × 80 plate-curve points and the 8 grid-current points.
 
 ### 5.3 Adaptors
 See `WDF_DESIGN.md` §5.5.

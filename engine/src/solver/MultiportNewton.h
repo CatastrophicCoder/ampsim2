@@ -1,0 +1,156 @@
+#pragma once
+
+#include <array>
+#include <cmath>
+#include <utility>
+
+#include "amp2203/detail/NewtonStats.h"
+
+namespace amp2203::solver {
+
+template <int K>
+using Vec = std::array<double, K>;
+template <int K>
+using Mat = std::array<std::array<double, K>, K>;
+
+/// Solves J·x = r in place (x returned in r) by Gaussian elimination with partial pivoting.
+/// Returns false if a pivot is zero or not finite.
+template <int K>
+bool solveLinear(Mat<K>& J, Vec<K>& r) noexcept {
+    for (int k = 0; k < K; ++k) {
+        int p = k;
+        for (int i = k + 1; i < K; ++i)
+            if (std::fabs(J[i][k]) > std::fabs(J[p][k]))
+                p = i;
+        if (!(std::fabs(J[p][k]) > 0.0) || !std::isfinite(J[p][k]))
+            return false;
+        if (p != k) {
+            std::swap(J[p], J[k]);
+            std::swap(r[p], r[k]);
+        }
+        for (int i = k + 1; i < K; ++i) {
+            const double f = J[i][k] / J[k][k];
+            for (int j = k; j < K; ++j)
+                J[i][j] -= f * J[k][j];
+            r[i] -= f * r[k];
+        }
+    }
+    for (int i = K - 1; i >= 0; --i) {
+        double s = r[i];
+        for (int j = i + 1; j < K; ++j)
+            s -= J[i][j] * r[j];
+        r[i] = s / J[i][i];
+    }
+    return true;
+}
+
+struct NewtonConfig {
+    int maxIter = 12;          // WDF_DESIGN §4 default
+    int maxHalvings = 4;
+    double stepTol = 1e-9;     // ‖Δv‖∞ < stepTol·max(1, ‖v‖∞)
+    double residualTol = 1e-9;  // ‖f‖∞ < residualTol (V)
+};
+
+/// Multiport nonlinear root (WDF_DESIGN §4) for K ports whose linear surroundings are given as an exact
+/// K-port Thevenin equivalent v = vOc − Z·i(v): the R-type adaptor below the root with the root ports
+/// eliminated (DECISIONS D-028). Solves f(v) = v + Z·i(v) − vOc = 0 with J = I + Z·∂i/∂v.
+///
+/// Device: `void operator()(const Vec<K>& v, Vec<K>& i, Mat<K>& didv) const noexcept`, with i the
+/// currents into the + terminal of each port.
+///
+/// Warm start from `v` (in/out). Each step is scaled uniformly so that no port moves by more than its
+/// `maxStep` (keeps the Newton direction); if ‖f‖∞ grows, the step is halved up to maxHalvings times.
+/// Converged when ‖f‖∞ < residualTol or ‖Δv‖∞ < stepTol·max(1, ‖v‖∞). Otherwise the iterate with the
+/// lowest ‖f‖∞ is kept and the failure is counted. On return `i` holds the currents at `v`.
+template <int K>
+class MultiportNewton {
+public:
+    NewtonConfig config;
+    Vec<K> maxStep{};
+
+    template <class Device>
+    int solve(const Device& device, const Vec<K>& vOc, const Mat<K>& Z, Vec<K>& v, Vec<K>& i,
+              detail::NewtonStats& stats) const noexcept {
+        Mat<K> didv;
+        Vec<K> f;
+        double fn = residual(device, vOc, Z, v, i, didv, f);
+        Vec<K> best = v;
+        Vec<K> bestI = i;
+        double bestFn = fn;
+        bool converged = false;
+        int it = 0;
+        while (!(converged = fn < config.residualTol) && it < config.maxIter) {
+            ++it;
+            Mat<K> J;
+            for (int r = 0; r < K; ++r)
+                for (int c = 0; c < K; ++c) {
+                    double s = r == c ? 1.0 : 0.0;
+                    for (int m = 0; m < K; ++m)
+                        s += Z[r][m] * didv[m][c];
+                    J[r][c] = s;
+                }
+            Vec<K> dv;
+            for (int r = 0; r < K; ++r)
+                dv[r] = -f[r];
+            if (!solveLinear<K>(J, dv))
+                break;
+            double scale = 1.0;
+            for (int r = 0; r < K; ++r)
+                if (std::fabs(dv[r]) * scale > maxStep[r])
+                    scale = maxStep[r] / std::fabs(dv[r]);
+            for (auto& d : dv)
+                d *= scale;
+
+            const Vec<K> v0 = v;
+            double fnNew = 0.0;
+            for (int h = 0;; ++h) {
+                for (int r = 0; r < K; ++r)
+                    v[r] = v0[r] + dv[r];
+                fnNew = residual(device, vOc, Z, v, i, didv, f);
+                if (fnNew <= fn || h == config.maxHalvings)
+                    break;
+                for (auto& d : dv)
+                    d *= 0.5;
+            }
+            fn = fnNew;
+            if (fn < bestFn) {
+                bestFn = fn;
+                best = v;
+                bestI = i;
+            }
+            double dvn = 0.0, vn = 0.0;
+            for (int r = 0; r < K; ++r) {
+                dvn = std::fmax(dvn, std::fabs(dv[r]));
+                vn = std::fmax(vn, std::fabs(v[r]));
+            }
+            if (dvn < config.stepTol * std::fmax(1.0, vn) && std::isfinite(fn)) {
+                converged = true;
+                break;
+            }
+        }
+        if (!converged) {
+            v = best;
+            i = bestI;
+        }
+        stats.record(it, converged);
+        return it;
+    }
+
+private:
+    template <class Device>
+    static double residual(const Device& device, const Vec<K>& vOc, const Mat<K>& Z, const Vec<K>& v, Vec<K>& i,
+                           Mat<K>& didv, Vec<K>& f) noexcept {
+        device(v, i, didv);
+        double n = 0.0;
+        for (int r = 0; r < K; ++r) {
+            double s = v[r] - vOc[r];
+            for (int m = 0; m < K; ++m)
+                s += Z[r][m] * i[m];
+            f[r] = s;
+            n = std::isfinite(s) ? std::fmax(n, std::fabs(s)) : HUGE_VAL;
+        }
+        return n;
+    }
+};
+
+}  // namespace amp2203::solver

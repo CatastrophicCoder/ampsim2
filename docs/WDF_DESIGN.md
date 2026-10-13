@@ -62,8 +62,10 @@ to cathode. Closed form with the Wright omega function ω (ω(z) = W(e^z)):
 
 ```
 Ig(Vgk)   = (n·Vt / Rs) · ω(z) − Is,     z = ln(Is·Rs / (n·Vt)) + (Vgk + Is·Rs) / (n·Vt)
-dIg/dVgk  = 1 / (Rs + n·Vt / (Ig + Is))
+dIg/dVgk  = 1 / (Rs + n·Vt / (Ig + Is))  =  ω / (Rs·(1 + ω))
 ```
+ω is evaluated to double precision (`engine/src/devices/WrightOmega.h`: initial guess plus
+Fritsch–Shafer–Crowley iterations; DECISIONS D-028).
 Is = 1e−9 A, n = 1, Vt = k·T/q = 25.8649170 mV (27 °C, ngspice default, with ngspice's constants
 k = 1.38064852e−23, q = 1.6021766208e−19). The SPICE 1 GΩ resistors (Re1, Rcp) are omitted. Port
 currents: i_G = Ig, i_P = Ip.
@@ -101,16 +103,23 @@ Matched-pair equivalent (B6): multiply Ip, Is, Ig and all their derivatives by 2
 
 ## 4. Multiport nonlinear root: Newton solver
 
-For a root with N ports, each port k has a port resistance R_k (assigned by the adaptor below it), an
-incident wave a_k (computed by the tree), an unknown port voltage v_k, and a device current
-i_k(v) (from §3; it may depend on several port voltages). From §1:
+For a root with N ports, each port k has an unknown port voltage v_k and a device current i_k(v) (from
+§3, into the port's + terminal; it may depend on several port voltages). The linear network below the
+root (the R-type adaptor and its elements) seen from the N root ports is an exact N-port Thevenin
+equivalent: v = v_oc − Z·i, where v_oc is a linear function of the elements' reflected waves and Z is
+the N×N resistance matrix of the network with every element replaced by its port resistance
+(DECISIONS D-028):
 
 ```
-f_k(v) = v_k + R_k · i_k(v) − a_k = 0                    (k = 1..N)
-J      = I + diag(R) · ∂i/∂v
-v     ← v − J⁻¹ f                                         (Newton step)
-b_k    = 2·v_k − a_k                                      (reflected waves after convergence)
+f(v) = v + Z · i(v) − v_oc = 0
+J    = I + Z · ∂i/∂v
+v   ← v − J⁻¹ f                                           (Newton step)
 ```
+After convergence the node voltages follow from the element waves and the root currents, and each
+element receives the incident wave 2·v_port − b_element. Both maps come from one MNA computation
+(`mna::rootTransfer`: node voltages = Xe·b − Xr·i). If the root ports are uncoupled (Z diagonal), this
+is the familiar form f_k = v_k + R_k·i_k − a_k with R_k = Z_kk and a_k = v_oc,k; in the triode blocks
+the ports share the cathode network and Cgp, so Z has off-diagonal terms and the full matrix is used.
 
 Port maps:
 | Block | N | Ports |
@@ -121,9 +130,11 @@ Port maps:
 | B6 | 6 | side A (g−k, s−k, p−k), side B (g−k, s−k, p−k); cathodes at ground |
 
 Algorithm (per sample):
-1. Warm start: v = solution of the previous sample.
+1. Initial guess: linear extrapolation from the two previous solutions, v = 2·v[n−1] − v[n−2]
+   (DECISIONS D-029; the plain warm start v[n−1] failed at V1b's exit from cutoff at 5 kHz 2 V).
 2. Up to `maxIter` (default 12) iterations; per-port step limit (default 2 V for grid ports, 20 V for
-   screen/plate ports) to keep the exponential terms well-behaved.
+   screen/plate ports) to keep the exponential terms well-behaved. The step is scaled uniformly so that
+   no port exceeds its limit (this keeps the Newton direction).
 3. Convergence when ‖Δv‖∞ < 1e−9 · max(1, ‖v‖∞) or ‖f‖∞ < 1e−9 V.
 4. If an iteration increases ‖f‖, halve the step (up to 4 times) before accepting it.
 5. If not converged after `maxIter`: keep the best iterate (lowest ‖f‖), increment the failure counter.
@@ -133,7 +144,7 @@ Algorithm (per sample):
 Statistics (median/max iterations, failure count) are exposed for the harness.
 
 Later optimisations (M6, only with harness evidence): chord method (reuse J for several iterations),
-lookup tables for E1/softplus/omega, better predictors (linear extrapolation from two previous samples).
+lookup tables for E1/softplus/omega, higher-order predictors.
 
 ---
 
@@ -168,8 +179,9 @@ with all other ports replaced by their port resistances (sources zeroed). Comput
 
 ### 5.3 Root-facing ports of a multiport nonlinearity
 When the R-type adaptor sits directly below a multiport nonlinear root, the root-facing port
-resistances are free positive parameters (the Newton solve is implicit). Choose them equal to the
-resistance seen into the linear network from each root port (as in 5.2) for good Newton conditioning.
+resistances are free positive parameters (the Newton solve is implicit). With the root equation in
+Thevenin form (§4, D-028) they cancel out: the root ports are eliminated and the Newton iteration works
+on the port voltages with the resistance matrix Z.
 
 ### 5.4 Parameter changes
 When a pot or any adaptable element changes, recompute the affected port resistances, the S matrix and

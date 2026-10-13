@@ -2,14 +2,18 @@
 //   amp2203_bench            full engine, 60 s at 48 kHz x 8 (M0: synthetic input; DI clips in M5.4)
 //   amp2203_bench b4         ToneStackMaster: ns per sample (static knobs, knobs moving) and µs per
 //                            scattering-matrix update (SPEC §7 M1 acceptance, §6.2)
+//   amp2203_bench b12        StageV1aV1b: ns per sample at several input levels, with Preamp Volume
+//                            moving, and µs per matrix update; Newton iterations
 #include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <numbers>
+#include <utility>
 #include <vector>
 
 #include "amp2203/Amp2203.h"
+#include "amp2203/StageV1aV1b.h"
 #include "amp2203/ToneStackMaster.h"
 
 namespace {
@@ -95,13 +99,61 @@ int benchToneStack() {
     return 0;
 }
 
+int benchStage12() {
+    const long n = static_cast<long>(5.0 * kRate);
+    double sink = 0.0;
+    std::printf("StageV1aV1b at %.0f Hz (Preamp Volume 0.6 unless moving):\n", kRate);
+    double nsRef = 0.0;
+    for (const auto& [freq, amp] : {std::pair{1000.0, 0.01}, {1000.0, 0.1}, {1000.0, 0.5}, {1000.0, 2.0}, {5000.0, 2.0}}) {
+        amp2203::StageV1aV1b st;
+        st.prepare(kRate, amp2203::EngineConfig{}.paramSmoothingMs);
+        st.reset(0.0);
+        const double dphi = 2.0 * std::numbers::pi * freq / kRate;
+        const auto t0 = Clock::now();
+        for (long i = 0; i < n; ++i)
+            sink += st.process(amp * std::sin(dphi * static_cast<double>(i)));
+        const double ns = seconds(t0) / static_cast<double>(n) * 1e9;
+        if (freq == 1000.0 && amp == 0.1)
+            nsRef = ns;
+        const auto& s = st.newtonStats();
+        std::printf("  %5.0f Hz %4.2f V: %6.1f ns/sample, Newton median %d max %d failures %llu\n", freq, amp, ns,
+                    s.medianIterations(), s.maxIterations, static_cast<unsigned long long>(s.failures));
+    }
+
+    // Preamp Volume moving all the time (alternate targets every 50 ms), 1 kHz 0.1 V
+    amp2203::StageV1aV1b st;
+    st.prepare(kRate, amp2203::EngineConfig{}.paramSmoothingMs);
+    st.reset(0.0);
+    amp2203::Params p;
+    const long u0 = st.matrixUpdates();
+    const double dphi = 2.0 * std::numbers::pi * 1000.0 / kRate;
+    const auto t0 = Clock::now();
+    for (long i = 0; i < n; ++i) {
+        if (i % static_cast<long>(0.05 * kRate) == 0) {
+            p.preampVolume = (i / static_cast<long>(0.05 * kRate)) % 2 ? 0.7 : 0.5;
+            st.setParams(p);
+        }
+        sink += st.process(0.1 * std::sin(dphi * static_cast<double>(i)));
+    }
+    const double nsMoving = seconds(t0) / static_cast<double>(n) * 1e9;
+    const long updates = st.matrixUpdates() - u0;
+    std::printf("  moving volume:  %.1f ns/sample, %ld matrix updates in %ld samples (interval %d)\n", nsMoving,
+                updates, n, amp2203::StageV1aV1b::kParamUpdateInterval);
+    std::printf("  matrix update:  %.2f us (moving minus static 1 kHz 0.1 V, per update)\n",
+                (nsMoving - nsRef) * static_cast<double>(n) / static_cast<double>(updates) * 1e-3);
+    std::printf("  checksum %g\n", sink);
+    return 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
     if (argc > 1 && std::strcmp(argv[1], "b4") == 0)
         return benchToneStack();
+    if (argc > 1 && std::strcmp(argv[1], "b12") == 0)
+        return benchStage12();
     if (argc > 1) {
-        std::fprintf(stderr, "usage: amp2203_bench [b4]\n");
+        std::fprintf(stderr, "usage: amp2203_bench [b4|b12]\n");
         return 1;
     }
     return benchFull();

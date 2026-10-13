@@ -1,5 +1,6 @@
 #include "Runner.h"
 
+#include "amp2203/StageV1aV1b.h"
 #include "amp2203/ToneStackMaster.h"
 
 #include <algorithm>
@@ -61,6 +62,42 @@ private:
     bool started_ = false;
 };
 
+/// B12 StageV1aV1b: input = guitar source voltage at node `in`, output = v_oc(p1b). The block starts
+/// from the DC operating point of the first input sample (every harness signal starts there).
+class StageV1aV1bRunner final : public Runner {
+public:
+    void prepare(double sampleRate, int) override {
+        block_.prepare(sampleRate, amp2203::EngineConfig{}.paramSmoothingMs);
+        started_ = false;
+    }
+    void setParams(const amp2203::Params& p) override { block_.setParams(p); }
+
+    void processVolts(double* v, int numSamples) noexcept override {
+        if (numSamples > 0 && !started_) {
+            block_.reset(v[0]);
+            block_.clearStats();
+            started_ = true;
+        }
+        for (int n = 0; n < numSamples; ++n)
+            v[n] = block_.process(v[n]);
+    }
+
+    std::span<const amp2203::Probe> probes() const noexcept override { return block_.probes(); }
+    amp2203::Amp2203::Stats stats() const override {
+        const auto& s = block_.newtonStats();
+        amp2203::Amp2203::Stats st;
+        st.newtonFailures = s.failures;
+        st.maxIterationsUsed = s.maxIterations;
+        st.newtonSolves = s.solves;
+        st.medianIterations = s.medianIterations();
+        return st;
+    }
+
+private:
+    amp2203::StageV1aV1b block_;
+    bool started_ = false;
+};
+
 /// M0 stand-in for a block that is not implemented yet: output = input (volts).
 class PassThroughRunner final : public Runner {
 public:
@@ -97,6 +134,8 @@ std::unique_ptr<Runner> makeRunner(std::string_view blockId) {
     const std::string id = lower(blockId);
     if (id == "full")
         return std::make_unique<FullRunner>();
+    if (id == "b12")
+        return std::make_unique<StageV1aV1bRunner>();
     if (id == "b4")
         return std::make_unique<ToneStackRunner>();
     const auto& ids = blockIds();

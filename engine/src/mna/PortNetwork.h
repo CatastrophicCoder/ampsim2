@@ -134,6 +134,44 @@ bool scattering(const PortNetwork<P, N>& net, const std::type_identity_t<std::ar
     return true;
 }
 
+/// Transfer matrices of a network with P element ports and K root ports between the same N nodes, for a
+/// multiport nonlinear root (WDF_DESIGN §4, DECISIONS D-028). Element port k is a Thevenin source (its
+/// reflected wave b_k behind its port resistance, conductance G[k]; G[k] = 0 leaves the port open, as
+/// for capacitors at DC); root port r draws the current i_r into its node+ and returns it at node−. Then
+/// the node voltages are v = Xe·b − Xr·i. Returns false if the network is singular.
+template <int P, int K, int N>
+bool rootTransfer(const PortNetwork<P, N>& elements, const PortNetwork<K, N>& root,
+                  const std::type_identity_t<std::array<double, P>>& G, std::type_identity_t<double[N][P]>& Xe,
+                  std::type_identity_t<double[N][K]>& Xr) noexcept {
+    std::array<DD, P> g{};
+    for (int k = 0; k < P; ++k)
+        g[k] = DD(G[k]);
+    auto Y = detail::nodal(elements, g);
+    std::array<std::array<DD, N>, P + K> rhs{};
+    for (int j = 0; j < P; ++j) {  // Norton injection G_j·b_j for b_j = 1
+        if (elements.ports[j][0] != kGround)
+            rhs[j][elements.ports[j][0]] += g[j];
+        if (elements.ports[j][1] != kGround)
+            rhs[j][elements.ports[j][1]] -= g[j];
+    }
+    for (int r = 0; r < K; ++r) {  // 1 A drawn out of node+ and returned at node− is a −1 / +1 injection;
+                                   // Xr is stored with the opposite sign (v = Xe·b − Xr·i)
+        if (root.ports[r][0] != kGround)
+            rhs[P + r][root.ports[r][0]] += DD(1.0);
+        if (root.ports[r][1] != kGround)
+            rhs[P + r][root.ports[r][1]] -= DD(1.0);
+    }
+    if (!detail::solve<N, P + K>(Y, rhs))
+        return false;
+    for (int n = 0; n < N; ++n) {
+        for (int j = 0; j < P; ++j)
+            Xe[n][j] = rhs[j][n].toDouble();
+        for (int r = 0; r < K; ++r)
+            Xr[n][r] = rhs[P + r][n].toDouble();
+    }
+    return true;
+}
+
 /// DC node voltages for conductances G[k] on the ports plus Norton current injections I[k] (A, from
 /// node− to node+ of port k). Used for `reset()` with capacitors open (G = 0, I = 0) and resistive
 /// sources as Norton equivalents. Returns false if singular.

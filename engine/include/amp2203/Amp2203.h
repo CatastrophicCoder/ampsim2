@@ -46,6 +46,8 @@ public:
     struct Stats {
         uint64_t newtonFailures = 0;
         double   maxIterationsUsed = 0.0;
+        uint64_t newtonSolves = 0;        // DECISIONS D-012 addition (M2): Newton solves so far
+        double   medianIterations = 0.0;  // median Newton iterations per solve (SPEC §7 M2 acceptance)
     };
     Stats getStats() const;
 
