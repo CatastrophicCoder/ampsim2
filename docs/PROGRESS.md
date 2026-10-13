@@ -485,8 +485,10 @@ Notes:
   (−81 to −86 dB); block-exact B5 88 / 0, B56 105 / 1, B6 94 / 3 (all failures on SIN-5000Hz-20V: Q20).
   Full amp 2.48 µs per sample (real-time factor 0.5). M4 stops here for review.
 - Q20 (M4): block-exact at 5 kHz 20 V (J4 source): B56 Newton median 5 (≤ 3); B6 (sub-block) harmonics 2–5
-  1.48 dB (≤ 0.5), 1 Newton failure (rescued), median 4. Accept and report, analyse further (e.g. the
-  engine at 2× rate for the harmonic difference, a better predictor for the median), or other? — Open.
+  1.48 dB (≤ 0.5), 1 Newton failure (rescued), median 4. — 2026-10-13 owner: analyse further first. Engine at
+  2× / 4× rate: B6 H5 difference 1.48 → 1.08 → 0.33 dB, ESR −39.7 → −45.0 → −50.0 dB; B56 median 5 → 3 → 2.
+  Predictors (none / linear / quadratic): B56 median 4 / 5 / 5, no variant ≤ 3; quadratic adds failures.
+  Discretisation, as Q16 / Q17. Options: accept and report; run B56 at 2× internally; other. — Open.
 
 ## M5 — JUCE plugin
 - [ ] Processor, parameters, oversampling, latency
