@@ -71,6 +71,8 @@ void Amp2203::setParams(const Params& p) {
 
 void Amp2203::setFeedbackClosed(bool closed) { power_->setFeedbackResistance(closed ? PhaseInverter::R22 : kOpenLoopR22); }
 
+void Amp2203::setHalfStepTrigger(double volts) { power_->setHalfStepTrigger(volts); }
+
 void Amp2203::applySupplies() noexcept {
     preamp_->setSupplyVoltages(supply_->bpA(), supply_->bpX());
     power_->setSupplyVoltages(supply_->bpX(), supply_->screen(), supply_->ct());

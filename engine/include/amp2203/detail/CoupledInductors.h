@@ -51,6 +51,17 @@ public:
         }
     }
 
+    /// Converts the trapezoidal states for a time step T' = ratio·T, keeping the last port voltages and
+    /// currents: R_L = (2/T)·L scales by 1/ratio, so the state z = v + R_L·i becomes v + (z − v)/ratio, with
+    /// v = (a + b)/2 of the last step (D-043). The conductances are not changed: at T' they are
+    /// ratio·conductance(i, j).
+    void rescaleState(double ratio) noexcept {
+        for (auto& x : w) {
+            const double v = 0.5 * (x.wdf.a + x.wdf.b);
+            x.z = v + (x.z - v) / ratio;
+        }
+    }
+
     /// Port conductance matrix entry G_L[i][j] (siemens).
     double conductance(int i, int j) const noexcept { return G_[i][j]; }
 

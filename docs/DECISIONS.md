@@ -748,3 +748,28 @@ The first solve's failure is still counted in the Newton statistics (`newton_fai
 `newton_rescued` / `newton_unrescued` report the fallback (ampwav --stats, Amp2203::Stats; D-012 addition).
 Consequences: blocks that never fail are unchanged bit for bit. At the max settings above all failed
 solves were rescued (0 unrescued); those samples cost more (6.3–6.6 µs per sample for the full amp there).
+
+## D-043 Adaptive half-steps in the power amp (B56)
+Date: 2026-10-13 · Status: accepted (owner decision, PROGRESS.md Q20)
+Context: M4 block-exact at 5 kHz 20 V (J4 source): B56 Newton median 5 (≤ 3); B6 harmonics 2–5 1.48 dB
+(≤ 0.5), median 4. The engine at 2× / 4× the rate: B56 median 5 → 3 → 2, ESR −37.8 → −46.5 → −52.5 dB; B6 H5
+difference 1.48 → 1.08 → 0.33 dB; predictor variants (none / linear / quadratic) did not bring the median to
+≤ 3. Options presented: accept; B56 at 2× throughout (≈ +1.6–2.0 µs per sample); the whole engine at
+1.536 MHz (≈ 2×); adaptive half-steps (unmeasured).
+Decision: `PowerAmp` computes a sample as two steps of T/2 when any root Thevenin voltage moves by more
+than kDefaultHalfStepTrigger = 100 V from the previous sample. A second set of root matrices at T/2 is kept
+(capacitor port conductances ×2, the OT's (T/2)·L⁻¹ ×1/2; updated with every knob update). The trapezoidal
+states are converted exactly when the step changes, keeping each port's voltage and current: z' = v + r·(z
+− v), r = R'/R (`DcCapacitor::rescale`, `CoupledInductors::rescaleState`; the reflected waves of the sample
+are restored first, since reflected() has overwritten them). The J4 source takes the linearly
+interpolated midpoint (as SPICE sees the input); the supplies are held. Every solve is counted in the Newton
+statistics. Measured, b56 SIN-5000Hz-20V, trigger off / 1e−9 (every sample) / 100 / 50 / 20 / 10 V: ESR
+−37.8 / −46.5 / −45.6 / −45.9 / −46.2 / −46.4 dB, median 5 / 3 / 3 / 3 / 3 / 3, solves per sample 1.00 / 2.00
+/ 1.20 / 1.24 / 1.41 / 1.62, 4024 / 5650 / 3573 / 3718 / 4192 / 4743 ns per sample; other signals: 100 V
+triggers on 0–37 % of the samples (5 kHz 5 V: 1.37 solves per sample, −65.0 → −66.3 dB), ≈ 6 % overhead
+where it never triggers. Every-sample half-steps reproduce the engine at 2× the rate (−46.5 dB both).
+Consequences: b56 block-exact 106 PASS, 0 FAIL; full-amp acceptance unchanged (107 PASS); full amp 2.67 µs
+per sample (was 2.48). Max settings (Master / Presence 1.0, 2.18 / 1.0 V input): first-solve failures 77 →
+18 / 12 → 0 in 30 ms, all rescued, 4.0–4.3 µs per sample there (was 6.3–6.6). The standalone `PowerStage`
+(B6, a verified sub-block not used in the chain) has no half-steps; its three 5 kHz 20 V FAILs remain,
+explained as discretisation by the rate study.

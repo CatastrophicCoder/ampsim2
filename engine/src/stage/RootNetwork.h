@@ -80,6 +80,21 @@ struct RootNetwork {
         return true;
     }
 
+    /// Thevenin voltages of the root ports for the elements' reflected waves (the first part of process()).
+    RVec thevenin(const State& s, const EVec& wave, const EVec& eOffset, const RVec& rOffset) const noexcept {
+        std::array<double, N> u{};
+        for (int n = 0; n < N; ++n) {
+            double acc = 0.0;
+            for (int j = 0; j < P; ++j)
+                acc += s.Xe[n][j] * (wave[static_cast<size_t>(j)] - eOffset[static_cast<size_t>(j)]);
+            u[n] = acc;
+        }
+        RVec vOc;
+        for (int r = 0; r < K; ++r)
+            vOc[r] = across(root.ports[r], u) + rOffset[r];
+        return vOc;
+    }
+
     /// One sample. `wave` holds the elements' reflected waves on entry and the incident waves for them on
     /// return. Returns false if the solution was not finite: the state is kept and `wave` is left as is
     /// (incident = reflected: no current into any element, states unchanged).

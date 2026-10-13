@@ -31,6 +31,7 @@ public:
     using PS = PowerStage;
     static constexpr int kParamUpdateInterval = 32;
     static constexpr int kNodes = 21, kElements = 42, kRootPorts = 10;
+    static constexpr double kDefaultHalfStepTrigger = 100.0;  // V; D-043 (0 = off)
 
     PowerAmp();
     PowerAmp(const PowerAmp&) = delete;  // the adaptors and the probes hold references
@@ -57,12 +58,25 @@ public:
     double supplyCurrentX() const noexcept { return iX_; }
     double centreTapCurrent() const noexcept { return iCt_; }
     double screenCurrent() const noexcept { return iScr_; }
-    const detail::NewtonStats& newtonStats() const noexcept { return root_.stats; }
-    void clearStats() noexcept { root_.stats.clear(); }
-    long sanitizeEvents() const noexcept { return root_.sanitized; }
+    /// Newton statistics of all solves (full-step samples and the half-step solves, D-043).
+    detail::NewtonStats newtonStats() const noexcept {
+        detail::NewtonStats all = root_.stats;
+        all.add(half_.stats);
+        return all;
+    }
+    void clearStats() noexcept {
+        root_.stats.clear();
+        half_.stats.clear();
+        halfSteps_ = 0;
+    }
+    /// Adaptive half-steps (D-043): a sample whose root Thevenin voltages move by more than `volts` on any
+    /// port is computed as two steps of T/2; 0 disables. Not real-time.
+    void setHalfStepTrigger(double volts) noexcept { halfStepTrigger_ = volts; }
+    long halfSteps() const noexcept { return halfSteps_; }
+    long sanitizeEvents() const noexcept { return root_.sanitized + half_.sanitized; }
     /// Failed solves recovered / not recovered by the source-stepping fallback (D-042).
-    long rescuedSolves() const noexcept { return root_.rescued; }
-    long unrescuedSolves() const noexcept { return root_.unrescued; }
+    long rescuedSolves() const noexcept { return root_.rescued + half_.rescued; }
+    long unrescuedSolves() const noexcept { return root_.unrescued + half_.unrescued; }
     long matrixUpdates() const noexcept { return updates_; }
 
     std::span<const Probe> probes() const noexcept { return probes_; }
@@ -71,6 +85,13 @@ private:
     using Wave = std::array<double, kElements>;
 
     void applyKnobs() noexcept;
+    void halfStep(double vIn) noexcept;
+    auto reactive() noexcept {
+        return std::array<detail::DcCapacitor*, 19>{&c9_,  &c15_, &c17_, &cgk3a_, &cgp3a_, &cpk3a_, &cgk3b_,
+                                                     &cgp3b_, &cpk3b_, &c14_, &c16_, &c18_, &c19_, &cgkA_,
+                                                     &cgpA_, &cpkA_, &cgkB_, &cgpB_, &cpkB_};
+    }
+    void rescaleReactive(double ratio) noexcept;
     Wave conductances(bool dc) const noexcept;
     Wave elementOffsets() const noexcept;
     void updateOutputs(double vIn) noexcept;
@@ -108,6 +129,11 @@ private:
     }
 
     detail::RootNetworkState<kNodes, kElements, kRootPorts> root_;
+    detail::RootNetworkState<kNodes, kElements, kRootPorts> half_;  // matrices at T/2 and the half-step solver state
+    double halfStepTrigger_ = kDefaultHalfStepTrigger;
+    long halfSteps_ = 0;
+    double xPrev_ = 0.0;  // the previous sample's J4 source voltage (half-step midpoint)
+    std::array<double, 22> bLast_{};  // reflected waves of the reactive elements before this sample's reflected()
     detail::KnobSmoother presence_;
     int sinceUpdate_ = 0;
     long updates_ = 0;

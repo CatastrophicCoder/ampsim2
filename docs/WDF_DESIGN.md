@@ -147,6 +147,11 @@ Algorithm (per sample):
 
 Statistics (median/max iterations, failure count) are exposed for the harness.
 
+Additions (M4): a source-stepping fallback after a failed solve (D-042) and, in the power amp B56, adaptive
+half-steps: a sample whose root Thevenin voltages move by more than 100 V is computed as two steps of T/2
+with a second set of matrices; the trapezoidal states are converted exactly at the step change
+(z' = v + (R'/R)·(z − v) per port, keeping the port voltage and current; D-043).
+
 Later optimisations (M6, only with harness evidence): chord method (reuse J for several iterations),
 lookup tables for E1/softplus/omega, higher-order predictors.
 

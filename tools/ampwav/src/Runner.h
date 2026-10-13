@@ -24,6 +24,8 @@ public:
     /// NFB diagnostic of the full amp (SPEC §7 M4): loop closed or open (R22 → 1 TΩ). False if the block has
     /// no NFB loop.
     virtual bool setFeedback(bool) { return false; }
+    /// Adaptive half-step trigger of the power amp in volts (D-043; 0 = off). False if the block has none.
+    virtual bool setHalfStepTrigger(double) { return false; }
     /// Volts per full-scale sample at the input and output (only meaningful for the full amp).
     virtual double inputVoltsPerFullScale() const { return 1.0; }
     virtual double outputVoltsPerFullScale() const { return 1.0; }

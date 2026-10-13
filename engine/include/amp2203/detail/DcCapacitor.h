@@ -24,6 +24,19 @@ public:
         wdf.a = wdf.b = v;
     }
 
+    /// Changes the time step by `ratio` (T' = ratio·T; port resistance T/(2C) scales the same). With
+    /// `convertState`, the trapezoidal state is converted so that the last step's port voltage v = (a + b)/2
+    /// and current i are kept: the state z = v + R·i becomes v + R'·i = v + ratio·(z − v) (WDF_DESIGN §2;
+    /// D-043). z, not the last incident wave, so that conversions can be chained within one step.
+    void rescale(double ratio, bool convertState) {
+        if (convertState) {
+            const double v = 0.5 * (wdf.a + wdf.b);
+            z_ = v + ratio * (z_ - v);
+        }
+        fs_ /= ratio;
+        propagateImpedanceChange();
+    }
+
     void calcImpedance() override {
         wdf.R = 1.0 / (2.0 * C_ * fs_);
         wdf.G = 1.0 / wdf.R;

@@ -488,7 +488,9 @@ Notes:
   1.48 dB (≤ 0.5), 1 Newton failure (rescued), median 4. — 2026-10-13 owner: analyse further first. Engine at
   2× / 4× rate: B6 H5 difference 1.48 → 1.08 → 0.33 dB, ESR −39.7 → −45.0 → −50.0 dB; B56 median 5 → 3 → 2.
   Predictors (none / linear / quadratic): B56 median 4 / 5 / 5, no variant ≤ 3; quadratic adds failures.
-  Discretisation, as Q16 / Q17. Options: accept and report; run B56 at 2× internally; other. — Open.
+  Discretisation, as Q16 / Q17. Options: accept and report; run B56 at 2× internally; other. — Answered
+  2026-10-13: try adaptive half-steps → adopted in `PowerAmp` (D-043): b56 106 PASS / 0 FAIL, full amp 2.67 µs
+  per sample. The B6 sub-block keeps its three 5 kHz 20 V FAILs (no half-steps there; discretisation).
 
 ## M5 — JUCE plugin
 - [ ] Processor, parameters, oversampling, latency

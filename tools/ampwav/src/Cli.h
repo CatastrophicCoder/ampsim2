@@ -38,6 +38,7 @@ struct Options {
     std::vector<KnobRamp> ramps;  // --knob-ramp; params are then set every sample
     std::vector<NodeDump> supplies;  // --supply node=file.wav: recorded supply voltages, set every sample
     std::string statsPath;       // optional JSON with timing and Newton statistics
+    std::optional<double> halfStepTrigger;  // --half-step-trigger V (power amp, D-043)
     std::string nfb;             // --nfb closed | open (full amp only; empty = closed)
     Units units = Units::Volts;
     int blockSize = 512;

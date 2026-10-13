@@ -28,6 +28,10 @@ public:
         amp_.setFeedbackClosed(closed);
         return true;
     }
+    bool setHalfStepTrigger(double v) override {
+        amp_.setHalfStepTrigger(v);
+        return true;
+    }
 
     void processVolts(double* v, int numSamples) noexcept override {
         if (numSamples > 0 && !started_) {
@@ -327,6 +331,10 @@ private:
 /// supply nodes (recordings of a b56 run, VERIFICATION §1).
 class PowerAmpRunner final : public Runner {
 public:
+    bool setHalfStepTrigger(double v) override {
+        block_.setHalfStepTrigger(v);
+        return true;
+    }
     void prepare(double sampleRate, int) override {
         block_.prepare(sampleRate, amp2203::EngineConfig{}.paramSmoothingMs);
         started_ = false;

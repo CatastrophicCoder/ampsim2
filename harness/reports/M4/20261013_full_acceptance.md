@@ -1,6 +1,6 @@
 # M4 acceptance: full amplifier vs the full netlist
 
-- Date: 2026-10-13, engine commit `e1baabd (dirty)`, ngspice 47, fs = 768000 Hz, SPICE reltol 1e-08
+- Date: 2026-10-13, engine commit `525b6f4 (dirty)`, ngspice 47, fs = 768000 Hz, SPICE reltol 1e-08
 - Netlist sha256 `7bea8385e4adb04e`, tubes.lib sha256 `9ec33154be8127d7`
 - Engine: `ampwav --block full` (volts at the jack and across the 16 Ω load), the checks of SPEC §7 M4.
 
@@ -29,8 +29,8 @@ PASS 107 · FAIL 0
 | dc | dc_rel_error | v(ng) | 2.143e-05 | ≤ 0.005 | PASS |
 | dc | el34_plate_ma | ip_tube_a | 1.194e-05 mA | ≤ 1 | PASS |
 | dc | el34_plate_ma | ip_tube_b | 1.195e-05 mA | ≤ 1 | PASS |
-| dc | el34_screen_ma | is_tube_a | 1.045e-06 mA | ≤ 0.3 | PASS |
-| dc | el34_screen_ma | is_tube_b | 1.043e-06 mA | ≤ 0.3 | PASS |
+| dc | el34_screen_ma | is_tube_a | 1.046e-06 mA | ≤ 0.3 | PASS |
+| dc | el34_screen_ma | is_tube_b | 1.044e-06 mA | ≤ 0.3 | PASS |
 | dc | ct_rel | v(ct) | 4.141e-07 | ≤ 0.01 | PASS |
 | dc | nbias_v | v(nbias) | 2.15e-06 V | ≤ 0.2 | PASS |
 | nfb | nfb_gain_db | closed 100 Hz | 0.001834 dB | ≤ 0.5 | PASS |
@@ -72,7 +72,7 @@ PASS 107 · FAIL 0
 | clean | total_power_rel | CLEAN SIN-1000Hz-0.025V | 0.02851 | ≤ 0.05 | PASS |
 | clean | total_thd_pp | CLEAN SIN-1000Hz-0.025V | 0.1632 pp | ≤ 0.5 | PASS |
 | stability | stability_out_v | max |out| | 4.307e-05 V | ≤ 0.001 | PASS |
-| stability | stability_growth | RMS last 10 s − first 10 s | -8.345e-12 V | ≤ 1e-06 | PASS |
+| stability | stability_growth | RMS last 10 s − first 10 s | 6.403e-11 V | ≤ 1e-06 | PASS |
 | stability | newton_failures | 60 s silence | 0 | ≤ 0 | PASS |
 | stability | newton_unrescued | 60 s silence | 0 | — | INFO |
 | stability | newton_median_iterations | 60 s silence | 1 | ≤ 3 | PASS |
@@ -90,22 +90,22 @@ PASS 107 · FAIL 0
 | crunch_drive | newton_unrescued | CRUNCH SIN-220Hz-0.3V | 0 | — | INFO |
 | crunch_drive | newton_median_iterations | CRUNCH SIN-220Hz-0.3V | 2 | ≤ 3 | PASS |
 | crunch_drive | newton_max_iterations | CRUNCH SIN-220Hz-0.3V | 5 | ≤ 12 | PASS |
-| crunch_drive | total_esr_db | CRUNCH DI-GTR L | -61.84 dB | ≤ -20 | PASS |
+| crunch_drive | total_esr_db | CRUNCH DI-GTR L | -61.85 dB | ≤ -20 | PASS |
 | crunch_drive | newton_failures | CRUNCH DI-GTR L | 0 | ≤ 0 | PASS |
 | crunch_drive | newton_unrescued | CRUNCH DI-GTR L | 0 | — | INFO |
 | crunch_drive | newton_median_iterations | CRUNCH DI-GTR L | 2 | ≤ 3 | PASS |
 | crunch_drive | newton_max_iterations | CRUNCH DI-GTR L | 7 | ≤ 12 | PASS |
-| crunch_drive | total_esr_db | CRUNCH DI-GTR LL | -62.28 dB | ≤ -20 | PASS |
+| crunch_drive | total_esr_db | CRUNCH DI-GTR LL | -62.29 dB | ≤ -20 | PASS |
 | crunch_drive | newton_failures | CRUNCH DI-GTR LL | 0 | ≤ 0 | PASS |
 | crunch_drive | newton_unrescued | CRUNCH DI-GTR LL | 0 | — | INFO |
 | crunch_drive | newton_median_iterations | CRUNCH DI-GTR LL | 2 | ≤ 3 | PASS |
 | crunch_drive | newton_max_iterations | CRUNCH DI-GTR LL | 7 | ≤ 12 | PASS |
-| crunch_drive | total_esr_db | CRUNCH DI-GTR R | -63 dB | ≤ -20 | PASS |
+| crunch_drive | total_esr_db | CRUNCH DI-GTR R | -63.01 dB | ≤ -20 | PASS |
 | crunch_drive | newton_failures | CRUNCH DI-GTR R | 0 | ≤ 0 | PASS |
 | crunch_drive | newton_unrescued | CRUNCH DI-GTR R | 0 | — | INFO |
 | crunch_drive | newton_median_iterations | CRUNCH DI-GTR R | 2 | ≤ 3 | PASS |
 | crunch_drive | newton_max_iterations | CRUNCH DI-GTR R | 7 | ≤ 12 | PASS |
-| crunch_drive | total_esr_db | CRUNCH DI-GTR RR | -61.95 dB | ≤ -20 | PASS |
+| crunch_drive | total_esr_db | CRUNCH DI-GTR RR | -61.96 dB | ≤ -20 | PASS |
 | crunch_drive | newton_failures | CRUNCH DI-GTR RR | 0 | ≤ 0 | PASS |
 | crunch_drive | newton_unrescued | CRUNCH DI-GTR RR | 0 | — | INFO |
 | crunch_drive | newton_median_iterations | CRUNCH DI-GTR RR | 2 | ≤ 3 | PASS |
@@ -116,22 +116,22 @@ PASS 107 · FAIL 0
 | crunch_drive | newton_unrescued | DRIVE SIN-220Hz-0.3V | 0 | — | INFO |
 | crunch_drive | newton_median_iterations | DRIVE SIN-220Hz-0.3V | 1 | ≤ 3 | PASS |
 | crunch_drive | newton_max_iterations | DRIVE SIN-220Hz-0.3V | 5 | ≤ 12 | PASS |
-| crunch_drive | total_esr_db | DRIVE DI-GTR L | -61.07 dB | ≤ -20 | PASS |
+| crunch_drive | total_esr_db | DRIVE DI-GTR L | -61.02 dB | ≤ -20 | PASS |
 | crunch_drive | newton_failures | DRIVE DI-GTR L | 0 | ≤ 0 | PASS |
 | crunch_drive | newton_unrescued | DRIVE DI-GTR L | 0 | — | INFO |
 | crunch_drive | newton_median_iterations | DRIVE DI-GTR L | 2 | ≤ 3 | PASS |
 | crunch_drive | newton_max_iterations | DRIVE DI-GTR L | 7 | ≤ 12 | PASS |
-| crunch_drive | total_esr_db | DRIVE DI-GTR LL | -62.18 dB | ≤ -20 | PASS |
+| crunch_drive | total_esr_db | DRIVE DI-GTR LL | -62.14 dB | ≤ -20 | PASS |
 | crunch_drive | newton_failures | DRIVE DI-GTR LL | 0 | ≤ 0 | PASS |
 | crunch_drive | newton_unrescued | DRIVE DI-GTR LL | 0 | — | INFO |
 | crunch_drive | newton_median_iterations | DRIVE DI-GTR LL | 2 | ≤ 3 | PASS |
 | crunch_drive | newton_max_iterations | DRIVE DI-GTR LL | 7 | ≤ 12 | PASS |
-| crunch_drive | total_esr_db | DRIVE DI-GTR R | -61.74 dB | ≤ -20 | PASS |
+| crunch_drive | total_esr_db | DRIVE DI-GTR R | -61.69 dB | ≤ -20 | PASS |
 | crunch_drive | newton_failures | DRIVE DI-GTR R | 0 | ≤ 0 | PASS |
 | crunch_drive | newton_unrescued | DRIVE DI-GTR R | 0 | — | INFO |
 | crunch_drive | newton_median_iterations | DRIVE DI-GTR R | 2 | ≤ 3 | PASS |
 | crunch_drive | newton_max_iterations | DRIVE DI-GTR R | 7 | ≤ 12 | PASS |
-| crunch_drive | total_esr_db | DRIVE DI-GTR RR | -61.06 dB | ≤ -20 | PASS |
+| crunch_drive | total_esr_db | DRIVE DI-GTR RR | -61.01 dB | ≤ -20 | PASS |
 | crunch_drive | newton_failures | DRIVE DI-GTR RR | 0 | ≤ 0 | PASS |
 | crunch_drive | newton_unrescued | DRIVE DI-GTR RR | 0 | — | INFO |
 | crunch_drive | newton_median_iterations | DRIVE DI-GTR RR | 2 | ≤ 3 | PASS |
@@ -181,12 +181,12 @@ PASS 107 · FAIL 0
 | CRUNCH | DI-GTR L | -61.8 dB | 0 | — | — | — | — |
 | CRUNCH | DI-GTR LL | -62.3 dB | 0 | — | — | — | — |
 | CRUNCH | DI-GTR R | -63.0 dB | 0 | — | — | — | — |
-| CRUNCH | DI-GTR RR | -61.9 dB | 0 | — | — | — | — |
+| CRUNCH | DI-GTR RR | -62.0 dB | 0 | — | — | — | — |
 | DRIVE | SIN-220Hz-0.3V | -63.8 dB | 0 | 0.04 dB | 25.98 / 25.99 % | 36.2 / 36.2 W | — |
-| DRIVE | DI-GTR L | -61.1 dB | 0 | — | — | — | — |
-| DRIVE | DI-GTR LL | -62.2 dB | 0 | — | — | — | — |
+| DRIVE | DI-GTR L | -61.0 dB | 0 | — | — | — | — |
+| DRIVE | DI-GTR LL | -62.1 dB | 0 | — | — | — | — |
 | DRIVE | DI-GTR R | -61.7 dB | 0 | — | — | — | — |
-| DRIVE | DI-GTR RR | -61.1 dB | 0 | — | — | — | — |
+| DRIVE | DI-GTR RR | -61.0 dB | 0 | — | — | — | — |
 
 ## Stability
 

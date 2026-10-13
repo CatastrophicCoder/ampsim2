@@ -1,5 +1,7 @@
 #include "amp2203/PowerAmp.h"
 
+#include <cmath>
+
 #include "devices/TriodesPentodes.h"
 #include "stage/RootNetwork.h"
 #include "stage56/Stage56Network.h"
@@ -102,17 +104,83 @@ PowerAmp::Wave PowerAmp::elementOffsets() const noexcept {
     return o;
 }
 
+void PowerAmp::rescaleReactive(double ratio) noexcept {
+    // capacitors: R = T/(2C) scales with the step; the windings' R_L = 2L/T inversely (their conductances
+    // enter only the matrices, which exist for both steps)
+    for (auto* c : reactive())
+        c->rescale(ratio, true);
+    ot_.rescaleState(ratio);
+}
+
 void PowerAmp::applyKnobs() noexcept {
     vr6_.setResistanceValue(PI::VR6 * (1.0 - detail::ltap(presence_.value())) + 1.0);  // as PhaseInverter
     j4_.setResistanceValue(rth4_);
     rthDirty_ = false;
-    std::array<mna::Mutual, 3> mutual{};
-    int m = 0;
-    for (int i = 0; i < 3; ++i)
-        for (int j = i + 1; j < 3; ++j)
-            mutual[static_cast<size_t>(m++)] = {kWindings[i], kWindings[j], ot_.conductance(i, j)};
-    kNet.updateMatrices(root_, conductances(false), mutual);
+    for (const double step : {1.0, 0.5}) {  // full step and half step (D-043)
+        std::array<mna::Mutual, 3> mutual{};
+        int m = 0;
+        for (int i = 0; i < 3; ++i)
+            for (int j = i + 1; j < 3; ++j)
+                mutual[static_cast<size_t>(m++)] = {kWindings[i], kWindings[j], step * ot_.conductance(i, j)};
+        Wave G = conductances(false);
+        if (step != 1.0) {
+            for (auto* c : reactive())
+                c->rescale(step, false);
+            G = conductances(false);
+            for (int w = 0; w < 3; ++w)
+                G[kWindings[w]] = step * ot_.conductance(w, w);
+            for (auto* c : reactive())
+                c->rescale(1.0 / step, false);
+        }
+        kNet.updateMatrices(step == 1.0 ? root_ : half_, G, mutual);
+    }
     ++updates_;
+}
+
+void PowerAmp::halfStep(double vIn) noexcept {
+    // the trapezoidal states move to T/2, two steps with the J4 source at the linearly interpolated midpoint
+    // and at vIn, then back to T (D-043). The solver state goes along with the step-scaled trend. The
+    // conversion needs the last sample's reflected waves, which this sample's reflected() overwrote.
+    {
+        size_t k = 0;
+        for (auto* c : reactive())
+            c->wdf.b = bLast_[k++];
+        for (auto& w : ot_.w)
+            w.wdf.b = bLast_[k++];
+    }
+    rescaleReactive(0.5);
+    auto& h = half_;
+    for (int r = 0; r < kNumRootPorts; ++r) {
+        h.v[r] = root_.v[r];
+        h.vPrev[r] = root_.v[r] - 0.5 * (root_.v[r] - root_.vPrev[r]);
+        h.i[r] = root_.i[r];
+        double voc = root_.v[r];  // the Thevenin voltages for which the last solution is exact at T/2
+        for (int c = 0; c < kNumRootPorts; ++c)
+            voc += h.Z[r][c] * root_.i[c];
+        h.vOcPrev[r] = voc;
+    }
+    double iterations = 0.0;
+    for (const double x : {0.5 * (xPrev_ + vIn), vIn}) {
+        j4_.setVoltage(x);
+        Wave wave;
+        stage::reflected(elements(), wave);
+        kNet.process(h, kRootSolver, TriodesPentodes{}, wave, elementOffsets(), kNoRootOffsets);
+        stage::incident(elements(), wave);
+        iterations += h.iterations;
+    }
+    rescaleReactive(2.0);
+    for (int r = 0; r < kNumRootPorts; ++r) {
+        root_.vPrev[r] = 2.0 * h.vPrev[r] - h.v[r];  // full-step trend
+        root_.v[r] = h.v[r];
+        root_.i[r] = h.i[r];
+        double voc = h.v[r];
+        for (int c = 0; c < kNumRootPorts; ++c)
+            voc += root_.Z[r][c] * h.i[c];
+        root_.vOcPrev[r] = voc;
+    }
+    root_.node = h.node;
+    root_.iterations = iterations;
+    ++halfSteps_;
 }
 
 void PowerAmp::updateOutputs(double vIn) noexcept {
@@ -156,6 +224,7 @@ void PowerAmp::reset(double vInDc) {
         c->setDcVoltage(across(e));
     const auto& v = root_.node;
     ot_.setDcCurrents({(v[pA] - v[pA1]) / PS::Rwp1, (v[pB1] - v[pB]) / PS::Rwp2, v[sl] / PS::Rws});
+    xPrev_ = vInDc;
     updateOutputs(vInDc);
 }
 
@@ -174,12 +243,32 @@ double PowerAmp::process(double vIn) noexcept {
     src21_.setVoltage(vbpX_);
     rsA_.setVoltage(vScr_);
     rsB_.setVoltage(vScr_);
+    if (halfStepTrigger_ > 0.0) {
+        size_t k = 0;
+        for (auto* c : reactive())
+            bLast_[k++] = c->wdf.b;
+        for (const auto& w : ot_.w)
+            bLast_[k++] = w.wdf.b;
+    }
     Wave wave;
     stage::reflected(elements(), wave);
-    const bool ok = kNet.process(root_, kRootSolver, TriodesPentodes{}, wave, elementOffsets(), kNoRootOffsets);
-    stage::incident(elements(), wave);  // on failure wave = reflected: states unchanged
-    if (ok)
+    const Wave eOff = elementOffsets();
+    bool half = false;
+    if (halfStepTrigger_ > 0.0) {
+        const auto vOc = kNet.thevenin(root_, wave, eOff, kNoRootOffsets);
+        for (int r = 0; r < kNumRootPorts; ++r)
+            half = half || std::fabs(vOc[r] - root_.vOcPrev[r]) > halfStepTrigger_;
+    }
+    if (half) {
+        halfStep(vIn);
         updateOutputs(vIn);
+    } else {
+        const bool ok = kNet.process(root_, kRootSolver, TriodesPentodes{}, wave, eOff, kNoRootOffsets);
+        stage::incident(elements(), wave);  // on failure wave = reflected: states unchanged
+        if (ok)
+            updateOutputs(vIn);
+    }
+    xPrev_ = vIn;
     return out_;
 }
 

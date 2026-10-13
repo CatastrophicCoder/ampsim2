@@ -82,6 +82,8 @@ void printUsage(std::ostream& os) {
           "  --list-nodes  print the probe names of the block and exit\n"
           "  --knob-ramp   ramp a knob's target rotation linearly (times in s); the engine smooths it.\n"
           "                Params are then set every sample (knob-jump test, VERIFICATION §7)\n"
+          "  --half-step-trigger  power amp (b56, full): compute a sample as two half-steps when a root\n"
+          "                Thevenin voltage moves more than this many volts (D-043; 0 = off)\n"
           "  --nfb         full amp NFB diagnostic (SPEC §7 M4): closed (default) or open (R22 -> 1 TOhm)\n"
           "  --supply      drive a recorded input of the block from a WAV of the same length and rate, set every\n"
           "                sample: supply nodes (bpa, bpx, ct, nscr), the NFB speaker voltage (b5: out) or the\n"
@@ -155,6 +157,16 @@ std::optional<Options> parseArgs(const std::vector<std::string>& args, std::stri
                 return std::nullopt;
             }
             *k = x;
+        } else if (a == "--half-step-trigger") {
+            std::string v;
+            if (!value(v)) return std::nullopt;
+            char* end = nullptr;
+            const double x = std::strtod(v.c_str(), &end);
+            if (end == v.c_str() || *end != '\0' || !(x >= 0.0)) {
+                error = "--half-step-trigger expects volts >= 0, got '" + v + "'";
+                return std::nullopt;
+            }
+            o.halfStepTrigger = x;
         } else if (a == "--nfb") {
             if (!value(o.nfb)) return std::nullopt;
             if (o.nfb != "closed" && o.nfb != "open") {
@@ -254,6 +266,10 @@ int run(const Options& o, std::ostream& log) {
 
     runner->prepare(rate, o.blockSize);
     runner->setParams(o.params);
+    if (o.halfStepTrigger && !runner->setHalfStepTrigger(*o.halfStepTrigger)) {
+        log << "ampwav: block '" << o.block << "' has no half-step option\n";
+        return 1;
+    }
     if (!o.nfb.empty() && !runner->setFeedback(o.nfb != "open")) {
         log << "ampwav: block '" << o.block << "' has no NFB loop (--nfb)\n";
         return 1;

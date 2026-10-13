@@ -37,6 +37,8 @@ public:
     /// Diagnostic for the M4 NFB check (SPEC §7 M4; DECISIONS D-012 addition), not real-time: `closed` =
     /// false sets R22 to 1 TΩ (loop open). Takes effect at the next reset().
     void setFeedbackClosed(bool closed);
+    /// Power-amp adaptive half-step trigger in volts (D-043; 0 = off). Not real-time.
+    void setHalfStepTrigger(double volts);
 
     // diagnostics (non-real-time)
     struct Stats {

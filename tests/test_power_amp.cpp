@@ -74,3 +74,42 @@ TEST_CASE("PowerAmp overdrive and Presence jump stay finite", "[stage56][m4]") {
     REQUIRE(peak > 30.0);
     REQUIRE(s.sanitizeEvents() == 0);
 }
+
+TEST_CASE("PowerAmp adaptive half-steps keep DC and agree with the full step on small signals", "[stage56][m4]") {
+    // every sample half-stepped: the DC point stays (state conversions T ↔ T/2 are exact at DC)
+    PowerAmp a;
+    setup(a);
+    a.setHalfStepTrigger(1e-12);
+    const double out = a.output();
+    for (int n = 0; n < 4096; ++n)
+        REQUIRE(std::fabs(a.process(0.0) - out) < 1e-6);
+    REQUIRE(a.halfSteps() == 4096);
+
+    // a trigger no small signal reaches: identical to no half-steps at all
+    PowerAmp b, c;
+    setup(b);
+    setup(c);
+    b.setHalfStepTrigger(0.0);
+    c.setHalfStepTrigger(1e6);
+    for (int n = 0; n < 4096; ++n) {
+        const double x = 0.5 * std::sin(2.0 * std::numbers::pi * 1000.0 * n / kFs);
+        REQUIRE(b.process(x) == c.process(x));
+    }
+    REQUIRE(c.halfSteps() == 0);
+
+    // all half-steps on a 1 kHz tone: close to the full-step result (both approximate the same circuit)
+    PowerAmp d, e;
+    setup(d);
+    setup(e);
+    d.setHalfStepTrigger(1e-12);
+    e.setHalfStepTrigger(0.0);
+    double err = 0.0, ref = 0.0;
+    for (int n = 0; n < static_cast<int>(0.01 * kFs); ++n) {
+        const double x = 1.0 * std::sin(2.0 * std::numbers::pi * 1000.0 * n / kFs);
+        const double yd = d.process(x), ye = e.process(x);
+        err += (yd - ye) * (yd - ye);
+        ref += (ye - out) * (ye - out);
+    }
+    INFO("half vs full step ESR " << 10.0 * std::log10(err / ref) << " dB");
+    REQUIRE(10.0 * std::log10(err / ref) < -60.0);
+}
