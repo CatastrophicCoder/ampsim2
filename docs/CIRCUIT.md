@@ -179,7 +179,7 @@ open and the input AC-grounded. The value used by the testbenches and the engine
 | Junction | Node | R_th (DC small-signal) | Z @ 1 kHz | Spread over presets (\|Z\| @ 1 kHz) | Method / notes |
 |---|---|---|---|---|---|
 | (J1) | p1a | 74.79 kΩ | 39.25 kΩ ∠−15.1° | none | Removed: B1 and B2 merged into B12 (D-017). C1 bypasses the cathode above ~100 Hz; \|Z\| falls to 31 kΩ at 10 kHz. Measured at commit a64bf9b |
-| J2 | p1b | 90.11 kΩ | 89.73 kΩ ∠−1.0° | 88.4–90.1 kΩ (Preamp Volume, Miller) | Measured on B12. R6 unbypassed; flat to ~1 kHz, 85.6 kΩ at 10 kHz |
+| (J2) | p1b | 90.11 kΩ | 89.73 kΩ ∠−1.0° | 88.4–90.1 kΩ (Preamp Volume, Miller) | Removed from the engine: B12, B3 and B4 form one tree B1234 (D-038); at full drive V1b's output impedance leaves the constant R_th2. Still used by the standalone b3 / b34 testbenches. Measured on B12; flat to ~1 kHz, 85.6 kΩ at 10 kHz |
 | (J3) | k2b | 360.1 Ω | 360.1 Ω ∠+0.1° | none | Removed from the engine chain: B3 and B4 merged into B34 (D-033); V2b cuts off into the tone stack (R_out 360 Ω → 100 kΩ). Still used by the standalone B3 / B4 testbenches |
 | J4 | y | R_VR2b ‖ (R_VR2a + R_VR3b + R_VR5 + R_VR4) (knob-dependent) | — | — | DC, J3 shorted, caps open; reactive part ignored (DECISIONS D-015) |
 | J5a | p3a | 41.40 kΩ | 58.07 kΩ ∠−0.9° | 56.2–58.1 kΩ (Master) | LTP: DC value only below ~1 Hz; 57–59 kΩ flat 10 Hz–5 kHz. Transimpedance to p3b 25.5 kΩ @ 1 kHz (0.44 of self) |

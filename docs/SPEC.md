@@ -205,8 +205,9 @@ exceeds tolerance, upgrade it in this order: (a) add the reactive part of the so
 
 | # | Block | Contents | Nonlinear root | Output |
 |---|---|---|---|---|
-| B12 | `StageV1aV1b` | Input source, R2, R3, V1a, R1‖C1, R4, C3, R5‖C4, C5, VR1 (Preamp Volume), V1b, R6, R7; plate loads to supply node `bpA` | Joint 4-port (two triodes) | `v_oc(p1b)`, `R_th2` |
-| B34 | `StageV2aV2bToneStack` | J2 source, C7, R10‖C8, R11, V2a, R9, R12, V2b (direct-coupled cathode follower), R13; C10, R15, C11, C12, VR3 Treble, VR5 Bass, VR4 Middle, VR2 Master | Joint 4-port (two triodes) | `v_oc(y)`, `R_th4` (knob-dependent) |
+| B1234 | `Preamp` | Input source, R2, R3, V1a, R1‖C1, R4, C3, R5‖C4, C5, VR1 (Preamp Volume), V1b, R6, R7; C7, R10‖C8, R11, V2a, R9, R12, V2b (direct-coupled cathode follower), R13; C10, R15, C11, C12, VR3 Treble, VR5 Bass, VR4 Middle, VR2 Master; supplies `bpA`, `bpX` | Joint 8-port (four triodes) | `v_oc(y)`, `R_th4` (knob-dependent) |
+| (B12) | `StageV1aV1b` | B12 alone, output `v_oc(p1b)` (verification of the V1a/V1b root, M2) | Joint 4-port | `v_oc(p1b)` |
+| (B34) | `StageV2aV2bToneStack` | B3 + B4 behind J2 (verification, M3) | Joint 4-port | `v_oc(y)`, `R_th4` |
 | (B3) | `StageV2aV2b` | B3 alone behind J2, output `v_oc(k2b)` (verification of the V2a/V2b root, M3) | Joint 4-port | `v_oc(k2b)` |
 | (B4) | `ToneStackMaster` | B4 alone behind J3 (R_th3), output `v_oc(y)` (verification of the tone stack, M1) | none (R-type) | `v_oc(y)`, `R_th4` |
 | B5 | `PhaseInverter` | J4 source, C9, R17, R16, R19, C15, R20, R23, C17, VR6 Presence, R22 (NFB, delayed), V3a, V3b, R18, R21 | Joint 4-port (two triodes) | `v_oc(p3a)`, `v_oc(p3b)`, `R_thA`, `R_thB` |
@@ -224,6 +225,11 @@ Notes per block (details in `CIRCUIT.md` / `WDF_DESIGN.md`):
   audible on V1a with its 68 kΩ grid stopper.
 - **B3 joint root:** V2a's plate is V2b's grid with no coupling capacitor, and V2b grid current flows
   through R12. Solve both triodes together (4 unknowns). Do not split this junction.
+- **B1234 (B12 + B3 + B4 in one tree, 8-port root):** after the J3 merge (below) the remaining preamp
+  junction J2 (p1b) gave −22.1 dB partition error at the PI-loaded y (Preamp Volume 1.0, 5 kHz 2 V;
+  target −26 dB): V1b swings between cutoff and grid conduction, far from a constant R_th2. With B12, B3
+  and B4 joined the worst sine is −36.1 dB (DECISIONS D-038, owner decision Q18). The engine's preamp is
+  therefore one tree; B12, B3, B4 and B34 remain as verified classes.
 - **B34 (B3 + B4 in one tree):** originally two blocks joined by J3 at the cathode follower k2b. M3
   measured the J3 partition error in SPICE at −2.2 to −7.5 dB ESR at y from 0.1 V input upwards: V2b cuts
   off on large swings into the tone stack, its output resistance jumps from 360 Ω to R13 = 100 kΩ, and a
@@ -251,7 +257,7 @@ Notes per block (details in `CIRCUIT.md` / `WDF_DESIGN.md`):
 
 ### 4.3 Processing order per sample
 ```
-supply voltages (from state)  ->  B12 -> B34 -> B5 (uses out[n-1]) -> B6 -> output
+supply voltages (from state)  ->  B1234 -> B5 (uses out[n-1]) -> B6 -> output
                                    \__________ currents reported to B7, B7.update() ___________/
 ```
 
@@ -373,7 +379,8 @@ Acceptance:
 ### M3 — B3, preamp cascade
 Tasks:
 1. `StageV2aV2b` (B3) with a joint 4-port root.
-2. Cascade B12→B3→B4; dump intermediate nodes. (Became B12→B34 after the J3 partition study, D-033.)
+2. Cascade B12→B3→B4; dump intermediate nodes. (Became B12→B34 after the J3 partition study, D-033, and
+   one tree B1234 after the J2 study, D-038.)
 Acceptance:
 - Block-exact targets as in M2 for B3 (at its own nominal and overdrive levels as defined in
   `VERIFICATION.md`).

@@ -561,7 +561,8 @@ Consequences: B3 block-exact vs its testbench passes (M3 report). B3 is kept as 
 chain uses B34 (D-033).
 
 ## D-033 Merge B3 and B4 into B34 (no J3 junction)
-Date: 2026-10-13 · Status: accepted (owner decision, PROGRESS.md Q14)
+Date: 2026-10-13 · Status: accepted (owner decision, PROGRESS.md Q14); the engine chain became one tree in
+D-038 (B34 stays as a verified block)
 Context: First M3 cascade runs: the SPICE chain b12 → b3 → b4 (J-Thevenin J3 with R_th3 = 360 Ω, B3's
 output k2b unloaded) differed from the full netlist at y by −2.2 to −7.5 dB ESR from 0.1 V input upwards
 (−18 dB even at 0.01 V with Preamp Volume 1.0), while the engine matched that chain to −60 dB. On large
@@ -659,4 +660,35 @@ Decision: grid ports +50 V / −1000 V, plate ports ±50 V per iteration (`devic
 Checked on the hard block cases (B12 5 kHz 2 V, B3 / B34 5 kHz 50 V): 0 failures, max 7 iterations,
 ESR unchanged. Preamp cascade: 0 failures, max 12 (Volume 1.0, 5 kHz 2 V).
 Consequences: B12, B3, B34 reports and the cascade regenerated with these limits.
+
+## D-038 Merge B12 and B34 into one preamp tree B1234 (no J2 junction)
+Date: 2026-10-13 · Status: accepted (owner decision, PROGRESS.md Q18)
+Context: M3 cascade at 768 kHz (D-035, D-036): the partition error at the PI-loaded y failed once, Preamp
+Volume 1.0, 5 kHz 2 V, −22.1 dB (target −26 dB), with margins of 1–2 dB elsewhere at 5 kHz. SPEC §4.1
+upgrade path: (a) the reactive part of R_th2 (|Z| 89.7 → 85.6 kΩ over 1–10 kHz, not a large-signal
+change); (b) merge. SPICE study of (b) (`python -m harness.merge_study`,
+`harness/reports/M3/20261013_merge_study.md`, 36 sines, recorded supplies): worst loaded-y error with J2
+−30.0 / −27.0 / −22.1 dB, merged −45.9 / −36.5 / −36.1 dB at Preamp Volume 0.2 / 0.6 / 1.0; speaker output
+−31.2 / −28.0 / −27.3 → −47.1 / −41.3 / −41.0 dB.
+Decision: the engine's preamp `Preamp` is one tree B1234 (`engine/src/stage1234/Stage1234Network.h`: 20
+nodes, 38 element ports = B12's 15 + B34's 23 without J2) under an 8-port root of V1a, V1b, V2a, V2b
+(`devices::FourTriodes`, the D-037 step limits per port). Preamp Volume and the tone knobs are smoothed;
+the matrices are recomputed every kParamUpdateInterval = 32 samples while one moves. Supplies bpA and bpX
+are settable (B7 in M4); R_th4 by D-015. SPICE testbench `b1234` (B12 + B3 + B4 joined, y open) is its
+block-exact reference and the cascade study's P. `StageV1aV1b`, `StageV2aV2b`, `ToneStackMaster` and
+`StageV2aV2bToneStack` stay as verified blocks with their testbenches.
+Consequences: Only J4 (y) remains before the PI. Cost: 1.25–1.83 µs per sample at 768 kHz (above the 1.3 µs
+budget on its own; B12 + B34 separately were 0.81–1.23 µs); see the M3 report. SPEC §4.2 / §4.3, CIRCUIT
+§4, VERIFICATION §4 updated.
+
+## D-039 Engine vs SPICE at 5 kHz 0.5 V in the preamp: accepted as a known deviation
+Date: 2026-10-13 · Status: accepted (owner decision, PROGRESS.md Q17)
+Context: In the M3 cascade at 768 kHz the engine missed the block-exact "hot" limit (≤ −40 dB) at y on the
+5 kHz 0.5 V sine: −39.3 dB (Volume 0.6) and −38.4 dB (Volume 1.0). The cause is the fixed-step
+discretisation of V2a / V2b cutoff transitions (as Q16): in the 384 kHz study the same case went
+−33.1 / −39.4 / −44.2 dB at 1× / 2× / 4× the rate; Newton converges. Options presented: run the preamp at
+2× the rate internally (about −44 dB, double cost) or accept and report.
+Decision: accept and report. The tolerance stays as written; the cascade report keeps the check as an
+explained FAIL (the numbers after the B1234 merge, D-038, are in the M3 report).
+Consequences: none on the engine. Revisit if the M6 optimisations make a higher internal rate affordable.
 

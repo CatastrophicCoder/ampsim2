@@ -6,7 +6,7 @@
 //                            moving, and µs per matrix update; Newton iterations
 //   amp2203_bench b3         StageV2aV2b: ns per sample at the B3 levels; Newton iterations
 //   amp2203_bench b34        StageV2aV2bToneStack: as b3, plus tone knobs moving and µs per matrix update
-//   amp2203_bench preamp     Preamp cascade B12 -> B34 at the B12 levels
+//   amp2203_bench preamp     Preamp B1234 (one tree, 8-port root) at the B12 levels
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -226,12 +226,35 @@ int benchStage34() {
 
 int benchPreamp() {
     double sink = 0.0;
-    levelSweep("Preamp (B12 -> B34)", [] {
+    auto make = [] {
         auto b = std::make_unique<amp2203::Preamp>();
         b->prepare(kRate, amp2203::EngineConfig{}.paramSmoothingMs);
         b->reset(0.0);
         return b;
-    }, 0.0, {{1000.0, 0.01}, {1000.0, 0.1}, {1000.0, 0.5}, {1000.0, 2.0}, {5000.0, 2.0}}, sink);
+    };
+    const double nsRef = levelSweep("Preamp (B1234, 8-port root)", make, 0.0,
+                                    {{1000.0, 0.1}, {1000.0, 0.01}, {1000.0, 0.5}, {1000.0, 2.0}, {5000.0, 2.0}}, sink);
+    // all five knobs moving all the time (alternate targets every 50 ms), 1 kHz 0.1 V
+    auto b = make();
+    amp2203::Params p;
+    const long n = static_cast<long>(5.0 * kRate);
+    const long u0 = b->matrixUpdates();
+    const double dphi = 2.0 * std::numbers::pi * 1000.0 / kRate;
+    const auto t0 = Clock::now();
+    for (long i = 0; i < n; ++i) {
+        if (i % static_cast<long>(0.05 * kRate) == 0) {
+            const double v = (i / static_cast<long>(0.05 * kRate)) % 2 ? 0.7 : 0.5;
+            p.preampVolume = p.treble = p.middle = p.bass = p.master = v;
+            b->setParams(p);
+        }
+        sink += b->process(0.1 * std::sin(dphi * static_cast<double>(i)));
+    }
+    const double nsMoving = seconds(t0) / static_cast<double>(n) * 1e9;
+    const long updates = b->matrixUpdates() - u0;
+    std::printf("  moving knobs:   %.1f ns/sample, %ld matrix updates in %ld samples (interval %d)\n", nsMoving, updates,
+                n, amp2203::Preamp::kParamUpdateInterval);
+    std::printf("  matrix update:  %.2f us (moving minus static 1 kHz 0.1 V, per update)\n",
+                (nsMoving - nsRef) * static_cast<double>(n) / static_cast<double>(updates) * 1e-3);
     std::printf("  checksum %g\n", sink);
     return 0;
 }

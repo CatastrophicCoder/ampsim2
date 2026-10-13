@@ -9,7 +9,7 @@ rotation nodes that follow the same smoothed trajectory continuously. Pass: no N
 over the ramp and the 20 ms after it. Peak error and error energy above 5 kHz are reported as information.
 Writes harness/reports/M<n>/<YYYYMMDD>_<block>_knob_jump.md.
 
-    python -m harness.knob_jump [--block b4|b12|b34]
+    python -m harness.knob_jump [--block b4|b12|b34|b1234]
 """
 import argparse
 import datetime
@@ -52,6 +52,9 @@ SETUPS = {
     'b34': {'milestone': 'M3', 'tone_v': 1.0, 'output': 'y', 'knobs': B4_KNOBS,
             'cases': [(k,) for k in B4_KNOBS] + [B4_KNOBS], 'level': 'on the J2 DC level',
             'pots': None},  # same pots as b4
+    'b1234': {'milestone': 'M3', 'tone_v': 0.1, 'output': 'y', 'knobs': ('preampVolume',) + B4_KNOBS,
+              'cases': [(k,) for k in ('preampVolume',) + B4_KNOBS] + [('preampVolume',) + B4_KNOBS],
+              'level': 'at the guitar input', 'pots': 'b12+b4'},
     'b12': {'milestone': 'M2', 'tone_v': 0.1, 'output': 'p1b', 'knobs': ('preampVolume',),
             'cases': [('preampVolume',)], 'level': 'at the guitar input',
             'pots': {
@@ -90,7 +93,12 @@ def _node(knob):
 def spice_testbench(block_id):
     setup = SETUPS[block_id]
     text = BLOCKS[block_id].path.read_text()
-    for name, (nodes, expr, knob) in (setup['pots'] or SETUPS['b4']['pots']).items():
+    pots = setup['pots']
+    if pots is None:
+        pots = SETUPS['b4']['pots']
+    elif pots == 'b12+b4':
+        pots = {**SETUPS['b12']['pots'], **SETUPS['b4']['pots']}
+    for name, (nodes, expr, knob) in pots.items():
         text, n = re.subn(rf'^{name} .*$', f"{name} {nodes} R='{expr.format(k=knob.lower())}'", text, flags=re.M)
         assert n == 1, name
     return text + ''.join(f'Vrec_{_node(k)} {_node(k)} 0 DC 0\n' for k in setup['knobs'])

@@ -180,8 +180,8 @@ private:
     bool started_ = false;
 };
 
-/// Preamp cascade B12 → B34: input = guitar source voltage, output = v_oc(y). Starts from the DC
-/// operating point of the first input sample.
+/// Preamp B1234 (B12 + B3 + B4 in one tree, D-038): input = guitar source voltage, output = v_oc(y).
+/// Starts from the DC operating point of the first input sample. Block ids `preamp` and `b1234`.
 class PreampRunner final : public Runner {
 public:
     void prepare(double sampleRate, int) override {
@@ -204,17 +204,19 @@ public:
 
     bool setSupply(std::string_view node, double v) noexcept override {
         if (node == "bpa")
-            block_.b12().setSupplyVoltage(v);
+            bpA_ = v;
         else if (node == "bpx")
-            block_.b34().setSupplyVoltage(v);
+            bpX_ = v;
         else
             return false;
+        block_.setSupplyVoltages(bpA_, bpX_);
         return true;
     }
 
 private:
     amp2203::Preamp block_;
     bool started_ = false;
+    double bpA_ = amp2203::Preamp::kSupplyBpA, bpX_ = amp2203::Preamp::kSupplyBpX;
 };
 
 /// M0 stand-in for a block that is not implemented yet: output = input (volts).
@@ -245,7 +247,7 @@ std::string lower(std::string_view s) {
 }  // namespace
 
 const std::vector<std::string>& blockIds() {
-    static const std::vector<std::string> ids = {"full", "preamp", "b12", "b3", "b34", "b4", "b5", "b6", "b7", "b56"};
+    static const std::vector<std::string> ids = {"full", "preamp", "b1234", "b12", "b3", "b34", "b4", "b5", "b6", "b7", "b56"};
     return ids;
 }
 
@@ -255,7 +257,7 @@ std::unique_ptr<Runner> makeRunner(std::string_view blockId) {
         return std::make_unique<FullRunner>();
     if (id == "b12")
         return std::make_unique<StageV1aV1bRunner>();
-    if (id == "preamp")
+    if (id == "preamp" || id == "b1234")
         return std::make_unique<PreampRunner>();
     if (id == "b34")
         return std::make_unique<StageV2aV2bToneStackRunner>();

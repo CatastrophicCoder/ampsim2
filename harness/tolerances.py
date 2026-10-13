@@ -39,6 +39,8 @@ SCORED = {
     # partition / total error at y is scored by harness/cascade.py.
     'M3': {'b3': {'dc_rel_error', 'nonlinear_esr_db', 'nonlinear_esr_db_overdrive', 'harmonics_2_5_db',
                   'newton_failures', 'newton_median_iterations', 'newton_max_iterations'},
+           'b1234': {'dc_rel_error', 'nonlinear_esr_db', 'nonlinear_esr_db_overdrive', 'harmonics_2_5_db',
+                     'newton_failures', 'newton_median_iterations', 'newton_max_iterations'},
            'b34': {'dc_rel_error', 'nonlinear_esr_db', 'nonlinear_esr_db_overdrive', 'harmonics_2_5_db',
                    'newton_failures', 'newton_median_iterations', 'newton_max_iterations'},
            # cascade (harness/cascade.py, D-036): partition at the loaded y, engine vs the SPICE chain

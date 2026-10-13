@@ -72,6 +72,7 @@ Block input amplitudes (volts peak at the junction source):
 | B3 (J2 source) | 0.1 | 1 | 10 | 50 |
 | B4 (J3 source, linear) | — | 1 | — | — |
 | B34 (J2 source; B3 + B4, D-033) | 0.1 | 1 | 10 | 50 |
+| B1234 (guitar input; the engine's preamp, D-038) | 0.01 | 0.1 | 0.5 | 2.0 |
 | B56 (J4 source) | 0.1 | 1 | 5 | 20 |
 
 With the P chaining, realistic levels for downstream blocks come from the upstream SPICE outputs; the

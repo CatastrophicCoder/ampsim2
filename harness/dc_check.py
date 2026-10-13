@@ -12,7 +12,7 @@ from .tolerances import TOLERANCES
 
 # relative error denominator floor: nodes at 0 V in F (tone stack, NFB nodes) are judged on 1 mV
 ABS_FLOOR = 1e-3
-TESTBENCHES = ('b12', 'b3', 'b34', 'b4', 'b56', 'b5open', 'b6', 'b123')
+TESTBENCHES = ('b12', 'b3', 'b34', 'b1234', 'b4', 'b56', 'b5open', 'b6', 'b123')
 
 # Deviations whose cause is known. They keep their PASS/FAIL status; the owner decides on acceptance.
 # b6 out/sl: accepted by the owner as a known partition effect (PROGRESS Q5, DECISIONS D-015).

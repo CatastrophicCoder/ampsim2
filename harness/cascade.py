@@ -3,15 +3,15 @@
 For each Preamp Volume preset (VOL0.2, DEFAULT = 0.6, VOL1.0; other knobs default) and the standard
 signal set at the B12 levels:
 - F: the full netlist (the PI load at y present),
-- P: the SPICE chain b12 -> b34 (B3 and B4 in one tree, D-033), its J2 source driven by b12's
-  open-circuit p1b,
-- E: the engine cascade (`ampwav --block preamp`: B12 -> B34).
+- P: the b1234 testbench (B12, B3 and B4 joined, D-038: the J2 and J3 junctions were removed after the
+  M3 partition studies; harness/merge_study.py),
+- E: the engine (`ampwav --block preamp`: the B1234 tree with an 8-port root).
 P and E use F's recorded supply voltages bpA and bpX (VERIFICATION §1), so supply modelling (B7, M4)
 is not part of the partition error. At y, P and E are open-circuit voltages while F's y carries the PI
 load; the column `P56` therefore also drives the b56 testbench (J4 source R_th4 into the PI, power stage
 and supply) with P's v_oc(y) and compares its loaded y and the speaker voltage with F.
 Compared at p1b and k2b (loaded nodes in F, P and E) and at y (v_oc in P and E): P vs F is the partition
-error (J2 and the PI load at J4), E vs F the total error, E vs P the block-exact error of the chain. Scored at y on sines: P vs F
+error (the PI load at J4), E vs F the total error, E vs P the block-exact error. Scored at y on sines: P vs F
 and E vs F were the SPEC §7 M3 wording; with the owner's decision Q15 (DECISIONS D-036) the scored
 checks are: partition error = P56 vs F at the loaded y, ESR ≤ −26 dB on sines (DI ≤ −20 dB; skipped
 when there are no DI clips); engine = E vs P at y with the block-exact limits by level (≤ −40 dB,
@@ -56,11 +56,14 @@ def signal_set():
 
 
 def _texts():
-    t = {k: BLOCKS[k].path.read_text() for k in ('full', 'b12', 'b34', 'b56')}
+    t = {k: BLOCKS[k].path.read_text() for k in ('full', 'b12', 'b34', 'b1234', 'b56')}
     # the constant supplies become recorded sources (spice.tran Vrec_<name>), driven by F's waveforms
     t['b12'] = t['b12'].replace('Vsup_bpA bpA 0 DC', 'Vrec_bpa bpA 0 DC')
     t['b34'] = t['b34'].replace('Vsup_bpX bpX 0 DC', 'Vrec_bpx bpX 0 DC')
+    t['b1234'] = t['b1234'].replace('Vsup_bpA bpA 0 DC', 'Vrec_bpa bpA 0 DC').replace('Vsup_bpX bpX 0 DC',
+                                                                                      'Vrec_bpx bpX 0 DC')
     assert 'Vrec_bpa' in t['b12'] and 'Vrec_bpx' in t['b34']
+    assert 'Vrec_bpa' in t['b1234'] and 'Vrec_bpx' in t['b1234']
     return t
 
 
@@ -91,6 +94,12 @@ def render_chain(texts, knobs, sig):
 
 
 def render_p(texts, knobs, sig, f_res):
+    return spice.tran(texts['b1234'], knobs, block_input(BLOCKS['b1234'], sig), list(NODES),
+                      recorded={'bpa': f_res['bpa'], 'bpx': f_res['bpx']})
+
+
+def render_p_j2(texts, knobs, sig, f_res):
+    """The partition before D-038 (b12 -> J2 -> b34), kept for harness/merge_study.py."""
     voc_p1b = spice.tran(texts['b12'], knobs, block_input(BLOCKS['b12'], sig), ['p1b'],
                          recorded={'bpa': f_res['bpa']})['p1b']
     return spice.tran(texts['b34'], knobs, voc_p1b, list(NODES), recorded={'bpx': f_res['bpx']})
@@ -114,11 +123,10 @@ def run_e(knobs, sig, workdir, f_res):
 
 
 def small_signal(texts, knobs):
-    """|H_P / H_F| at y: product of the block transfers (each at its own junction source) vs the full netlist."""
-    f, h12 = spice.ac(texts['b12'], knobs, 'p1b', 'in')
-    _, h34 = spice.ac(texts['b34'], knobs, 'y', 'j2s')
+    """|H_P / H_F| at y: the b1234 transfer (y open) vs the full netlist (y loaded by the PI)."""
+    f, hp = spice.ac(BLOCKS['b1234'].path.read_text(), knobs, 'y', 'in')
     _, hf = spice.ac(texts['full'], knobs, 'y', 'in')
-    return f, 20 * np.log10(np.abs(h12 * h34) / np.abs(hf))
+    return f, 20 * np.log10(np.abs(hp) / np.abs(hf))
 
 
 def analyse(sig, res):
@@ -210,7 +218,7 @@ def plot(res, outdir, stem):
         ax.set_xlabel('frequency [Hz]')
         ax.grid(True, which='both', alpha=0.3)
     np.atleast_1d(axes)[0].set_ylabel('|H_P / H_F| at y [dB]')
-    fig.suptitle('Small-signal partition error at y (J2, J4)')
+    fig.suptitle('Small-signal partition error at y (J4: v_oc(y) vs the PI-loaded y)')
     fig.tight_layout()
     fig.savefig(outdir / f'{stem}_small_signal.png', dpi=110)
     plt.close(fig)
@@ -242,11 +250,11 @@ def write_report(res, milestone='M3'):
     outdir.mkdir(parents=True, exist_ok=True)
     stem = f'{datetime.date.today().strftime("%Y%m%d")}_cascade'
     pngs = plot(res, outdir, stem)
-    lines = [f'# {milestone} report: preamp cascade B12 → B34, partition and total error at y', '',
+    lines = [f'# {milestone} report: preamp B1234, partition and total error at y', '',
              f'- Date: {datetime.date.today().isoformat()}, engine commit `{_git()}`, ngspice {spice.ngspice_version()}, '
              f'fs = {config.FS} Hz, SPICE reltol {config.SPICE_RELTOL}',
-             f'- F: `full.cir` (sha256 `{_sha(BLOCKS["full"].path)}`), P: b12 → b34 testbenches chained through '
-             'the J2 source, E: `ampwav --block preamp`. At y, P and E are v_oc(y) (no PI load), F has '
+             f'- F: `full.cir` (sha256 `{_sha(BLOCKS["full"].path)}`), P: the b1234 testbench (B12 + B3 + B4 joined, '
+             'D-038), E: `ampwav --block preamp` (B1234). At y, P and E are v_oc(y) (no PI load), F has '
              'the PI load; at p1b and k2b all three are the loaded nodes. P and E run on F\'s recorded bpA / bpX.',
              '- ESR on each signal minus its own DC operating point (D-018). Scored (D-036): partition error = P56 vs F '
              'at the loaded y (P\'s v_oc(y) through the J4 source into the b56 testbench), sines ≤ −26 dB, DI ≤ −20 dB; '

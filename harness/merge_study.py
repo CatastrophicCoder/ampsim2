@@ -37,7 +37,7 @@ def merged_text():
 
 def one(texts, merged, knobs, sig):
     f = cascade.render_f(texts, knobs, sig)
-    p = cascade.render_p(texts, knobs, sig, f)
+    p = cascade.render_p_j2(texts, knobs, sig, f)
     p56, _ = cascade.render_p56(texts, knobs, p)
     m = spice.tran(merged, knobs, block_input(BLOCKS['b12'], sig), ['y'], recorded={'bpa': f['bpa'], 'bpx': f['bpx']})
     m56, note = cascade.render_p56(texts, knobs, m)

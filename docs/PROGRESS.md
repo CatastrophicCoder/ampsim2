@@ -319,9 +319,9 @@ Notes:
 
 ## M3 — B3, preamp cascade
 - [x] `StageV2aV2b` (joint 4-port root) — D-032; B3 + B4 merged into B34 (Q14, D-033)
-- [x] Cascade B12→B34 (`Preamp`), node dumps
+- [x] Cascade B12→B34, then one tree B1234 (`Preamp`, Q18, D-038), node dumps
 - [x] Block-exact and partition reports; junction upgrades (J3 → merge); 768 kHz (Q16); loaded-y scoring (Q15)
-- [x] M3 report: `harness/reports/M3/20261013_M3_report.md` — awaiting owner review (Q17, Q18 open)
+- [x] M3 report: `harness/reports/M3/20261013_M3_report.md` — awaiting owner review
 Plan (2026-10-13; follows SPEC §7 M3, §4.1, WDF_DESIGN §4, §6 and VERIFICATION §1, §7):
 
 Step 1 — Shared root-network code
@@ -371,6 +371,11 @@ Notes:
 - 2026-10-13 M3 report: B3 / B34 block-exact PASS, knob jumps PASS, cascade 273 PASS / 3 FAIL (Q17: E vs P
   at 5 kHz 0.5 V −39.3 / −38.4 dB; Q18: loaded-y partition at Volume 1.0, 5 kHz 2 V −22.1 dB). M3 stops
   here for review.
+- 2026-10-13 Q17 / Q18 answered: B12 + B34 merged into one tree B1234 (`Preamp`, 8-port root, D-038);
+  5 kHz 0.5 V deviation accepted (D-039). Cascade: partition at the loaded y 36 / 36 sines pass (worst
+  −36.1 dB), E vs P all pass except the accepted 5 kHz 0.5 V cases (−39.4 / −39.0 dB); B1234 block-exact
+  102 PASS / 1 FAIL (the same case); knob jumps PASS. Cost 1.27–1.86 µs/sample (above the 1.3 µs budget),
+  4.3 µs/sample with all knobs moving (94 µs per matrix update). M3 stops here for review.
 
 ## M4 — B5, B6, B7, full chain
 - [ ] EL34 model (+ screen modification) and Jacobian; device unit tests
@@ -437,10 +442,11 @@ _(Claude Code: add questions here and also ask them in the session.)_
 - Q16 (M3): engine discretisation at extreme slews (5 kHz, 0.5–2 V input) at 384 kHz? — Answered
   2026-10-13: verify at 768 kHz and make it the default internal rate (D-035).
 - Q17 (M3): engine vs the SPICE chain at 5 kHz 0.5 V is −39.3 / −38.4 dB (≤ −40 dB) at 768 kHz
-  (discretisation, as Q16). How to treat it? — Open.
+  (discretisation, as Q16). How to treat it? — Answered 2026-10-13: accept and report (D-039).
 - Q18 (M3): partition at the loaded y, Volume 1.0, 5 kHz 2 V is −22.1 dB (≤ −26 dB), mostly J2. Upgrade
   path (a) reactive R_th2, (b) merge B12 and B34, or other? — Open. SPICE study of (b) first (owner request,
   `python -m harness.merge_study`, `harness/reports/M3/20261013_merge_study.md`): with B12 + B3 + B4
   joined, the loaded-y partition error over all 36 sines is worst −45.9 / −36.5 / −36.1 dB at Preamp
   Volume 0.2 / 0.6 / 1.0 (current: −30.0 / −27.0 / −22.1 dB); speaker output −47.1 / −41.3 / −41.0 dB.
+  — Answered 2026-10-13: merge B12 and B34 into one tree B1234 (D-038).
 
