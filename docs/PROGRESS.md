@@ -439,5 +439,8 @@ _(Claude Code: add questions here and also ask them in the session.)_
 - Q17 (M3): engine vs the SPICE chain at 5 kHz 0.5 V is −39.3 / −38.4 dB (≤ −40 dB) at 768 kHz
   (discretisation, as Q16). How to treat it? — Open.
 - Q18 (M3): partition at the loaded y, Volume 1.0, 5 kHz 2 V is −22.1 dB (≤ −26 dB), mostly J2. Upgrade
-  path (a) reactive R_th2, (b) merge B12 and B34, or other? — Open.
+  path (a) reactive R_th2, (b) merge B12 and B34, or other? — Open. SPICE study of (b) first (owner request,
+  `python -m harness.merge_study`, `harness/reports/M3/20261013_merge_study.md`): with B12 + B3 + B4
+  joined, the loaded-y partition error over all 36 sines is worst −45.9 / −36.5 / −36.1 dB at Preamp
+  Volume 0.2 / 0.6 / 1.0 (current: −30.0 / −27.0 / −22.1 dB); speaker output −47.1 / −41.3 / −41.0 dB.
 

@@ -65,6 +65,7 @@ python -m harness.tonestack_check --tran                   # M1: B4 magnitude (3
 python -m harness.knob_jump [--block b12|b34]             # knob-jump test vs SPICE (D-025): B4 (M1), Preamp Volume (M2), B34 (M3)
 python -m harness.diagnostics --block b12                  # M2: diode CJO/TT, engine-rate and SPICE-RELTOL convergence
 python -m harness.cascade                                  # M3: preamp cascade F / P / P56 / E at p1b, k2b, y (hours)
+python -m harness.merge_study                              # M3 Q18: loaded-y partition with B12 + B34 merged (SPICE only)
 python -m harness.render_spice --block <id> --preset <id>  # SPICE reference (cached in harness/cache/)
 python -m harness.run_engine --block <id> --preset <id>
 python -m harness.compare --block <id> --preset <id> --milestone M<n>   # renders + runs + report
