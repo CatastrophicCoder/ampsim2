@@ -18,6 +18,8 @@ TOLERANCES = {
     'total_esr_db': (-20.0, 'max'),
     'total_harmonics_2_9_db': (1.5, 'max'),
     'newton_failures': (0, 'max'),
+    'newton_median_iterations': (3, 'max'),        # SPEC §7 M2 acceptance
+    'newton_max_iterations': (12, 'max'),          # the configured limit (WDF_DESIGN §4 maxIter)
 }
 
 # milestone -> block -> set of scored checks. M0 tests the pipeline only: everything is INFO, except
@@ -27,6 +29,10 @@ SCORED = {
     # M1: B4 ToneStackMaster (SPEC §7 M1). The 375-setting magnitude sweep and the knob-jump test run in
     # harness/tonestack_check.py and harness/knob_jump.py with the same tolerances.
     'M1': {'b4': {'linear_mag_db_20_10k', 'linear_mag_db_10k_20k', 'linear_esr_db', 'dc_rel_error'}},
+    # M2: B12 StageV1aV1b (SPEC §7 M2). ESR: every signal at the small/nominal/hot levels ≤ −40 dB, the
+    # overdrive-level (2 V) sines ≤ −30 dB; harmonics 2–5 where above −80 dBc; Newton statistics.
+    'M2': {'b12': {'dc_rel_error', 'nonlinear_esr_db', 'nonlinear_esr_db_overdrive', 'harmonics_2_5_db',
+                   'newton_failures', 'newton_median_iterations', 'newton_max_iterations'}},
 }
 
 

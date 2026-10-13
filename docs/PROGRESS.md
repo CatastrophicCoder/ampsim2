@@ -233,13 +233,86 @@ Notes:
 - 2026-10-13 Step 4: M1 report written. M1 stops here for review.
 
 ## M2 — B12: V1a and V1b with a joint triode root
-- [ ] 12AX7 model + Wright omega grid current + Jacobian; device unit tests
-- [ ] Generic multiport Newton root (first user N = 4)
-- [ ] `StageV1aV1b` tree (Preamp Volume inside), DC initialisation
-- [ ] Block-exact checks, Newton statistics
-- [ ] M2 report
-Plan:
+- [x] 12AX7 model + Wright omega grid current + Jacobian; device unit tests
+- [x] Generic multiport Newton root (first user N = 4) — Thevenin form (D-028), predictor (D-029)
+- [x] `StageV1aV1b` tree (Preamp Volume inside), DC initialisation (D-028)
+- [x] Block-exact checks, Newton statistics
+- [x] M2 report: `harness/reports/M2/20261013_M2_report.md` — awaiting owner review (Q12, Q13 open)
+Plan (2026-10-13; follows SPEC §7 M2, WDF_DESIGN §3.1, §4, §5.3 and VERIFICATION §5–7):
+
+Step 1 — 12AX7 device model (`engine/src/devices/`)
+- Wright omega ω(z) in double precision (initial guess plus Fritsch–Shafer–Crowley iterations to
+  machine precision). chowdsp's `Omega::omega4` is a fast approximation (its accuracy is not enough
+  for the 0.1 % / 1 nA device tolerance across the grid-current sweep), so it is not used.
+- Triode: Koren plate current and the closed-form grid diode (Rs = rgi + 1 Ω = 2001 Ω), with the
+  analytic Jacobian (WDF_DESIGN §3.1). Header-only, `noexcept`, no allocation.
+- Catch2: plate and grid sweeps vs `tests/data/12ax7_{plate,grid}.csv` (0.1 % or 1 nA), analytic vs
+  central-difference Jacobian at every sweep point (1e-5 relative, VERIFICATION §5.2), ω identity
+  ω + ln ω = z over a wide range.
+
+Step 2 — Generic multiport Newton root (`engine/src/solver/`)
+- Template on the port count K. The linear part of the block seen from the K root ports is an exact
+  K-port Thevenin equivalent: v = v_oc − Z·i(v), with v_oc a linear function of the element waves and Z
+  the K×K resistance matrix (both from the MNA, double-double setup). Root equation
+  f(v) = v + Z·i(v) − v_oc = 0, J = I + Z·∂i/∂v. This is the R-type adaptor with the root ports
+  eliminated: WDF_DESIGN §4's form with diag(R) is the special case of uncoupled root ports. In B12 the
+  ports share nodes (V1a's grid and plate ports share k1a), so Z has off-diagonal terms; the full matrix
+  is used. The root-port resistances of §5.3 cancel out of this form. Recorded in DECISIONS and in
+  WDF_DESIGN §4.
+- §4 algorithm otherwise unchanged: warm start, maxIter 12, step limits 2 V (grid) / 20 V (plate),
+  convergence ‖Δv‖∞ < 1e-9·max(1, ‖v‖∞) or ‖f‖∞ < 1e-9 V, step halving up to 4×, best iterate and a
+  failure counter, fixed-size Gaussian elimination. Statistics: iteration histogram (median, max),
+  failures.
+- Catch2: a 2-port test network against a direct solve, step limiting, failure counting.
+
+Step 3 — `StageV1aV1b` (B12)
+- Linear network (CIRCUIT.md §1 B12) as 15 element ports between 8 nodes plus the 4 root ports:
+  (Vin, R3) and (bpA, R4), (bpA, R7) as resistive voltage sources; R1‖C1, R5‖C4, C5‖VR1a as library
+  parallel adaptors; C3, VR1b, R6; the six inter-electrode capacitances (Cgk 2.3 pF, Cgp 2.4 pF,
+  Cpk 0.9 pF per triode, SPEC §4.2). R2 sits across the ideal input source and does not change any node
+  voltage, so it is left out. Bilinear capacitors (`DcCapacitor`).
+- Per sample: element reflected waves → node voltages of the open-root network → v_oc at the
+  root ports → Newton → node voltages with the root currents → incident waves to the elements.
+- Preamp Volume (VR1, log, +1 Ω per side as the netlist) smoothed like the B4 knobs; the matrices are
+  recomputed every kParamUpdateInterval = 32 samples while it moves (cost measured).
+- Supply bpA: a settable ideal source, default the F operating point (389.349603 V, as the testbench);
+  the block reports its supply current for B7 (M4).
+- `reset()`: DC operating point with the capacitors open, solved with the same Newton (more iterations,
+  not real-time), written into the capacitor states and the warm start (SPEC §3.6 option 1).
+- Output v_oc(p1b) (unloaded); probes for in, g1a, k1a, p1a, na, vtop, w1, k1b, p1b, the four device
+  currents and the Newton iterations. `ampwav --block b12`; `amp2203_bench b12`.
+
+Step 4 — Harness checks and report
+- `compare --block b12 --preset DEFAULT --milestone M2` with M2 scoring in `tolerances.py`: DC of p1a,
+  k1a, p1b, k1b (0.5 %); ESR ≤ −40 dB for every signal at the small/nominal/hot levels and ≤ −30 dB for
+  the 2 V sines; harmonics 2–5 within 0.5 dB where above −80 dBc; Newton median ≤ 3 iterations,
+  max ≤ the limit, zero failures (the median and max checks are added to `tolerances.py` as transcribed
+  from SPEC §7 M2).
+- Same signal set at Preamp Volume 0.2 and 1.0 (new presets), reported.
+- Knob-jump test for Preamp Volume (SPEC §6.2, D-025 criterion) added to `harness/knob_jump.py`.
+- M2 report `harness/reports/M2/`, with costs (ns/sample, µs per matrix update).
+
+Risks: Newton conditioning at grid-current onset (2 V input); bias shift of C3 / the Miller capacitance
+in BURST; the ignored diode CJO/TT (SPEC §5) shows up as a small high-frequency error at 2 V. Each is
+reported, not tuned away.
 Notes:
+- 2026-10-13 Step 1 done: `engine/src/devices/` (WrightOmega.h, Triode.h); Catch2 plate curves (567
+  points) and grid current (8) within 0.1 % / 1 nA, Jacobian at 568 points within 1e-5 (Vpk = 0 skipped,
+  VERIFICATION §5.2), ω identity to 4e-16. The CSV reader uses strtod (the tables hold subnormals).
+- 2026-10-13 Step 2 done: `engine/src/solver/MultiportNewton.h`, `detail/NewtonStats.h`,
+  `mna::rootTransfer`; the §4 root equation in K-port Thevenin form (D-028). Catch2: closed-form one-port,
+  coupled two-port, step limit, failure handling, median.
+- 2026-10-13 Step 3 done: `StageV1aV1b` (D-028), ampwav `--block b12` (Newton fields in `--stats`),
+  `amp2203_bench b12`. First DEFAULT run: everything within tolerance except 5 kHz 2 V (4213 Newton
+  failures, ESR −7.9 dB): V1b leaving cutoff at 6–7 V/sample with the plain warm start. Linear
+  extrapolation as the predictor fixes it (0 failures, median 3, max 10; D-029, variants measured).
+- 2026-10-13 Step 4: `compare` scores M2 (`tolerances.py`: overdrive sines at −30 dB, Newton median /
+  max checks), presets VOL0.2 / VOL1.0, `knob_jump --block b12` (−49.7 dB, PASS),
+  `python -m harness.diagnostics` (diode CJO/TT, engine rate convergence, SPICE RELTOL convergence).
+  SPICE cache keys now include the content of included libraries. ampwav accepts up to 1.536 MHz (D-013).
+  DEFAULT and VOL1.0: all PASS. VOL0.2: two FAILs raised with the owner (Q12 STEP ESR −34.5 dB from
+  > 20 kHz content, converges with the engine rate; Q13 H3 at 5 kHz 0.1 V 0.54 dB, the SPICE reference is
+  not converged at RELTOL 1e-6).
 
 ## M3 — B3, preamp cascade
 - [ ] `StageV2aV2b` (joint 4-port root)
@@ -298,3 +371,9 @@ _(Claude Code: add questions here and also ask them in the session.)_
 - Q11 (M1): the R-type up-port reaches only 2–4e-12 reflection-free in double precision at extreme B4
   settings (WDF_DESIGN §5.5: 1e-12)? — Answered 2026-10-13: higher precision (double-double setup
   arithmetic; exact-rational Python reference) (D-026).
+- Q12 (M2): STEP at Preamp Volume 0.2 gives ESR −34.5 dB (≤ −40 dB); the error lies above 20 kHz
+  (−50.7 dB after a 20 kHz low-pass) and shrinks with the engine rate (−44.4 / −52.6 dB at 2× / 4×):
+  bilinear discretisation of an ideal step through the C5 bright-cap path. How to treat it? — Open.
+- Q13 (M2): H3 of the 5 kHz 0.1 V sine at Preamp Volume 0.2 differs by 0.54 dB (≤ 0.5 dB); the SPICE
+  reference is not converged at RELTOL 1e-6 (−70.68 dBc; −71.13 at 1e-8; engine −71.23). How to treat
+  it? — Open.

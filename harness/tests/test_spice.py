@@ -82,5 +82,20 @@ class TestSpice(unittest.TestCase):
         self.assertIn(f'.include {config.TUBES}', text)
 
 
+
+class TestCacheKeyCoversLibraries(unittest.TestCase):
+    def test_key_changes_with_included_library_content(self):
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as d:
+            lib = Path(d) / 'x.lib'
+            text = f'* t\n.include {lib}\nR1 a 0 1k\n'
+            lib.write_text('* one\n')
+            k1 = spice._key('op', text)
+            lib.write_text('* two\n')
+            self.assertNotEqual(k1, spice._key('op', text))
+            self.assertEqual(spice._key('op', text), spice._key('op', text))
+
+
 if __name__ == '__main__':
     unittest.main()

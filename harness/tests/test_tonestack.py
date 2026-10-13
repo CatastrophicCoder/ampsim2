@@ -39,10 +39,11 @@ class TestKnobJumpHelpers(unittest.TestCase):
         self.assertTrue(np.all(np.diff(s) >= 0))
 
     def test_spice_testbench_replaces_every_pot(self):
-        text = knob_jump.spice_testbench()
-        for name in knob_jump.POTS:
-            self.assertRegex(text, rf"(?m)^{name} \S+ \S+ R='")
-        self.assertEqual(text.count('Vrec_rot_'), 4)
+        for block_id, n_knobs in (('b4', 4), ('b12', 1)):
+            text = knob_jump.spice_testbench(block_id)
+            for name in knob_jump.SETUPS[block_id]['pots']:
+                self.assertRegex(text, rf"(?m)^{name} \S+ \S+ R='")
+            self.assertEqual(text.count('Vrec_rot_'), n_knobs)
 
 
 @unittest.skipUnless(HAS_NGSPICE, 'ngspice not installed')

@@ -67,6 +67,8 @@ def analyse(block, signals, spice_res, engine_res, report):
         row['esr'] = metrics.esr_db(ref_ac, y_ac)
         row['lag'], row['lag_esr'] = metrics.best_lag(ref_ac, y_ac)
         esr_check = 'total_esr_db' if block.id == 'full' else 'linear_esr_db' if block.linear else 'nonlinear_esr_db'
+        if esr_check == 'nonlinear_esr_db' and sig.kind == 'SIN' and sig.meta['amp'] == block.levels.get('overdrive'):
+            esr_check = 'nonlinear_esr_db_overdrive'
         report.add(esr_check, sig.id, row['esr'], ' dB')
         if sig.kind == 'SIN':
             f0 = sig.meta['freq']
@@ -101,6 +103,10 @@ def analyse(block, signals, spice_res, engine_res, report):
         row['newton_failures'] = stats['newton_failures']
         row['max_iter'] = stats['max_iterations_used']
         report.add('newton_failures', sig.id, int(stats['newton_failures']))
+        if stats.get('newton_solves'):
+            row['median_iter'] = stats['median_iterations']
+            report.add('newton_median_iterations', sig.id, int(stats['median_iterations']))
+            report.add('newton_max_iterations', sig.id, int(stats['max_iterations_used']))
         per_signal.append(row)
     return per_signal
 
@@ -220,16 +226,16 @@ def write_report(milestone, block, preset, signals, report, per_signal, dc_rows,
 
     lines += ['', '## Signals', '',
               '| Signal | Peak F [V] | ESR [dB] | Best lag | ESR at lag [dB] | THD F / E [%] | Power F / E [W] | '
-              'ns/sample | Newton fail / max it |',
+              'ns/sample | Newton fail / median / max it |',
               '|---|---|---|---|---|---|---|---|---|']
     for r in per_signal:
         thd = f'{r["thd_ref"]:.3g} / {r["thd"]:.3g}' if 'thd' in r else '—'
         pw = f'{r["p_ref"]:.4g} / {r["p"]:.4g}' if 'p' in r else '—'
         lines.append(f'| {r["id"]} | {r["peak_ref"]:.4g} | {r["esr"]:.2f} | {r["lag"]} | {r["lag_esr"]:.2f} | {thd} | '
-                     f'{pw} | {r["ns_per_sample"]:.1f} | {r["newton_failures"]} / {r["max_iter"]:g} |')
+                     f'{pw} | {r["ns_per_sample"]:.1f} | {r["newton_failures"]} / {r.get("median_iter", "—")} / {r["max_iter"]:g} |')
 
     lines += ['', '## DC operating point', '', '| Node | SPICE [V] | Engine [V] | Rel. error |', '|---|---|---|---|']
-    lines += [f'| {n} | {v:.4f} | {_fmt(e)} | {_fmt(rel)} |' for n, v, e, rel in dc_rows]
+    lines += [f'| {n} | {v:.4f} | {"—" if e is None else f"{e:.4f}"} | {_fmt(rel)} |' for n, v, e, rel in dc_rows]
     lines += ['', 'Engine values are the probe values after the first sample (zero input) following `reset()`. '
               'Nodes the engine does not probe yet show —.', '']
 

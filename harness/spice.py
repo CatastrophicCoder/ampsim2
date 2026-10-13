@@ -86,7 +86,11 @@ def _run(netlist_text, control, files=None):
 
 
 def _key(*parts):
+    """Cache key over the parts plus the content of every included library (the netlist text names the
+    library by path only, so an edited library must not hit stale renders)."""
     h = hashlib.sha256()
+    for lib in sorted(set(re.findall(r'(?m)^\.include (\S+)', ''.join(p for p in parts if isinstance(p, str))))):
+        h.update(hashlib.sha256(Path(lib).read_bytes()).digest() if Path(lib).exists() else lib.encode())
     for p in parts:
         h.update(p if isinstance(p, bytes) else json.dumps(p, sort_keys=True).encode())
         h.update(b'\0')
