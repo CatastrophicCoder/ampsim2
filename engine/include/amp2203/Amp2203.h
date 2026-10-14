@@ -86,6 +86,8 @@ private:
     const Halfband halfband_{10.0};
     detail::FirWindow<Halfband::kTaps> decim_, interp_;
     bool powerPhase_ = false;  // true: the power amp runs at this sample
+    double iY_ = 0.0;          // exact J4: the load current at y of the last sample (A)
+    bool exactJ4() const noexcept { return cfg_.exactJ4 && cfg_.powerAmpRateDivisor == 1; }
 
     double vIn_ = 0.0;   // V at the input jack
     double vOut_ = 0.0;  // V across the 16 Ω load

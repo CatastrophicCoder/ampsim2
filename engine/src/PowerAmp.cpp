@@ -12,10 +12,12 @@ namespace {
 
 using namespace stage56;
 using devices::TriodesPentodes;
+using devices::TriodesPentodesLoad;
 
 constexpr stage::RootNetwork<kNumNodes, kNumElements, kNumRootPorts> kNet{kElements, kRoot};
-const solver::MultiportNewton<10> kRootSolver = TriodesPentodes::solver(16);  // D-045 (owner decision Q21)
-const solver::MultiportNewton<10> kDcSolver = TriodesPentodes::solver(500);  // reset() only
+// D-045 (owner decision Q21)
+const solver::MultiportNewton<kNumRootPorts> kRootSolver = TriodesPentodes::solverK<kNumRootPorts>(16);
+const solver::MultiportNewton<kNumRootPorts> kDcSolver = TriodesPentodes::solverK<kNumRootPorts>(500);  // reset() only
 constexpr std::array<double, kNumRootPorts> kNoRootOffsets{};
 constexpr double kWindingDcConductance = 1e6;  // S: the windings are shorts at DC (as PowerStage)
 constexpr Element kWindings[3] = {eLp1, eLp2, eLs};
@@ -166,11 +168,12 @@ void PowerAmp::halfStep(double vIn) noexcept {
     tuned.config.residualTol = residualTol_;
     const auto& newton = residualTol_ == kRootSolver.config.residualTol ? kRootSolver : tuned;
     double iterations = 0.0;
-    for (const double x : {0.5 * (xPrev_ + vIn), vIn}) {
-        j4_.setVoltage(x);
+    for (const int step : {0, 1}) {
+        j4_.setVoltage(step == 0 ? 0.5 * (xPrev_ + vIn) : vIn);
+        const TriodesPentodesLoad dev{step == 0 ? 0.5 * (vThPrev_ + portVTh_) : portVTh_, portG_};
         Wave wave;
         stage::reflected(elements(), wave);
-        kNet.process(h, newton, TriodesPentodes{}, wave, elementOffsets(), kNoRootOffsets);
+        kNet.process(h, newton, dev, wave, elementOffsets(), kNoRootOffsets);
         stage::incident(elements(), wave);
         iterations += h.iterations;
     }
@@ -216,8 +219,10 @@ void PowerAmp::reset(double vInDc) {
     sources[eRsB] = vScr_;
     const Wave eOff = elementOffsets();
     const double vb = PS::kBiasVoltage;
-    kNet.solveDc(root_, kDcSolver, TriodesPentodes{}, conductances(true), sources, eOff, kNoRootOffsets,
-                 {-1.5, 0.5 * vbpX_, -1.5, 0.5 * vbpX_, vb, vScr_ - 5.0, vCt_ - 1.0, vb, vScr_ - 5.0, vCt_ - 1.0});
+    kNet.solveDc(root_, kDcSolver, TriodesPentodesLoad{portVTh_, portG_}, conductances(true), sources, eOff,
+                 kNoRootOffsets,
+                 {-1.5, 0.5 * vbpX_, -1.5, 0.5 * vbpX_, vb, vScr_ - 5.0, vCt_ - 1.0, vb, vScr_ - 5.0, vCt_ - 1.0,
+                  portVTh_});
 
     auto across = [&](Element e) { return kNet.elementVoltage(root_, e, eOff); };
     c9_.setDcVoltage(across(eC9));
@@ -231,6 +236,7 @@ void PowerAmp::reset(double vInDc) {
     const auto& v = root_.node;
     ot_.setDcCurrents({(v[pA] - v[pA1]) / PS::Rwp1, (v[pB1] - v[pB]) / PS::Rwp2, v[sl] / PS::Rws});
     xPrev_ = vInDc;
+    vThPrev_ = portVTh_;
     updateOutputs(vInDc);
 }
 
@@ -273,12 +279,13 @@ double PowerAmp::process(double vIn) noexcept {
         halfStep(vIn);
         updateOutputs(vIn);
     } else {
-        const bool ok = kNet.solve(root_, newton, TriodesPentodes{}, u, vOc, wave, eOff);
+        const bool ok = kNet.solve(root_, newton, TriodesPentodesLoad{portVTh_, portG_}, u, vOc, wave, eOff);
         stage::incident(elements(), wave);  // on failure wave = reflected: states unchanged
         if (ok)
             updateOutputs(vIn);
     }
     xPrev_ = vIn;
+    vThPrev_ = portVTh_;
     return out_;
 }
 

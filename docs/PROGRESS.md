@@ -635,6 +635,15 @@ Notes:
   knob-robust, usable with other plugins). Written: `docs/ARCHITECTURE_STUDY.md` (literature, products,
   candidates A–E against latency / authenticity / CPU / knobs / verifiability / effort). M6 waits for the
   owner's direction.
+- 2026-10-14 Owner: run experiments X1 and X3 (ARCHITECTURE_STUDY §6); PyTorch 2.14.1 approved for X3.
+- X1 (branch `m6-x1-j4`): exact J4 coupling (`EngineConfig::exactJ4`, ampwav `--j4 exact`, harness
+  `AMP2203_J4=exact`): a load port rY at y on both roots (preamp: given current; power amp: the preamp's
+  linearised Thevenin source, rTh = Z_yy − Z_yp·D·(I + Z_pp·D)⁻¹·Z_py, every sample), preamp solved, power amp
+  solved against it, preamp re-solved (warm) with the actual load current. At 384 kHz: HOT 220 Hz ESR −12.6 →
+  −58.9 dB, harmonics 11.6 → 0.01 dB, HOT DI −13 → −41.5 … −42.7 dB (the HOT DI clips keep 5–8 rescued
+  first-solve failures each: 4 FAIL on newton_failures, `…_j4exact_hot.md`); full acceptance 107 PASS, CLEAN
+  (Master 1.0) −31.2 → −60.1 dB, the rest within 0.5 dB (`…_j4exact.md`). Cost at 384 kHz (10 s DI): 3352 / 4497
+  ns default / hot (main 2242 / 3016; the extra open port alone +6 %).
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_

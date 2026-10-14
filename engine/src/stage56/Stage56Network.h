@@ -46,7 +46,7 @@ enum Element : int {
 };
 
 /// Root: V3a / V3b grid and plate ports against k3, then (g, s, p) of each EL34 pair against ground.
-enum RootPort : int { rG3a, rP3a, rG3b, rP3b, rGA, rSA, rPA, rGB, rSB, rPB, kNumRootPorts };
+enum RootPort : int { rG3a, rP3a, rG3b, rP3b, rGA, rSA, rPA, rGB, rSB, rPB, rY, kNumRootPorts };  // rY: preamp at y (M6 X1)
 
 inline constexpr mna::PortNetwork<kNumElements, kNumNodes> kElements{{{
     {y, mna::kGround},
@@ -104,6 +104,7 @@ inline constexpr mna::PortNetwork<kNumRootPorts, kNumNodes> kRoot{{{
     {gB, mna::kGround},
     {sB, mna::kGround},
     {pB, mna::kGround},
+    {y, mna::kGround},
 }}};
 
 }  // namespace amp2203::stage56

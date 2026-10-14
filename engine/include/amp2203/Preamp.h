@@ -28,7 +28,7 @@ public:
     static constexpr double kSupplyBpA = 389.349603;  // CIRCUIT.md §5; B7 sets them in M4
     static constexpr double kSupplyBpX = 402.335999;
     static constexpr int kParamUpdateInterval = 32;
-    static constexpr int kNodes = 20, kElements = 38, kRootPorts = 8;
+    static constexpr int kNodes = 20, kElements = 38, kRootPorts = 9;  // 8 triode ports + the load at y
 
     // Component values, CIRCUIT.md §1 and tubes.lib (SI units).
     static constexpr double R1 = 2.7e3, R3 = 68e3, R4 = 100e3, R5 = 470e3, R6 = 10e3, R7 = 100e3;
@@ -54,6 +54,13 @@ public:
     void reset(double vInDc);
     /// One sample: guitar source voltage in, v_oc(y) out. Real-time safe.
     double process(double vIn) noexcept;
+    /// The same sample in steps, with a load current drawn at y (M6 X1, exact J4 coupling): beginSample, then
+    /// solveLoaded (repeatable: each call restarts from the state before the sample), then finishSample.
+    void beginSample(double vIn) noexcept;
+    bool solveLoaded(double iY) noexcept;
+    /// Linearised Thevenin source at y around the last solveLoaded(iY): v_y = vTh − rTh·i_y.
+    void theveninAtY(double iY, double& vTh, double& rTh) const noexcept;
+    void finishSample() noexcept;
 
     double output() const noexcept { return out_; }
     /// Output resistance at the master wiper for J4 (DECISIONS D-015 formula, as ToneStackMaster).
@@ -75,6 +82,15 @@ public:
 private:
     using Wave = std::array<double, kElements>;
     double residualTol_ = 1e-9;
+    // a sample in steps (beginSample / solveLoaded / finishSample)
+    Wave reflected_{}, incident_{}, eOff_{};
+    std::array<double, kNodes> u_{};
+    std::array<double, kRootPorts> vOc_{};
+    std::array<std::array<double, kRootPorts>, 4> saved_{};  // v, vPrev, i, vOcPrev before the sample
+    std::array<double, kNodes> savedNode_{};
+    double vInNow_ = 0.0;
+    bool ok_ = true;
+    bool solvedOnce_ = false;  // solveLoaded() ran in this sample
 
     void applyKnobs() noexcept;
     Wave conductances(bool dc) const noexcept;

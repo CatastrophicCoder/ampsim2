@@ -28,6 +28,8 @@ public:
     virtual bool setHalfStepTrigger(double) { return false; }
     /// Newton residual tolerance in volts (full amp, M6 study). False if the block has none.
     virtual bool setNewtonResidualTolerance(double) { return false; }
+    /// Exact J4 coupling (full amp, M6 X1); call before prepare(). False if the block has none.
+    virtual bool setExactJ4(bool) { return false; }
     /// Power amp at sampleRate / divisor (full amp, M6); call before prepare(). False if the block has none.
     virtual bool setPowerRateDivisor(int) { return false; }
     /// Output delay in samples added by the block (full amp at divisor 2); ampwav removes it.

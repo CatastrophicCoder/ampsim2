@@ -22,7 +22,7 @@ enum Element : int {
 
 /// Grid and plate port of each triode against its cathode. V2b's plate port is bpX − k2b: stored
 /// gnd − k2b, offset +v(bpX).
-enum RootPort : int { rG1a, rP1a, rG1b, rP1b, rG2a, rP2a, rG2b, rP2b, kNumRootPorts };
+enum RootPort : int { rG1a, rP1a, rG1b, rP1b, rG2a, rP2a, rG2b, rP2b, rY, kNumRootPorts };  // rY: load at y (M6 X1)
 
 inline constexpr mna::PortNetwork<kNumElements, kNumNodes> kElements{{{
     {g1a, mna::kGround},   // Vin behind R3
@@ -74,6 +74,7 @@ inline constexpr mna::PortNetwork<kNumRootPorts, kNumNodes> kRoot{{{
     {p2a, k2a},
     {p2a, k2b},
     {mna::kGround, k2b},
+    {y, mna::kGround},
 }}};
 
 /// Sign of v(bpX) in each port's offset: (supply at node+) − (supply at node−).
@@ -81,6 +82,6 @@ inline constexpr int kElementSupplySign[kNumElements] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   // B12
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, +1,          // B3
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};              // B4
-inline constexpr int kRootSupplySign[kNumRootPorts] = {0, 0, 0, 0, 0, 0, 0, +1};
+inline constexpr int kRootSupplySign[kNumRootPorts] = {0, 0, 0, 0, 0, 0, 0, +1, 0};
 
 }  // namespace amp2203::stage1234

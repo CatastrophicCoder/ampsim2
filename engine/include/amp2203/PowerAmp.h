@@ -30,7 +30,7 @@ public:
     using PI = PhaseInverter;
     using PS = PowerStage;
     static constexpr int kParamUpdateInterval = 32;
-    static constexpr int kNodes = 21, kElements = 42, kRootPorts = 10;
+    static constexpr int kNodes = 21, kElements = 42, kRootPorts = 11;  // 10 tube ports + the preamp at y
     static constexpr double kDefaultHalfStepTrigger = 100.0;  // V; D-043 (0 = off)
 
     PowerAmp();
@@ -46,6 +46,14 @@ public:
         vScr_ = vScreen;
         vCt_ = vCt;
     }
+    /// The preamp as a Thevenin source at y on the root port rY (M6 X1, exact J4 coupling; g = 0 leaves the
+    /// port open and J4 is the element source). Real-time safe; for the next process() / reset().
+    void setPreampPort(double vTh, double g) noexcept {
+        portVTh_ = vTh;
+        portG_ = g;
+    }
+    /// Current the root port rY draws from the preamp (A, out of the preamp's y).
+    double preampPortCurrent() const noexcept { return -root_.i[kRootPorts - 1]; }
     /// R22 value (default PI::R22; 1 TΩ opens the loop for the M4 NFB check). Not real-time.
     void setFeedbackResistance(double r);
     /// DC operating point for a constant J4 source voltage (capacitors open, windings shorted). Not real-time.
@@ -134,6 +142,7 @@ private:
     detail::RootNetworkState<kNodes, kElements, kRootPorts> half_;  // matrices at T/2 and the half-step solver state
     double halfStepTrigger_ = kDefaultHalfStepTrigger;
     double residualTol_ = 1e-9;
+    double portVTh_ = 0.0, portG_ = 0.0, vThPrev_ = 0.0;  // preamp port at y (M6 X1)
     long halfSteps_ = 0;
     double xPrev_ = 0.0;  // the previous sample's J4 source voltage (half-step midpoint)
     std::array<double, 22> bLast_{};  // reflected waves of the reactive elements before this sample's reflected()

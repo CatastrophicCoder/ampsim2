@@ -58,7 +58,8 @@ void writeStats(const std::string& path, const Options& o, double rate, size_t s
       << "  \"newton_rescued\": " << st.newtonRescued << ",\n"
       << "  \"newton_unrescued\": " << st.newtonUnrescued << ",\n"
       << "  \"power_rate_divisor\": " << o.powerRateDivisor << ",\n"
-      << "  \"newton_residual_tol\": " << o.newtonTol.value_or(1e-9) << "\n"
+      << "  \"newton_residual_tol\": " << o.newtonTol.value_or(1e-9) << ",\n"
+      << "  \"exact_j4\": " << (o.exactJ4 ? "true" : "false") << "\n"
       << "}\n";
 }
 
@@ -70,6 +71,7 @@ void printUsage(std::ostream& os) {
           "              [--units volts|fs] [--block-size N] [--stats stats.json] [--list-nodes]\n"
           "              [--knob-ramp knob=start,duration,from,to ...] [--supply node=file.wav ...]\n"
           "              [--nfb closed|open] [--power-rate-divisor 1|2] [--newton-tol V]\n"
+          "              [--j4 thevenin|exact]\n"
           "\n"
           "  --block       full, preamp (= b1234), b12, b3, b34, b4, b5, b6, b56; b7 is a pass-through\n"
           "  --in          mono WAV; 64-bit float is read bit-exact, other formats via 32-bit float\n"
@@ -90,6 +92,7 @@ void printUsage(std::ostream& os) {
           "  --power-rate-divisor  full amp: 2 runs the power amp at half the rate behind halfband filters (M6);\n"
           "                the filters' delay is removed from the output and the dumps\n"
           "  --newton-tol  full amp: Newton residual tolerance in volts (default 1e-9, M6 study)\n"
+          "  --j4          full amp: preamp -> power amp junction: thevenin (default, D-015) or exact (M6 X1)\n"
           "  --supply      drive a recorded input of the block from a WAV of the same length and rate, set every\n"
           "                sample: supply nodes (bpa, bpx, ct, nscr), the NFB speaker voltage (b5: out) or the\n"
           "                second PI output (b6: p3b) (partition studies and B5 / B6 tests, VERIFICATION §1)\n";
@@ -172,6 +175,14 @@ std::optional<Options> parseArgs(const std::vector<std::string>& args, std::stri
                 return std::nullopt;
             }
             o.halfStepTrigger = x;
+        } else if (a == "--j4") {
+            std::string v;
+            if (!value(v)) return std::nullopt;
+            if (v != "thevenin" && v != "exact") {
+                error = "--j4 expects thevenin or exact, got '" + v + "'";
+                return std::nullopt;
+            }
+            o.exactJ4 = v == "exact";
         } else if (a == "--newton-tol") {
             std::string v;
             if (!value(v)) return std::nullopt;
@@ -287,6 +298,10 @@ int run(const Options& o, std::ostream& log) {
     }
     const double rate = in.sampleRate;
 
+    if (o.exactJ4 && !runner->setExactJ4(true)) {
+        log << "ampwav: block '" << o.block << "' has no J4 option\n";
+        return 1;
+    }
     if (o.powerRateDivisor != 1 && !runner->setPowerRateDivisor(o.powerRateDivisor)) {
         log << "ampwav: block '" << o.block << "' has no power-amp rate option\n";
         return 1;

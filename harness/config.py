@@ -10,6 +10,8 @@ FS = int(os.environ.get('AMP2203_FS', DEFAULT_FS))
 POWER_DIVISOR = int(os.environ.get('AMP2203_POWER_DIVISOR', 1))
 # AMP2203_NEWTON_TOL sets the engine's Newton residual tolerance in volts (M6 study; ampwav --newton-tol)
 NEWTON_TOL = os.environ.get('AMP2203_NEWTON_TOL')
+# AMP2203_J4=exact runs the full amp with the exact preamp -> power amp junction (M6 X1; ampwav --j4 exact)
+J4 = os.environ.get('AMP2203_J4', 'thevenin')
 INPUT_VOLTS_PER_FS = 4.361     # 0 dBFS = +12 dBu at the jack (D-010); scales DI recordings
 
 ROOT = Path(__file__).resolve().parent.parent

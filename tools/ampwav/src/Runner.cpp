@@ -36,6 +36,10 @@ public:
         amp_.setNewtonResidualTolerance(v);
         return true;
     }
+    bool setExactJ4(bool on) override {
+        cfg_.exactJ4 = on;
+        return true;
+    }
     bool setPowerRateDivisor(int d) override {
         cfg_.powerAmpRateDivisor = d;
         return true;

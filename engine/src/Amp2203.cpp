@@ -16,6 +16,7 @@ namespace {
 constexpr int kDcIterations = 50;
 constexpr double kDcTolerance = 1e-9;  // V, supply node change between fixed-point rounds
 constexpr double kOpenLoopR22 = 1e12;  // Ω: "R22 → 1 TΩ" (SPEC §7 M4 NFB check)
+constexpr double kOpenJ4 = 1e12;       // Ω: the J4 element source in the exact-J4 mode (M6 X1)
 
 /// Appends `src` to `dst`, skipping `skip` and renaming per `rename` ({from, to} pairs).
 void appendProbes(std::vector<Probe>& dst, std::span<const Probe> src, std::initializer_list<const char*> skip,
@@ -92,8 +93,15 @@ void Amp2203::solveDc() {
         const double before[4] = {supply_->ct(), supply_->screen(), supply_->bpX(), supply_->bpA()};
         applySupplies();
         preamp_->reset(0.0);
-        power_->setSourceResistance(preamp_->rth4());
-        power_->reset(preamp_->output());
+        if (exactJ4()) {  // J4 element open; the preamp on the root port (at DC no current through C9)
+            power_->setSourceResistance(kOpenJ4);
+            power_->setPreampPort(preamp_->output(), 1.0 / preamp_->rth4());
+            power_->reset(0.0);
+        } else {
+            power_->setPreampPort(0.0, 0.0);
+            power_->setSourceResistance(preamp_->rth4());
+            power_->reset(preamp_->output());
+        }
         supply_->reset({power_->centreTapCurrent(), power_->screenCurrent(),
                         preamp_->supplyCurrentX() + power_->supplyCurrentX(), preamp_->supplyCurrentA()});
         const double after[4] = {supply_->ct(), supply_->screen(), supply_->bpX(), supply_->bpA()};
@@ -105,6 +113,7 @@ void Amp2203::solveDc() {
     }
     applySupplies();
     vOut_ = power_->output();
+    iY_ = 0.0;
     // rate-change filters at the DC point: the decimator holds the preamp output, the interpolator the
     // zero-stuffed power amp output (2·v at the samples where the power amp runs, 0 between; both polyphase
     // branches have unity DC gain)
@@ -124,6 +133,23 @@ void Amp2203::reset() {
 double Amp2203::processSample(double x) noexcept {
     vIn_ = x * cfg_.inputVoltsPerFullScale;
     applySupplies();
+    if (exactJ4()) {
+        // preamp with the last load current, its linearised Thevenin source at y, the power amp against it,
+        // then the preamp again with the power amp's actual load current
+        preamp_->beginSample(vIn_);
+        preamp_->solveLoaded(iY_);
+        double vTh = 0.0, rTh = 0.0;
+        preamp_->theveninAtY(iY_, vTh, rTh);
+        power_->setPreampPort(vTh, 1.0 / rTh);
+        vOut_ = power_->process(0.0);
+        iY_ = power_->preampPortCurrent();
+        preamp_->solveLoaded(iY_);
+        preamp_->finishSample();
+        supply_->process({power_->centreTapCurrent(), power_->screenCurrent(),
+                          preamp_->supplyCurrentX() + power_->supplyCurrentX(), preamp_->supplyCurrentA()});
+        const double o = vOut_ / cfg_.outputVoltsPerFullScale;
+        return std::isfinite(o) ? o : 0.0;
+    }
     const double y = preamp_->process(vIn_);
     if (cfg_.powerAmpRateDivisor == 1) {
         power_->setSourceResistance(preamp_->rth4());

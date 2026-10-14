@@ -13,6 +13,12 @@ struct TriodesPentodes {
     static constexpr int kBlockEnd[10] = {2, 2, 4, 4, 7, 7, 7, 10, 10, 10};
 
     void operator()(const solver::Vec<10>& v, solver::Vec<10>& i, solver::Mat<10>& d) const noexcept {
+        eval<10>(v, i, d);
+    }
+
+    /// The two triodes and the two pentode pairs on ports 0–9 of a K-port root.
+    template <int K>
+    static void eval(const solver::Vec<K>& v, solver::Vec<K>& i, solver::Mat<K>& d) noexcept {
         for (int t = 0; t < 2; ++t) {
             const int g = 2 * t, p = 2 * t + 1;
             const auto c = k12AX7.eval(v[g], v[p]);
@@ -41,6 +47,21 @@ struct TriodesPentodes {
         }
     }
 
+    /// Step limits of both device groups; ports from 10 on (linear) without a practical limit.
+    template <int K>
+    static solver::MultiportNewton<K> solverK(int maxIter) noexcept {
+        const auto s = solver(maxIter);
+        solver::MultiportNewton<K> r;
+        r.config = s.config;
+        for (int k = 0; k < 10; ++k) {
+            r.maxStep[k] = s.maxStep[k];
+            r.maxStepDown[k] = s.maxStepDown[k];
+        }
+        for (int k = 10; k < K; ++k)
+            r.maxStep[k] = 1e4;
+        return r;
+    }
+
     /// Step limits of both device groups (D-034, D-037, PowerStage).
     static solver::MultiportNewton<10> solver(int maxIter) noexcept {
         const auto t = TwoTriodes::solver(maxIter);
@@ -56,6 +77,20 @@ struct TriodesPentodes {
             r.maxStepDown[4 + k] = p.maxStepDown[k];
         }
         return r;
+    }
+};
+
+/// TriodesPentodes plus an eleventh port at the PI input y: the preamp as a Thevenin source (vTh behind 1/g),
+/// seen as a linear device drawing i = g·(v − vTh) (M6 X1: exact J4 coupling; g = 0: no port).
+struct TriodesPentodesLoad {
+    static constexpr int kBlockBegin[11] = {0, 0, 2, 2, 4, 4, 4, 7, 7, 7, 10};
+    static constexpr int kBlockEnd[11] = {2, 2, 4, 4, 7, 7, 7, 10, 10, 10, 11};
+    double vTh = 0.0, g = 0.0;
+
+    void operator()(const solver::Vec<11>& v, solver::Vec<11>& i, solver::Mat<11>& d) const noexcept {
+        TriodesPentodes::eval<11>(v, i, d);
+        i[10] = g * (v[10] - vTh);
+        d[10][10] = g;
     }
 };
 
