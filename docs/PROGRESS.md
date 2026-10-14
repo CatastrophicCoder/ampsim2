@@ -631,6 +631,10 @@ Notes:
   y −20.6 dB, out −12.8 dB. Master sweep (220 Hz 0.3 V, SPICE chain vs F, out): Master 0.3 −71, 0.5 −74,
   0.7 −48, 0.85 −31, 1.0 −15 dB (Presence 0.5); Presence 1.0 within 3 dB of these. The verified presets all
   use Master ≤ 0.3 except CLEAN (Master 1.0, −31 dB ESR at 25 mV).
+- 2026-10-14 Owner paused the J4 fix question: asked for a comprehensive architecture study (playable,
+  knob-robust, usable with other plugins). Written: `docs/ARCHITECTURE_STUDY.md` (literature, products,
+  candidates A–E against latency / authenticity / CPU / knobs / verifiability / effort). M6 waits for the
+  owner's direction.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
