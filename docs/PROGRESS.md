@@ -616,6 +616,11 @@ Notes:
   1e-4 V (DI ESR within 0.03 dB of 1e-9). Time (10 s DI, default / hot): 1e-9 2263 / 3042 ns; 1e-6 1979 / 2664;
   1e-5 1759 / 2495; 1e-4 1573 / 2280; 1e-3 1483 / 2139. vs 768 kHz (48 kHz band): −80.8 / −52.7 dB for 1e-9
   to 1e-5, −80.4 / −52.8 at 1e-4, −72.3 / −52.4 at 1e-3.
+- Exact-output tuning: plain resistors (wave always 0, no supply offset; 13 of 38 preamp, 14 of 42 power-amp
+  ports) left out of the open-circuit product (`RootNetwork::updateMatrices` zeroWave, `stage::plainResistors`):
+  −1 % (ESR vs before −230 / −204 dB, rounding). Inline polynomial exp / log / log1p / pow in the devices
+  (≤ 2 ulp; pow 17 ulp) in a scratch build: +24 % time (Apple libm faster in these latency-bound chains); not
+  adopted.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_

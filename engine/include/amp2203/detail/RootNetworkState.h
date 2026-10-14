@@ -10,8 +10,12 @@ namespace amp2203::detail {
 /// (WDF_DESIGN §4, DECISIONS D-028). Data only; the per-sample algorithm is in engine/src/stage/RootNetwork.h.
 template <int N, int P, int K>
 struct RootNetworkState {
-    // open-root transfer: node voltages = Xe·b − Xr·i; root-port Thevenin resistance matrix Z
+    // open-root transfer: node voltages = Xe·b − Xr·i; root-port Thevenin resistance matrix Z. Xe holds only
+    // the columns of the element ports in `active` (the first activeCount entries; ports whose wave is always
+    // zero are left out, M6), in that order.
     double Xe[N][P]{};
+    std::array<int, P> active{};
+    int activeCount = 0;
     double Xr[N][K]{};
     std::array<std::array<double, K>, K> Z{};
 

@@ -132,7 +132,10 @@ void PowerAmp::applyKnobs() noexcept {
             for (auto* c : reactive())
                 c->rescale(1.0 / step, false);
         }
-        kNet.updateMatrices(step == 1.0 ? root_ : half_, G, mutual);
+        // plain resistors reflect exactly 0 and have no offset (only the windings do): left out of the
+        // open-circuit product (M6)
+        constexpr auto kZeroWave = stage::plainResistors<decltype(elements())>();
+        kNet.updateMatrices(step == 1.0 ? root_ : half_, G, mutual, &kZeroWave);
     }
     ++updates_;
 }

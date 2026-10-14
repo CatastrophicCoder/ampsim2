@@ -113,7 +113,11 @@ void Preamp::applyKnobs() noexcept {
     vr4b_.setResistanceValue(VR4 * ltap(m));
     vr2a_.setResistanceValue(VR2 * (1.0 - atap(v)) + 1.0);
     vr2b_.setResistanceValue(VR2 * atap(v) + 1.0);
-    kNet.updateMatrices(root_, conductances(false));
+    // plain resistors not on bpX reflect exactly 0 with no offset: left out of the open-circuit product (M6)
+    auto zeroWave = stage::plainResistors<decltype(elements())>();
+    for (int k = 0; k < kNumElements; ++k)
+        zeroWave[static_cast<size_t>(k)] = zeroWave[static_cast<size_t>(k)] && kElementSupplySign[k] == 0;
+    kNet.updateMatrices(root_, conductances(false), {}, &zeroWave);
     ++updates_;
 
     // R_th4 as ToneStackMaster (D-015): VR2b ‖ (VR2a + VR3b + VR5 + VR4), capacitors open, k2b shorted

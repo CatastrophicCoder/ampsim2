@@ -5,6 +5,9 @@
 #include <cmath>
 #include <span>
 #include <tuple>
+#include <type_traits>
+
+#include <chowdsp_wdf/chowdsp_wdf.h>
 
 #include "amp2203/detail/RootNetworkState.h"
 #include "mna/PortNetwork.h"
@@ -28,6 +31,16 @@ void incident(Tuple&& elements, const std::array<double, P>& wave) noexcept {
         size_t k = 0;
         (e.incident(wave[k++]), ...);
     }, elements);
+}
+
+/// Ports of a tuple of element references that are plain resistors (reflected wave always 0, M6).
+template <class Tuple>
+constexpr auto plainResistors() noexcept {
+    using T = std::remove_cvref_t<Tuple>;
+    return []<size_t... k>(std::index_sequence<k...>) {
+        return std::array<bool, sizeof...(k)>{
+            std::is_same_v<std::remove_cvref_t<std::tuple_element_t<k, T>>, chowdsp::wdft::ResistorT<double>>...};
+    }(std::make_index_sequence<std::tuple_size_v<T>>{});
 }
 
 /// Per-sample algorithm of a linear network with a K-port nonlinear root (WDF_DESIGN §4, D-028), shared by
@@ -65,14 +78,22 @@ struct RootNetwork {
     }
 
     /// Recomputes Xe, Xr and Z for the element conductances G (plus the mutual conductances of coupled
-    /// elements). Returns false (state unchanged) if singular.
-    bool updateMatrices(State& s, const EVec& G, std::span<const mna::Mutual> mutual = {}) const noexcept {
+    /// elements). `zeroWave` (optional) marks element ports whose wave minus offset is always exactly 0 (plain
+    /// resistors without a supply offset): their Xe columns are left out of the open-circuit product (M6; the
+    /// sum then skips exact zeros and is grouped differently, so results change at the rounding level).
+    /// Returns false (state unchanged) if singular.
+    bool updateMatrices(State& s, const EVec& G, std::span<const mna::Mutual> mutual = {},
+                        const std::array<bool, P>* zeroWave = nullptr) const noexcept {
         double Xe[N][P], Xr[N][K];
         if (!mna::rootTransfer(elements, root, G, Xe, Xr, mutual))
             return false;
+        s.activeCount = 0;
+        for (int j = 0; j < P; ++j)
+            if (zeroWave == nullptr || !(*zeroWave)[static_cast<size_t>(j)])
+                s.active[static_cast<size_t>(s.activeCount++)] = j;
         for (int n = 0; n < N; ++n) {
-            for (int j = 0; j < P; ++j)
-                s.Xe[n][j] = Xe[n][j];
+            for (int c = 0; c < P; ++c)
+                s.Xe[n][c] = c < s.activeCount ? Xe[n][s.active[static_cast<size_t>(c)]] : 0.0;
             for (int r = 0; r < K; ++r)
                 s.Xr[n][r] = Xr[n][r];
         }
@@ -84,10 +105,13 @@ struct RootNetwork {
     void openCircuit(const State& s, const EVec& wave, const EVec& eOffset, const RVec& rOffset,
                      std::array<double, N>& u, RVec& vOc) const noexcept {
         std::array<double, P> b;
-        for (int j = 0; j < P; ++j)
-            b[static_cast<size_t>(j)] = wave[static_cast<size_t>(j)] - eOffset[static_cast<size_t>(j)];
+        const int m = s.activeCount;
+        for (int c = 0; c < m; ++c) {
+            const auto j = static_cast<size_t>(s.active[static_cast<size_t>(c)]);
+            b[static_cast<size_t>(c)] = wave[j] - eOffset[j];
+        }
         for (int n = 0; n < N; ++n)
-            u[n] = dot<P>(s.Xe[n], b.data());
+            u[n] = dot(s.Xe[n], b.data(), m);
         for (int r = 0; r < K; ++r)
             vOc[r] = across(root.ports[r], u) + rOffset[r];
     }
@@ -96,6 +120,9 @@ struct RootNetwork {
     /// single chain; the rounding differs from the plain loop at the last-bit level, D-047).
     template <int M>
     static double dot(const double* a, const double* b) noexcept {
+        return dot(a, b, M);
+    }
+    static double dot(const double* a, const double* b, int M) noexcept {
         double s0 = 0.0, s1 = 0.0, s2 = 0.0, s3 = 0.0;
         int j = 0;
         for (; j + 3 < M; j += 4) {
