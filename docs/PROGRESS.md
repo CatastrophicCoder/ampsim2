@@ -498,7 +498,7 @@ Notes:
 - [x] `amp2203_bench` real-time factor: 0.42 (≥ 10 not met; profiled, Q22)
 - [x] pluginval (VST3, AU), auval: pass
 - [x] Wrapper null test vs `ampwav`: −92.6 to −110.9 dB
-- [x] M5 report: `harness/reports/M5/20261013_M5_report.md` — awaiting owner review
+- [x] M5 report: `harness/reports/M5/20261013_M5_report.md` — closed by the owner 2026-10-14
 Plan (2026-10-13; follows SPEC §7 M5, §3.3–3.5, §6.3, D-035):
 
 Step 1 — Processor (`plugin/src/`, the only JUCE code)
@@ -552,6 +552,9 @@ Notes:
   (AU installed in ~/Library/Audio/Plug-Ins: owner decision), Presence knob jump −77 dB, automation: no NaN,
   6367 first-solve Newton failures all rescued (Q21), real-time factor 0.42 (Q22). M5 stops here for review.
 - 2026-10-14 M5: owner decision after the rate study (D-047): Oversampling 2x / 4x / 8x / 16x, default 8x (D-048).
+- 2026-10-14 M5 closed by the owner. Deviations from SPEC §7 M5 carried with the close: real-time factor
+  0.53 at 16x (target ≥ 10; plugin at the 8x default 0.97–1.17), and under automation at high Master 90
+  first-solve Newton failures at 768 kHz, all rescued (D-042, D-045). 2x / 4x have no SPICE pass (D-047).
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
