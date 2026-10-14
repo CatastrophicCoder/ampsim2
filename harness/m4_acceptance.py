@@ -37,6 +37,8 @@ from .tolerances import status
 from .wavio import read_wav, write_wav
 
 SECTIONS = ('dc', 'nfb', 'clean', 'stability', 'overdrive', 'crunch_drive')
+# run only with --only: HOT (Master, Presence 1.0) as CRUNCH / DRIVE, same tolerances (M6, owner request)
+EXTRA_SECTIONS = ('hot',)
 NFB_FREQS = (100.0, 1000.0, 5000.0)
 NFB_AMP = 0.001
 EL34 = {'ip_tube_a': '@b.x4.bp[i]', 'ip_tube_b': '@b.x6.bp[i]', 'is_tube_a': '@b.x4.bs[i]', 'is_tube_b': '@b.x6.bs[i]'}
@@ -193,10 +195,10 @@ def check_overdrive(rep, notes):
     return [_sine_compare(rep, 'overdrive', pid, sig, f_res, e_res, sag=True)]
 
 
-def check_crunch_drive(rep, notes, jobs):
+def check_crunch_drive(rep, notes, jobs, pids=('CRUNCH', 'DRIVE'), section='crunch_drive'):
     texts = cascade._texts()
     work = []
-    for pid in ('CRUNCH', 'DRIVE'):
+    for pid in pids:
         for sig in PRESETS[pid].signals(BLOCKS['full']):
             work.append((pid, sig))
 
@@ -208,14 +210,14 @@ def check_crunch_drive(rep, notes, jobs):
     rows = []
     with ThreadPoolExecutor(max_workers=jobs or os.cpu_count()) as ex:
         for pid, sig, f_res, e_res in ex.map(one, work):
-            rows.append(_sine_compare(rep, 'crunch_drive', pid, sig, f_res, e_res))
+            rows.append(_sine_compare(rep, section, pid, sig, f_res, e_res))
     return rows
 
 
-def write_report(rep, res, notes):
+def write_report(rep, res, notes, only=None):
     # rate studies (AMP2203_FS, M5) go to the M5 folder with the rate in the name; power-amp rate studies
     # (AMP2203_POWER_DIVISOR, M6) to M6 with the divisor too
-    m6 = config.POWER_DIVISOR != 1 or config.NEWTON_TOL
+    m6 = config.POWER_DIVISOR != 1 or config.NEWTON_TOL or (only and 'hot' in only)
     out = config.REPORT_DIR / ('M6' if m6 else 'M4' if config.FS == config.DEFAULT_FS else 'M5')
     out.mkdir(parents=True, exist_ok=True)
     stem = f'{datetime.date.today().strftime("%Y%m%d")}_full_acceptance'
@@ -225,6 +227,8 @@ def write_report(rep, res, notes):
         stem += f'_pdiv{config.POWER_DIVISOR}'
     if config.NEWTON_TOL:
         stem += f'_tol{config.NEWTON_TOL}'
+    if only:  # a subset of sections gets its own file
+        stem += '_' + '-'.join(only)
     npass = sum(r[6] == 'PASS' for r in rep.rows)
     nfail = sum(r[6] == 'FAIL' for r in rep.rows)
     lines = [f'# M4 acceptance: full amplifier vs the full netlist', '',
@@ -252,7 +256,7 @@ def write_report(rep, res, notes):
             sc, ec = res['nfb'][('closed', f)]
             so, eo = res['nfb'][('open', f)]
             lines.append(f'| {f:g} Hz | {sc:.2f} | {ec:.2f} | {so:.2f} | {eo:.2f} | {so - sc:.2f} | {eo - ec:.2f} |')
-    sine_rows = [r for k in ('clean', 'overdrive', 'crunch_drive') for r in res.get(k, [])]
+    sine_rows = [r for k in ('clean', 'overdrive', 'crunch_drive', 'hot') for r in res.get(k, [])]
     if sine_rows:
         lines += ['', '## Signals', '', '| Preset | Signal | ESR | best lag | harm. 2–9 | THD F / E | Power F / E | '
                   'min v(ct) F / E |', '|---|---|---|---|---|---|---|---|']
@@ -275,7 +279,7 @@ def write_report(rep, res, notes):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('--only', help='comma-separated sections: ' + ', '.join(SECTIONS))
+    ap.add_argument('--only', help='comma-separated sections: ' + ', '.join(SECTIONS + EXTRA_SECTIONS))
     ap.add_argument('--jobs', type=int)
     a = ap.parse_args()
     sections = a.only.split(',') if a.only else list(SECTIONS)
@@ -294,9 +298,11 @@ def main():
             res[sec] = check_overdrive(rep, notes)
         elif sec == 'crunch_drive':
             res[sec] = check_crunch_drive(rep, notes, a.jobs)
+        elif sec == 'hot':
+            res[sec] = check_crunch_drive(rep, notes, a.jobs, ('HOT',), 'hot')
         else:
             ap.error(f'unknown section {sec}')
-    path = write_report(rep, res, notes)
+    path = write_report(rep, res, notes, sections if a.only else None)
     nfail = sum(r[6] == 'FAIL' for r in rep.rows)
     print(f'm4_acceptance: wrote {path.relative_to(config.ROOT)} ({nfail} FAIL)')
 

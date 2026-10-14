@@ -621,6 +621,16 @@ Notes:
   −1 % (ESR vs before −230 / −204 dB, rounding). Inline polynomial exp / log / log1p / pow in the devices
   (≤ 2 ulp; pow 17 ulp) in a scratch build: +24 % time (Apple libm faster in these latency-bound chains); not
   adopted.
+- 2026-10-14 Q24 answered (owner): Newton tolerance stays 1e-9 V; the half-rate power amp becomes a plugin
+  choice, default off; first a SPICE reference at Master + Presence 1.0 ("render it first").
+- HOT preset (Master, Presence 1.0; 220 Hz 0.3 V and the 4 DI clips; `m4_acceptance --only hot`, CRUNCH /
+  DRIVE tolerances) at 384 kHz: full rate 11 PASS / 10 FAIL (`harness/reports/M6/20261014_full_acceptance_fs384000_hot.md`):
+  ESR −12.6 to −13.3 dB (≤ −20), harmonics 2–9 11.6 dB (≤ 1.5), 3–8 first-solve Newton failures per DI clip
+  (all rescued); half rate the same 10 FAIL (`…_pdiv2_hot.md`). Cause: the J4 partition (D-015 resistive
+  R_th4, y open on the preamp side). The SPICE chain alone (P56 vs F, no engine) gives the same numbers:
+  y −20.6 dB, out −12.8 dB. Master sweep (220 Hz 0.3 V, SPICE chain vs F, out): Master 0.3 −71, 0.5 −74,
+  0.7 −48, 0.85 −31, 1.0 −15 dB (Presence 0.5); Presence 1.0 within 3 dB of these. The verified presets all
+  use Master ≤ 0.3 except CLEAN (Master 1.0, −31 dB ESR at 25 mV).
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_

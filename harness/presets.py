@@ -23,7 +23,7 @@ class Preset:
             return [signals.sine(1000.0, 0.025)]
         if self.id == 'OVERDRIVE':
             return [signals.sine(220.0, 0.3)]
-        if self.id in ('CRUNCH', 'DRIVE'):
+        if self.id in ('CRUNCH', 'DRIVE', 'HOT'):
             return [signals.sine(220.0, 0.3)] + signals.di_signals()
         if self.id.startswith('TONE-'):
             return [signals.sweep(block.levels.get('small') or block.levels['nominal'], 'SWP-lo')]
@@ -51,6 +51,7 @@ PRESETS = {
     'OVERDRIVE': Preset('OVERDRIVE', {'preampVolume': 0.8, 'master': 0.3}, '300 mV peak 220 Hz (SPEC §7 M4 overdrive)'),
     'CRUNCH': Preset('CRUNCH', {'preampVolume': 0.6, 'master': 0.3}, '300 mV peak 220 Hz, DI clips'),
     'DRIVE': Preset('DRIVE', {'preampVolume': 1.0, 'master': 0.3}, '300 mV peak 220 Hz, DI clips'),
+    'HOT': Preset('HOT', {'master': 1.0, 'presence': 1.0}, 'Master and Presence 1.0; 300 mV peak 220 Hz, DI clips (M6)'),
     'PRES0': Preset('PRES0', {'presence': 0.0}, 'Presence 0; standard signal set (M4 J5 study)'),
     'PRES1': Preset('PRES1', {'presence': 1.0}, 'Presence 1; standard signal set (M4 J5 study)'),
     'PIPE': Preset('PIPE', {}, 'Pipeline smoke test: one 50 ms nominal 1 kHz sine'),
