@@ -45,6 +45,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout Amp2203Processor::layout() {
                                                        juce::StringArray{"2x", "4x", "8x", "16x"}, 2));
     l.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"oversamplingFilter", 1}, "Oversampling Filter",
                                                        juce::StringArray{"Linear phase (FIR)", "Low latency (IIR)"}, 0));
+    // power amp at the oversampled rate or at half of it (M6, D-049; faster, less accurate)
+    l.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"powerAmpRate", 1}, "Power Amp Rate",
+                                                       juce::StringArray{"Full", "Half"}, 0));
     return l;
 }
 
@@ -61,6 +64,7 @@ Amp2203Processor::~Amp2203Processor() { stopTimer(); }
 void Amp2203Processor::rebuild(double hostRate, int maxBlock) {
     activeChoice_ = static_cast<int>(apvts_.getRawParameterValue("oversampling")->load());
     activeFilter_ = static_cast<int>(apvts_.getRawParameterValue("oversamplingFilter")->load());
+    activePowerRate_ = static_cast<int>(apvts_.getRawParameterValue("powerAmpRate")->load());
     activeFactor_ = factorFor(activeChoice_);
     const auto order = static_cast<size_t>(std::log2(activeFactor_));
     const auto type = activeFilter_ == 0 ? juce::dsp::Oversampling<double>::filterHalfBandFIREquiripple
@@ -72,6 +76,7 @@ void Amp2203Processor::rebuild(double hostRate, int maxBlock) {
     amp2203::EngineConfig cfg;
     cfg.sampleRate = hostRate * activeFactor_;
     cfg.maxBlockSize = maxBlock * activeFactor_;
+    cfg.powerAmpRateDivisor = activePowerRate_ == 1 ? 2 : 1;
     engine_.prepare(cfg);
     pushParams();
     engine_.reset();  // DC operating point at the current knobs (SPEC §3.6)
@@ -79,7 +84,9 @@ void Amp2203Processor::rebuild(double hostRate, int maxBlock) {
     outLevel_.reset(hostRate, 0.02);
     trim_.setCurrentAndTargetValue(juce::Decibels::decibelsToGain(apvts_.getRawParameterValue("inputTrim")->load()));
     outLevel_.setCurrentAndTargetValue(juce::Decibels::decibelsToGain(apvts_.getRawParameterValue("outputLevel")->load()));
-    setLatencySamples(static_cast<int>(std::lround(oversampler_->getLatencyInSamples())));
+    // oversampler plus the engine's rate-change filters (half-rate power amp), in host samples
+    setLatencySamples(static_cast<int>(std::lround(oversampler_->getLatencyInSamples() +
+                                                   static_cast<double>(engine_.latencySamples()) / activeFactor_)));
 }
 
 void Amp2203Processor::prepareToPlay(double sampleRate, int samplesPerBlock) {
@@ -91,13 +98,14 @@ void Amp2203Processor::prepareToPlay(double sampleRate, int samplesPerBlock) {
 }
 
 void Amp2203Processor::timerCallback() {
-    // oversampling factor / filter changes rebuild the oversampler and re-prepare the engine: allocation,
+    // oversampling factor / filter and power-amp rate changes rebuild the oversampler and re-prepare the engine: allocation,
     // so on the message thread with processing suspended
     if (!prepared_)
         return;
     const int choice = static_cast<int>(apvts_.getRawParameterValue("oversampling")->load());
     const int filter = static_cast<int>(apvts_.getRawParameterValue("oversamplingFilter")->load());
-    if (choice == activeChoice_ && filter == activeFilter_)
+    const int powerRate = static_cast<int>(apvts_.getRawParameterValue("powerAmpRate")->load());
+    if (choice == activeChoice_ && filter == activeFilter_ && powerRate == activePowerRate_)
         return;
     suspendProcessing(true);
     rebuild(hostRate_, maxBlock_);

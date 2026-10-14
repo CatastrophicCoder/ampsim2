@@ -65,7 +65,7 @@ private:
     juce::SmoothedValue<double, juce::ValueSmoothingTypes::Multiplicative> trim_, outLevel_;
     double hostRate_ = 48000.0;
     int maxBlock_ = 512;
-    int activeFactor_ = 16, activeChoice_ = 0, activeFilter_ = 0;
+    int activeFactor_ = 16, activeChoice_ = 0, activeFilter_ = 0, activePowerRate_ = 0;
     std::atomic<bool> prepared_{false};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Amp2203Processor)

@@ -319,7 +319,8 @@ Must reproduce `reference/spice/tubes.lib` exactly (same equations and parameter
 ### 6.3 Plugin parameters (M5)
 Preamp Volume, Treble, Middle, Bass, Master, Presence (0–10 display, rotation internally),
 Interface Level (dBu at 0 dBFS, 0..+24 dBu, default +12.0 dBu; sets `inputVoltsPerFullScale`),
-Input Trim (−24..+24 dB, default 0 dB), Output Level (−48..+12 dB), Oversampling (2x/4x/8x/16x, default 8x),
+Input Trim (−24..+24 dB, default 0 dB), Output Level (−48..+12 dB), Oversampling (2x/4x/8x/16x, default 8x), Power Amp Rate (Full / Half, default
+Full; D-049),
 optional Cabinet IR on/off with file chooser (only if implemented in this repo; see 1.3).
 
 ---

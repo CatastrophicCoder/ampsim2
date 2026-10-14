@@ -854,3 +854,23 @@ real-time cost doubled; at 192 kHz 1.536 MHz, not verified). 2x (96 kHz inside a
 verification; the M5 measurement at 2x showed Newton failures not rescued at Master + Presence 10 (M5 report,
 Q22 table). States saved with the old choice list restore to the next higher factor (old index 0 Auto → 2x,
 1 2x → 4x, 2 4x → 8x, 3 8x → 16x; 4 clamps to 16x).
+
+## D-049 M6 performance: exact-output changes, half-rate power amp as a plugin option, Newton tolerance kept
+Date: 2026-10-14 · Status: accepted (owner decisions Q23, Q24)
+Context: M6 scope performance (owner). Baseline at the 8x default (384 kHz): 2270 ns per engine sample,
+real-time factor 1.15 (Master + Presence 1.0: 0.83). Measurements in PROGRESS.md M6 notes.
+Decision:
+- Kept: the elimination in `solver::solveLinear` unrolled at compile time (bit-identical); plain-resistor
+  ports (wave always 0, no supply offset) left out of the open-circuit product (`stage::plainResistors`,
+  `RootNetwork::updateMatrices` zeroWave; rounding-level change). Together −2 to −4 %.
+- Newton residual tolerance stays 1e-9 V (WDF_DESIGN §4.3). Studied (`--newton-tol`, acceptance at 384 kHz
+  107 PASS at 1e-7…1e-4 V; −12 / −22 / −30 % time at 1e-6 / 1e-5 / 1e-4); owner: keep 1e-9.
+- Power amp at half rate (`EngineConfig::powerAmpRateDivisor`, halfband FIR 35 taps / Kaiser β 10, 34 samples
+  delay at the engine rate reported by `Amp2203::latencySamples()`): a plugin parameter "Power Amp Rate"
+  (Full / Half, default Full); the plugin adds the delay to its latency. At 384 kHz: −24 to −26 % time;
+  acceptance 107 PASS, DI ESR −55.2 to −57.6 dB (full rate −60.8 to −62.7).
+- Not adopted: build flags (≤ 3 %), LU reuse after small steps (≤ 5 %, output moves from a 1 V threshold),
+  inline polynomial exp / log (+24 % time), two threads (owner: not chosen).
+Consequences: SPEC §6.3 lists Power Amp Rate. The HOT preset study (PROGRESS.md M6) found the J4 partition
+error at high Master, independent of these changes.
+

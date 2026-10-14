@@ -5,7 +5,7 @@
 namespace {
 constexpr const char* kKnobIds[] = {"preampVolume", "treble", "middle", "bass", "master", "presence",
                                     "interfaceLevel", "inputTrim", "outputLevel"};
-constexpr const char* kChoiceIds[] = {"oversampling", "oversamplingFilter"};
+constexpr const char* kChoiceIds[] = {"oversampling", "oversamplingFilter", "powerAmpRate"};
 constexpr int kKnobSize = 90, kLabelHeight = 20, kMargin = 12;
 }  // namespace
 
@@ -32,7 +32,7 @@ Amp2203Editor::Amp2203Editor(Amp2203Processor& p) : AudioProcessorEditor(p) {
         c->attachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(apvts, id, c->box);
         choices_.push_back(std::move(c));
     }
-    setSize(6 * (kKnobSize + kMargin) + kMargin, 2 * (kKnobSize + kLabelHeight + 18 + kMargin) + 60);
+    setSize(6 * (kKnobSize + kMargin) + kMargin, 2 * (kKnobSize + kLabelHeight + 18 + kMargin) + kLabelHeight + 26 + kMargin + 60);
 }
 
 Amp2203Editor::~Amp2203Editor() = default;
@@ -60,9 +60,11 @@ void Amp2203Editor::resized() {
     auto row2 = area.removeFromTop(kKnobSize + kLabelHeight + 18);
     for (int k = 6; k < 9; ++k)
         place(row2, *knobs_[static_cast<size_t>(k)]);
+    area.removeFromTop(kMargin);
+    auto row3 = area.removeFromTop(kLabelHeight + 26);
     for (auto& c : choices_) {
-        auto cell = row2.removeFromLeft(kKnobSize * 2);
-        row2.removeFromLeft(kMargin);
+        auto cell = row3.removeFromLeft(kKnobSize * 2);
+        row3.removeFromLeft(kMargin);
         c->label.setBounds(cell.removeFromTop(kLabelHeight));
         c->box.setBounds(cell.removeFromTop(26));
     }
