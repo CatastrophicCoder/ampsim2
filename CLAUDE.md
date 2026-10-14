@@ -78,6 +78,7 @@ python -m harness.render_spice --block <id> --preset <id>  # SPICE reference (ca
 python -m harness.run_engine --block <id> --preset <id>
 python -m harness.compare --block <id> --preset <id> --milestone M<n>   # renders + runs + report
 python -m unittest discover -s harness/tests -t .          # harness unit tests
+python -m harness.x3_neural render|train|evaluate          # M6 X3: LSTM trained on the engine (needs requirements-ml.txt, D-050)
 ```
 Planned: none (all M0 commands exist; later milestones add theirs here).
 

@@ -874,3 +874,11 @@ Decision:
 Consequences: SPEC §6.3 lists Power Amp Rate. The HOT preset study (PROGRESS.md M6) found the J4 partition
 error at high Master, independent of these changes.
 
+## D-050 PyTorch 2.14.1 for the neural-model experiment (X3)
+Date: 2026-10-14 · Status: accepted (owner decision: "PyTorch 2.14.1")
+Context: ARCHITECTURE_STUDY.md §6 X3 trains a small recurrent network on the engine's output.
+Decision: `torch==2.14.1`, pinned in `requirements-ml.txt` (separate from `requirements.txt`; the harness and
+the engine do not need it). Inference cost is measured with hand-written C++ in the experiment, so the engine and
+plugin have no new dependency.
+Consequences: `pip install -r requirements-ml.txt` in the venv before `python -m harness.x3_neural`.
+
