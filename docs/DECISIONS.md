@@ -781,7 +781,7 @@ Decision:
 - `Amp2203Processor` (plugin/src): APVTS parameters per SPEC §6.3 (knobs 0–10 shown, rotation = value / 10;
   Interface Level 0..+24 dBu, default +12, sets `Amp2203::setInputVoltsPerFullScale` (new real-time setter,
   D-012 addition); Input Trim ±24 dB and Output Level −48..+12 dB as smoothed gains in the wrapper);
-  Oversampling Auto / 2x / 4x / 8x / 16x (Auto = SPEC §3.4 by host rate); Oversampling Filter linear-phase
+  Oversampling Auto / 2x / 4x / 8x / 16x (Auto = SPEC §3.4 by host rate; replaced by D-048); Oversampling Filter linear-phase
   FIR or polyphase IIR (`juce::dsp::Oversampling<double>`, maximum quality, integer latency). Latency via
   `setLatencySamples` (FIR 67, IIR 6 samples at 16x / 48 kHz). Mono: the left (or only) input channel, the
   output on every channel. A factor or filter change rebuilds on the message thread (10 Hz timer,
@@ -840,3 +840,15 @@ writes `harness/reports/M5/20261014_full_acceptance_fs384000.md`: 107 PASS, 0 FA
 first-solve failures on five DI runs, 2 of them not rescued by the fallback); DI ESR −54.4 to −57.1 dB, sines and NFB as at 768 kHz.
 Consequences: the earlier "8x vs 16x render" comparison (−42 to −47 dB) mixed two oversampling filter chains
 and is not a measure of the engine's accuracy; the SPICE comparison at each rate is.
+
+## D-048 Plugin oversampling 4x / 8x / 16x, default 8x
+Date: 2026-10-14 · Status: accepted (owner decision after D-047)
+Context: rate study D-047: at 48 kHz, 8x (384 kHz) passes the full-amp acceptance as 16x does (107 PASS, DI
+−60.8 to −62.7 dB) at about twice the real-time factor (0.97–1.17 vs 0.55–0.61); 4x (192 kHz) 102 PASS /
+5 FAIL, 1.71–2.27.
+Decision: the Oversampling parameter offers 4x, 8x and 16x (choice index 0 / 1 / 2), default 8x; Auto and 2x
+are removed, and the factor no longer depends on the host rate. `amp2203_render --factor` accepts 4 / 8 / 16
+(default 8).
+Consequences: at host rates above 48 kHz the engine runs above the verified rates (8x at 96 kHz = 768 kHz,
+real-time cost doubled; at 192 kHz 1.536 MHz, not verified). States saved with the old choice list restore
+to a different factor (old index 0 Auto → 4x, 1 2x → 8x, 2 4x → 16x; indices 3 / 4 clamp to 16x).

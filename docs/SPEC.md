@@ -152,9 +152,9 @@ DECISIONS D-033), `PhaseInverter`, `PowerStage` (verified sub-blocks of `PowerAm
 ### 3.4 Sample rate and oversampling
 - The engine runs at whatever rate `prepare()` receives. The JUCE plugin layer wraps it with
   `juce::dsp::Oversampling` and passes the oversampled rate.
-- Default plugin oversampling: 16x at 44.1/48 kHz, 8x at 88.2/96 kHz, 4x at 176.4/192 kHz, so the
-  internal rate is about 700–770 kHz (DECISIONS D-035; was 8x / about 384 kHz). Exposed as a parameter
-  (2x/4x/8x/16x).
+- Plugin oversampling: a parameter with 4x / 8x / 16x, default 8x, the same factor at every host rate
+  (DECISIONS D-048, owner decision after the D-047 rate study; was 16x / 8x / 4x by host rate, D-035).
+  At 48 kHz 8x is 384 kHz inside, verified against SPICE like 768 kHz (D-047).
 - Verification runs the engine directly at 768 kHz (16 x 48 kHz) on signals generated at that rate, so
   no resampler sits between SPICE and the engine. See `VERIFICATION.md`. (At 384 kHz the preamp's
   fastest cutoff transitions were not resolved: D-034, D-035.)
@@ -319,7 +319,7 @@ Must reproduce `reference/spice/tubes.lib` exactly (same equations and parameter
 ### 6.3 Plugin parameters (M5)
 Preamp Volume, Treble, Middle, Bass, Master, Presence (0–10 display, rotation internally),
 Interface Level (dBu at 0 dBFS, 0..+24 dBu, default +12.0 dBu; sets `inputVoltsPerFullScale`),
-Input Trim (−24..+24 dB, default 0 dB), Output Level (−48..+12 dB), Oversampling (2x/4x/8x/16x),
+Input Trim (−24..+24 dB, default 0 dB), Output Level (−48..+12 dB), Oversampling (4x/8x/16x, default 8x),
 optional Cabinet IR on/off with file chooser (only if implemented in this repo; see 1.3).
 
 ---

@@ -13,9 +13,8 @@
 /// inside juce::dsp::Oversampling, latency reported to the host (DECISIONS D-044).
 class Amp2203Processor final : public juce::AudioProcessor, private juce::Timer {
 public:
-    /// Oversampling choice: 0 = auto (SPEC §3.4: 16x at 44.1 / 48 kHz, 8x at 88.2 / 96, 4x at 176.4 / 192),
-    /// then 2x, 4x, 8x, 16x.
-    static int factorFor(int choice, double hostRate) noexcept;
+    /// Oversampling choice: 0 = 4x, 1 = 8x (default), 2 = 16x, at any host rate (SPEC §3.4, D-048).
+    static int factorFor(int choice) noexcept;
     static double interfaceVoltsPerFullScale(double dBu) noexcept;  // SPEC §3.3
 
     Amp2203Processor();

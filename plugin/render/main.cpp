@@ -1,9 +1,9 @@
 // amp2203_render — offline renders through the plugin's processor (SPEC §7 M5 null test, DECISIONS D-044).
-//   amp2203_render plugin --in x.wav --out y.wav [--factor 16] [--filter fir|iir] [--param id=value ...]
+//   amp2203_render plugin --in x.wav --out y.wav [--factor 8] [--filter fir|iir] [--param id=value ...]
 //       the whole Amp2203Processor (oversampling, engine, levels); --param uses the plugin's parameter ids and
 //       displayed values (knobs 0–10, levels in dB / dBu)
-//   amp2203_render up   --in x.wav --out x_os.wav [--factor 16] [--filter fir|iir]   oversampler up stage only
-//   amp2203_render down --in y_os.wav --out y.wav [--factor 16] [--filter fir|iir]   oversampler down stage only
+//   amp2203_render up   --in x.wav --out x_os.wav [--factor 8] [--filter fir|iir]   oversampler up stage only
+//   amp2203_render down --in y_os.wav --out y.wav [--factor 8] [--filter fir|iir]   oversampler down stage only
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
         return fail("usage: amp2203_render plugin|up|down --in a.wav --out b.wav [--factor N] [--filter fir|iir] [--param id=v]");
     const std::string mode = argv[1];
     std::string inPath, outPath, filter = "fir";
-    int factor = 16;
+    int factor = 8;
     std::map<std::string, float> params;
     for (int i = 2; i + 1 < argc; i += 2) {
         const std::string a = argv[i], v = argv[i + 1];
@@ -59,8 +59,8 @@ int main(int argc, char** argv) {
         else
             return fail("unknown option " + a);
     }
-    if (factor != 2 && factor != 4 && factor != 8 && factor != 16)
-        return fail("--factor must be 2, 4, 8 or 16");
+    if (factor != 4 && factor != 8 && factor != 16)
+        return fail("--factor must be 4, 8 or 16");
     const bool fir = filter == "fir";
     ampwav::MonoWav in;
     std::string err;
@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
             p->setValueNotifyingHost(p->convertTo0to1(value));
             return true;
         };
-        set("oversampling", static_cast<float>(std::log2(factor)));  // choice index: 1 = 2x … 4 = 16x
+        set("oversampling", static_cast<float>(std::log2(factor)) - 2.0f);  // choice index: 0 = 4x, 1 = 8x, 2 = 16x
         set("oversamplingFilter", fir ? 0.0f : 1.0f);
         for (const auto& [id, v] : params)
             if (!set(id, v))

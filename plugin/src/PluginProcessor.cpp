@@ -14,10 +14,8 @@ juce::String tenths(float v, int) { return juce::String(v, 1); }
 
 }  // namespace
 
-int Amp2203Processor::factorFor(int choice, double hostRate) noexcept {
-    if (choice >= 1 && choice <= 4)
-        return 1 << choice;
-    return hostRate < 60000.0 ? 16 : (hostRate < 120000.0 ? 8 : 4);
+int Amp2203Processor::factorFor(int choice) noexcept {
+    return choice <= 0 ? 4 : (choice == 1 ? 8 : 16);
 }
 
 double Amp2203Processor::interfaceVoltsPerFullScale(double dBu) noexcept {
@@ -43,7 +41,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout Amp2203Processor::layout() {
                                                       juce::NormalisableRange<float>(-48.0f, 12.0f, 0.1f), 0.0f,
                                                       juce::AudioParameterFloatAttributes().withLabel("dB")));
     l.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"oversampling", 1}, "Oversampling",
-                                                       juce::StringArray{"Auto", "2x", "4x", "8x", "16x"}, 0));
+                                                       juce::StringArray{"4x", "8x", "16x"}, 1));
     l.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"oversamplingFilter", 1}, "Oversampling Filter",
                                                        juce::StringArray{"Linear phase (FIR)", "Low latency (IIR)"}, 0));
     return l;
@@ -62,7 +60,7 @@ Amp2203Processor::~Amp2203Processor() { stopTimer(); }
 void Amp2203Processor::rebuild(double hostRate, int maxBlock) {
     activeChoice_ = static_cast<int>(apvts_.getRawParameterValue("oversampling")->load());
     activeFilter_ = static_cast<int>(apvts_.getRawParameterValue("oversamplingFilter")->load());
-    activeFactor_ = factorFor(activeChoice_, hostRate);
+    activeFactor_ = factorFor(activeChoice_);
     const auto order = static_cast<size_t>(std::log2(activeFactor_));
     const auto type = activeFilter_ == 0 ? juce::dsp::Oversampling<double>::filterHalfBandFIREquiripple
                                          : juce::dsp::Oversampling<double>::filterHalfBandPolyphaseIIR;
