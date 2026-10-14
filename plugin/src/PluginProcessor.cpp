@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include "PluginEditor.h"
@@ -15,7 +16,7 @@ juce::String tenths(float v, int) { return juce::String(v, 1); }
 }  // namespace
 
 int Amp2203Processor::factorFor(int choice) noexcept {
-    return choice <= 0 ? 4 : (choice == 1 ? 8 : 16);
+    return 2 << std::clamp(choice, 0, 3);
 }
 
 double Amp2203Processor::interfaceVoltsPerFullScale(double dBu) noexcept {
@@ -41,7 +42,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout Amp2203Processor::layout() {
                                                       juce::NormalisableRange<float>(-48.0f, 12.0f, 0.1f), 0.0f,
                                                       juce::AudioParameterFloatAttributes().withLabel("dB")));
     l.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"oversampling", 1}, "Oversampling",
-                                                       juce::StringArray{"4x", "8x", "16x"}, 1));
+                                                       juce::StringArray{"2x", "4x", "8x", "16x"}, 2));
     l.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"oversamplingFilter", 1}, "Oversampling Filter",
                                                        juce::StringArray{"Linear phase (FIR)", "Low latency (IIR)"}, 0));
     return l;

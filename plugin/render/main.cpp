@@ -59,8 +59,8 @@ int main(int argc, char** argv) {
         else
             return fail("unknown option " + a);
     }
-    if (factor != 4 && factor != 8 && factor != 16)
-        return fail("--factor must be 4, 8 or 16");
+    if (factor != 2 && factor != 4 && factor != 8 && factor != 16)
+        return fail("--factor must be 2, 4, 8 or 16");
     const bool fir = filter == "fir";
     ampwav::MonoWav in;
     std::string err;
@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
             p->setValueNotifyingHost(p->convertTo0to1(value));
             return true;
         };
-        set("oversampling", static_cast<float>(std::log2(factor)) - 2.0f);  // choice index: 0 = 4x, 1 = 8x, 2 = 16x
+        set("oversampling", static_cast<float>(std::log2(factor)) - 1.0f);  // choice index: 0 = 2x … 3 = 16x
         set("oversamplingFilter", fir ? 0.0f : 1.0f);
         for (const auto& [id, v] : params)
             if (!set(id, v))

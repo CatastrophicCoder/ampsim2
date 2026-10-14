@@ -841,14 +841,16 @@ first-solve failures on five DI runs, 2 of them not rescued by the fallback); DI
 Consequences: the earlier "8x vs 16x render" comparison (−42 to −47 dB) mixed two oversampling filter chains
 and is not a measure of the engine's accuracy; the SPICE comparison at each rate is.
 
-## D-048 Plugin oversampling 4x / 8x / 16x, default 8x
+## D-048 Plugin oversampling 2x / 4x / 8x / 16x, default 8x
 Date: 2026-10-14 · Status: accepted (owner decision after D-047)
 Context: rate study D-047: at 48 kHz, 8x (384 kHz) passes the full-amp acceptance as 16x does (107 PASS, DI
 −60.8 to −62.7 dB) at about twice the real-time factor (0.97–1.17 vs 0.55–0.61); 4x (192 kHz) 102 PASS /
 5 FAIL, 1.71–2.27.
-Decision: the Oversampling parameter offers 4x, 8x and 16x (choice index 0 / 1 / 2), default 8x; Auto and 2x
-are removed, and the factor no longer depends on the host rate. `amp2203_render --factor` accepts 4 / 8 / 16
-(default 8).
+Decision: the Oversampling parameter offers 2x, 4x, 8x and 16x (choice index 0 / 1 / 2 / 3), default 8x; Auto
+is removed, and the factor no longer depends on the host rate. `amp2203_render --factor` accepts 2 / 4 / 8 / 16
+(default 8). (2x was first removed with Auto and restored the same day at the owner's request.)
 Consequences: at host rates above 48 kHz the engine runs above the verified rates (8x at 96 kHz = 768 kHz,
-real-time cost doubled; at 192 kHz 1.536 MHz, not verified). States saved with the old choice list restore
-to a different factor (old index 0 Auto → 4x, 1 2x → 8x, 2 4x → 16x; indices 3 / 4 clamp to 16x).
+real-time cost doubled; at 192 kHz 1.536 MHz, not verified). 2x (96 kHz inside at 48 kHz) has no SPICE
+verification; the M5 measurement at 2x showed Newton failures not rescued at Master + Presence 10 (M5 report,
+Q22 table). States saved with the old choice list restore to the next higher factor (old index 0 Auto → 2x,
+1 2x → 4x, 2 4x → 8x, 3 8x → 16x; 4 clamps to 16x).

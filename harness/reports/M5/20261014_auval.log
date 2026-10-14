@@ -15,12 +15,12 @@ Component Version: 0.0.1 (0x1)
 --------------------------------------------------
 TESTING OPEN TIMES:
 COLD:
-Time to open AudioUnit:         20.484 ms
+Time to open AudioUnit:         14.271 ms
 WARM:
-Time to open AudioUnit:         18.488  ms
+Time to open AudioUnit:         10.913  ms
 This AudioUnit is a version 2 implementation.
 FIRST TIME:
-Time for initialization:        20.121 ms
+Time for initialization:        17.849 ms
 
 * * PASS
 --------------------------------------------------
@@ -65,7 +65,7 @@ VERIFYING SPECIAL PROPERTIES:
 
 VERIFYING CUSTOM UI
 Cocoa Views Available: 1
-  JUCE_AUCocoaViewClass_a25547114c7c72e3
+  JUCE_AUCocoaViewClass_ddfafb9254539d1a
     PASS
 
 HAS FACTORY PRESETS
@@ -141,13 +141,14 @@ Flags: Values Have Strings, High Resolution, Can Ramp, Readable, Writable
 Parameter ID:1420097723
 Name: Oversampling
 Parameter Type: Indexed
-Values: Minimum = 4x, Default = 8x, Maximum = 16x
+Values: Minimum = 2x, Default = 8x, Maximum = 16x
 Flags: Values Have Strings, High Resolution, Readable, Writable 
 Parameter has Value Strings
-Num Strings = 3
-Value: 0,  String: 4x
-Value: 1,  String: 8x
-Value: 2,  String: 16x
+Num Strings = 4
+Value: 0,  String: 2x
+Value: 1,  String: 4x
+Value: 2,  String: 8x
+Value: 3,  String: 16x
   -parameter PASS
 
 Parameter ID:1706969868

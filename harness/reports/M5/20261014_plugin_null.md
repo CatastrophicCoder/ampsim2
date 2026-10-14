@@ -1,6 +1,6 @@
 # M5 wrapper null test: plugin vs ampwav at 768 kHz with the same resampling
 
-- Date: 2026-10-14, commit `6c0bbd9 (dirty)`; host rate 48000 Hz, 16x
+- Date: 2026-10-14, commit `6754b4f (dirty)`; host rate 48000 Hz, 16x
 - Plugin: `amp2203_render plugin` (the Amp2203Processor offline). Reference: the processor's oversampler up stage, `ampwav --block full --units fs` at 768 kHz, the down stage. Default knobs and levels.
 - Tolerance (SPEC §7 M5): ESR ≤ -60 dB.
 

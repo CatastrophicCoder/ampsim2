@@ -505,7 +505,7 @@ Step 1 — Processor (`plugin/src/`, the only JUCE code)
 - APVTS parameters per SPEC §6.3: Preamp Volume, Treble, Middle, Bass, Master, Presence (0–10 shown,
   rotation 0–1 inside), Interface Level (0..+24 dBu, default +12), Input Trim (±24 dB), Output Level
   (−48..+12 dB, default 0 dB), Oversampling (2x / 4x / 8x / 16x; default by host rate per SPEC §3.4: 16x at
-  44.1 / 48 kHz, 8x at 88.2 / 96, 4x at 176.4 / 192; since D-048: 4x / 8x / 16x, default 8x), Oversampling filter (linear-phase FIR or polyphase IIR,
+  44.1 / 48 kHz, 8x at 88.2 / 96, 4x at 176.4 / 192; since D-048: 2x / 4x / 8x / 16x, default 8x), Oversampling filter (linear-phase FIR or polyphase IIR,
   task 2). State saved / restored through the APVTS.
 - Mono: a mono bus uses its channel; on a stereo bus the left channel is processed (SPEC allows summed or
   left; guitar interfaces put the instrument on input 1, and summing a single-sided input halves it) and the
@@ -551,7 +551,7 @@ Notes:
 - 2026-10-13 M5: processor, editor, render tool, null test 26 / 26 PASS, pluginval VST3 / AU and auval PASS
   (AU installed in ~/Library/Audio/Plug-Ins: owner decision), Presence knob jump −77 dB, automation: no NaN,
   6367 first-solve Newton failures all rescued (Q21), real-time factor 0.42 (Q22). M5 stops here for review.
-- 2026-10-14 M5: owner decision after the rate study (D-047): Oversampling 4x / 8x / 16x, default 8x (D-048).
+- 2026-10-14 M5: owner decision after the rate study (D-047): Oversampling 2x / 4x / 8x / 16x, default 8x (D-048).
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
