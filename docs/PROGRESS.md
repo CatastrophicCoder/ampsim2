@@ -644,6 +644,12 @@ Notes:
   first-solve failures each: 4 FAIL on newton_failures, `…_j4exact_hot.md`); full acceptance 107 PASS, CLEAN
   (Master 1.0) −31.2 → −60.1 dB, the rest within 0.5 dB (`…_j4exact.md`). Cost at 384 kHz (10 s DI): 3352 / 4497
   ns default / hot (main 2242 / 3016; the extra open port alone +6 %).
+- X3 (`harness/x3_neural.py`, report `harness/reports/M6/20261015_x3_neural.md`): LSTM-32 at 48 kHz trained on
+  the engine (768 kHz, CRUNCH, four DI tracks × four input gains; CPU, Adam 1e-3 with gradient clipping 1.0 after
+  5e-3 diverged at epoch ≈ 80; 1200 epochs, 78 min). Vs SPICE on the held-out 5 s CRUNCH DI clips: −16.5 …
+  −17.1 dB (teacher −48.7 … −49.1 dB); validation vs teacher −14.5 dB. Non-harmonic power on 5 / 9 kHz sines:
+  −6.3 … −17.0 dB (teacher −25.7 … −39.9 dB). Cost: 439 ns per 48 kHz sample in plain C++ (2.1 % of one core).
+  Training is resumable (`train_state.pt`, written at every validation).
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_

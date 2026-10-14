@@ -14,6 +14,7 @@ import argparse
 import datetime
 import json
 import os
+import resource
 import subprocess
 import sys
 import tempfile
@@ -124,19 +125,32 @@ def _esr_loss(y, t):
     return e + dc
 
 
-def train(epochs=400, seg=RATE // 2, batch=48, tbptt=2048, warm=1000):
+def train(epochs=1200, seg=RATE // 2, batch=48, tbptt=2048, warm=1000):
     import torch
     torch.manual_seed(0)
     np.random.seed(0)
-    dev = 'mps' if torch.backends.mps.is_available() else 'cpu'
+    dev = 'cpu'  # an LSTM-32 trains ≈ 17× faster per step on the CPU than on MPS (0.18 vs ≈ 3 s, batch 48 × 2048)
+    torch.set_num_threads(8)
     xs, ys = _load('train')
     vx, vy = _load('val')
+    vx, vy = [x[:5 * RATE] for x in vx], [y[:5 * RATE] for y in vy]  # 5 s per validation track while training
     model = _model().to(dev)
-    opt = torch.optim.Adam(model.parameters(), lr=5e-3)
-    sched = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, factor=0.5, patience=10)
-    best, log = float('inf'), []
+    opt = torch.optim.Adam(model.parameters(), lr=1e-3)  # 5e-3 diverged at epoch ≈ 80
+    sched = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, factor=0.5, patience=3)
+    best, log, start = float('inf'), [], 0
     t0 = time.time()
-    for ep in range(epochs):
+    ckpt = CACHE / 'train_state.pt'
+    if ckpt.exists():  # resume after an interruption (written at every validation)
+        st = torch.load(ckpt, weights_only=False)
+        model.load_state_dict(st['model'])
+        opt.load_state_dict(st['opt'])
+        sched.load_state_dict(st['sched'])
+        best, log, start = st['best'], st['log'], st['ep']
+        np.random.set_state(st['np_rng'])
+        torch.set_rng_state(st['torch_rng'])
+        t0 -= log[-1][3] if log else 0.0
+        print(f'x3: resuming at epoch {start}', flush=True)
+    for ep in range(start, epochs):
         model.train()
         bx, by = [], []
         for _ in range(batch):
@@ -155,18 +169,24 @@ def train(epochs=400, seg=RATE // 2, batch=48, tbptt=2048, warm=1000):
             loss = _esr_loss(out, by[:, s:s + tbptt])
             opt.zero_grad()
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             opt.step()
-            total += float(loss)
-        if ep % 5 == 4 or ep == epochs - 1:
-            v = validate(model, vx, vy, dev)
-            sched.step(v)
+            total += loss.item()
+        if ep % 20 == 19 or ep == epochs - 1:
+            v = float(validate(model, vx, vy, dev))
+            sched.step(v)  # patience counts validations (20 epochs each)
             log.append((ep + 1, total, v, time.time() - t0))
-            print(f'x3: epoch {ep + 1} train {total:.4f} val ESR {10 * np.log10(v):.1f} dB ({time.time() - t0:.0f} s)',
-                  flush=True)
+            rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 2 ** 30  # bytes on macOS
+            print(f'x3: epoch {ep + 1} train {total:.4f} val ESR {10 * np.log10(v):.1f} dB ({time.time() - t0:.0f} s, '
+                  f'peak RSS {rss:.1f} GB)', flush=True)
             if v < best:
                 best = v
                 torch.save(model.state_dict(), CACHE / 'lstm32.pt')
+            torch.save({'model': model.state_dict(), 'opt': opt.state_dict(), 'sched': sched.state_dict(),
+                        'best': best, 'log': log, 'ep': ep + 1, 'np_rng': np.random.get_state(),
+                        'torch_rng': torch.get_rng_state()}, ckpt)
     (CACHE / 'train_log.json').write_text(json.dumps(log))
+    ckpt.unlink(missing_ok=True)
 
 
 def validate(model, vx, vy, dev):
@@ -348,7 +368,7 @@ def write_report(rows, val, alias, ns, log):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('step', choices=('render', 'train', 'evaluate'))
-    ap.add_argument('--epochs', type=int, default=400)
+    ap.add_argument('--epochs', type=int, default=1200)
     a = ap.parse_args()
     if a.step == 'render':
         render()
