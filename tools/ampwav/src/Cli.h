@@ -40,6 +40,8 @@ struct Options {
     std::string statsPath;       // optional JSON with timing and Newton statistics
     std::optional<double> halfStepTrigger;  // --half-step-trigger V (power amp, D-043)
     std::string nfb;             // --nfb closed | open (full amp only; empty = closed)
+    int powerRateDivisor = 1;    // --power-rate-divisor 1 | 2 (full amp, M6)
+    std::optional<double> newtonTol;  // --newton-tol V (full amp, M6 study)
     Units units = Units::Volts;
     int blockSize = 512;
     bool listNodes = false;

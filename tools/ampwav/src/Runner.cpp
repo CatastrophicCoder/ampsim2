@@ -32,6 +32,15 @@ public:
         amp_.setHalfStepTrigger(v);
         return true;
     }
+    bool setNewtonResidualTolerance(double v) override {
+        amp_.setNewtonResidualTolerance(v);
+        return true;
+    }
+    bool setPowerRateDivisor(int d) override {
+        cfg_.powerAmpRateDivisor = d;
+        return true;
+    }
+    int latency() const override { return amp_.latencySamples(); }
 
     void processVolts(double* v, int numSamples) noexcept override {
         if (numSamples > 0 && !started_) {

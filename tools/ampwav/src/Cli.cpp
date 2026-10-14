@@ -56,7 +56,9 @@ void writeStats(const std::string& path, const Options& o, double rate, size_t s
       << "  \"newton_solves\": " << st.newtonSolves << ",\n"
       << "  \"median_iterations\": " << st.medianIterations << ",\n"
       << "  \"newton_rescued\": " << st.newtonRescued << ",\n"
-      << "  \"newton_unrescued\": " << st.newtonUnrescued << "\n"
+      << "  \"newton_unrescued\": " << st.newtonUnrescued << ",\n"
+      << "  \"power_rate_divisor\": " << o.powerRateDivisor << ",\n"
+      << "  \"newton_residual_tol\": " << o.newtonTol.value_or(1e-9) << "\n"
       << "}\n";
 }
 
@@ -67,7 +69,7 @@ void printUsage(std::ostream& os) {
           "              [--param name=value ...] [--dump-node node=file.wav ...]\n"
           "              [--units volts|fs] [--block-size N] [--stats stats.json] [--list-nodes]\n"
           "              [--knob-ramp knob=start,duration,from,to ...] [--supply node=file.wav ...]\n"
-          "              [--nfb closed|open]\n"
+          "              [--nfb closed|open] [--power-rate-divisor 1|2] [--newton-tol V]\n"
           "\n"
           "  --block       full, preamp (= b1234), b12, b3, b34, b4, b5, b6, b56; b7 is a pass-through\n"
           "  --in          mono WAV; 64-bit float is read bit-exact, other formats via 32-bit float\n"
@@ -85,6 +87,9 @@ void printUsage(std::ostream& os) {
           "  --half-step-trigger  power amp (b56, full): compute a sample as two half-steps when a root\n"
           "                Thevenin voltage moves more than this many volts (D-043; 0 = off)\n"
           "  --nfb         full amp NFB diagnostic (SPEC §7 M4): closed (default) or open (R22 -> 1 TOhm)\n"
+          "  --power-rate-divisor  full amp: 2 runs the power amp at half the rate behind halfband filters (M6);\n"
+          "                the filters' delay is removed from the output and the dumps\n"
+          "  --newton-tol  full amp: Newton residual tolerance in volts (default 1e-9, M6 study)\n"
           "  --supply      drive a recorded input of the block from a WAV of the same length and rate, set every\n"
           "                sample: supply nodes (bpa, bpx, ct, nscr), the NFB speaker voltage (b5: out) or the\n"
           "                second PI output (b6: p3b) (partition studies and B5 / B6 tests, VERIFICATION §1)\n";
@@ -167,6 +172,24 @@ std::optional<Options> parseArgs(const std::vector<std::string>& args, std::stri
                 return std::nullopt;
             }
             o.halfStepTrigger = x;
+        } else if (a == "--newton-tol") {
+            std::string v;
+            if (!value(v)) return std::nullopt;
+            char* end = nullptr;
+            const double x = std::strtod(v.c_str(), &end);
+            if (end == v.c_str() || *end != '\0' || !(x > 0.0)) {
+                error = "--newton-tol expects volts > 0, got '" + v + "'";
+                return std::nullopt;
+            }
+            o.newtonTol = x;
+        } else if (a == "--power-rate-divisor") {
+            std::string v;
+            if (!value(v)) return std::nullopt;
+            if (v != "1" && v != "2") {
+                error = "--power-rate-divisor expects 1 or 2, got '" + v + "'";
+                return std::nullopt;
+            }
+            o.powerRateDivisor = v == "2" ? 2 : 1;
         } else if (a == "--nfb") {
             if (!value(o.nfb)) return std::nullopt;
             if (o.nfb != "closed" && o.nfb != "open") {
@@ -264,10 +287,18 @@ int run(const Options& o, std::ostream& log) {
     }
     const double rate = in.sampleRate;
 
+    if (o.powerRateDivisor != 1 && !runner->setPowerRateDivisor(o.powerRateDivisor)) {
+        log << "ampwav: block '" << o.block << "' has no power-amp rate option\n";
+        return 1;
+    }
     runner->prepare(rate, o.blockSize);
     runner->setParams(o.params);
     if (o.halfStepTrigger && !runner->setHalfStepTrigger(*o.halfStepTrigger)) {
         log << "ampwav: block '" << o.block << "' has no half-step option\n";
+        return 1;
+    }
+    if (o.newtonTol && !runner->setNewtonResidualTolerance(*o.newtonTol)) {
+        log << "ampwav: block '" << o.block << "' has no Newton tolerance option\n";
         return 1;
     }
     if (!o.nfb.empty() && !runner->setFeedback(o.nfb != "open")) {
@@ -315,6 +346,14 @@ int run(const Options& o, std::ostream& log) {
         for (double& s : y)
             s *= runner->inputVoltsPerFullScale();
 
+    // a block with an output delay (full amp at power-rate divisor 2) runs `latency` samples longer on the
+    // last input value (supplies likewise); the first `latency` output and dump samples are then dropped
+    const size_t latency = static_cast<size_t>(runner->latency());
+    const size_t outLength = y.size();
+    if (!y.empty())
+        y.resize(outLength + latency, y.back());
+    for (auto& s : supply)
+        s.resize(outLength + latency, s.back());
     const size_t total = y.size();
     std::vector<std::vector<double>> dumps(o.dumps.size(), std::vector<double>(total));
 
@@ -369,6 +408,11 @@ int run(const Options& o, std::ostream& log) {
     if (o.units == Units::FullScale)
         for (double& s : y)
             s /= runner->outputVoltsPerFullScale();
+    if (latency > 0) {
+        y.erase(y.begin(), y.begin() + static_cast<std::ptrdiff_t>(latency));
+        for (auto& d : dumps)
+            d.erase(d.begin(), d.begin() + static_cast<std::ptrdiff_t>(latency));
+    }
 
     if (!writeMonoWavF64(o.outPath, rate, y, err)) {
         log << "ampwav: " << err << "\n";

@@ -78,6 +78,8 @@ public:
     long rescuedSolves() const noexcept { return root_.rescued + half_.rescued; }
     long unrescuedSolves() const noexcept { return root_.unrescued + half_.unrescued; }
     long matrixUpdates() const noexcept { return updates_; }
+    /// Newton residual tolerance in volts (WDF_DESIGN §4.3 default 1e-9; M6 study). Not real-time.
+    void setNewtonResidualTolerance(double volts) noexcept { residualTol_ = volts; }
 
     std::span<const Probe> probes() const noexcept { return probes_; }
 
@@ -131,6 +133,7 @@ private:
     detail::RootNetworkState<kNodes, kElements, kRootPorts> root_;
     detail::RootNetworkState<kNodes, kElements, kRootPorts> half_;  // matrices at T/2 and the half-step solver state
     double halfStepTrigger_ = kDefaultHalfStepTrigger;
+    double residualTol_ = 1e-9;
     long halfSteps_ = 0;
     double xPrev_ = 0.0;  // the previous sample's J4 source voltage (half-step midpoint)
     std::array<double, 22> bLast_{};  // reflected waves of the reactive elements before this sample's reflected()

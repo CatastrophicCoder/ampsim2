@@ -52,7 +52,7 @@ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release   # add -DAMP2203_BUILD_
 cmake --build build
 ctest --test-dir build --output-on-failure
 ./build/tools/bench/amp2203_bench                          # real-time factor, 60 s of a DI clip at 48 kHz x 16 (--factor N: x N; --hot: Master, Presence 1.0; b4 / b12 / b3 / b34 / preamp / b5 / b6 / b56: block costs)
-./build/tools/ampwav/ampwav --block full --in in.wav --out out.wav --rate 768000 --param preampVolume=0.6   # --help for all options
+./build/tools/ampwav/ampwav --block full --in in.wav --out out.wav --rate 768000 --param preampVolume=0.6   # --help for all options (M6 studies: --power-rate-divisor 2, --newton-tol V)
 source .venv/bin/activate                                  # harness commands below need the venv
 python -m harness.testbench_gen                            # regenerate harness/testbenches/*.cir (--check)
 python -m harness.dc_check                                 # testbench DC vs full netlist (M0 sanity)
@@ -62,7 +62,7 @@ python -m harness.device_sweeps                            # tests/data device D
 python -m harness.ot_fit                                   # OT fit to the 1750U datasheet (--check: netlist)
 python -m harness.ot_fixtures                              # M4: OT network alone, SPICE fixtures for tests/test_ot.cpp (--check)
 python -m harness.partition_j5 --variants self,diff,2port  # M4: J5 partition error in SPICE, closed loop (hours)
-python -m harness.m4_acceptance                            # M4: full amp vs F (DC, NFB, CLEAN, stability, overdrive, CRUNCH / DRIVE + DI)
+python -m harness.m4_acceptance                            # M4: full amp vs F (DC, NFB, CLEAN, stability, overdrive, CRUNCH / DRIVE + DI); env AMP2203_FS, AMP2203_POWER_DIVISOR, AMP2203_NEWTON_TOL for rate / M6 studies
 python -m harness.plugin_null                              # M5: plugin (amp2203_render) vs ampwav at 768 kHz with the same resampling
 python -m harness.automation                               # M5: every knob at audio rate, NaN / Newton check
 ./build/plugin/amp2203_render_artefacts/Release/amp2203_render plugin --in x.wav --out y.wav --factor 16   # offline plugin render

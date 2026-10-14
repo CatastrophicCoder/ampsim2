@@ -66,6 +66,10 @@ def engine(knobs, x, nodes=(), nfb=None, seconds=None):
         args += [a for n in nodes for a in ('--dump-node', f'{n}={d / (n + ".wav")}')]
         if nfb:
             args += ['--nfb', nfb]
+        if config.POWER_DIVISOR != 1:
+            args += ['--power-rate-divisor', str(config.POWER_DIVISOR)]
+        if config.NEWTON_TOL:
+            args += ['--newton-tol', config.NEWTON_TOL]
         _ampwav(args)
         res = {'out': read_wav(d / 'out.wav')[0], 'stats': json.loads((d / 'stats.json').read_text())}
         for n in nodes:
@@ -209,17 +213,25 @@ def check_crunch_drive(rep, notes, jobs):
 
 
 def write_report(rep, res, notes):
-    # rate studies (AMP2203_FS, M5) go to the M5 folder with the rate in the name
-    out = config.REPORT_DIR / ('M4' if config.FS == config.DEFAULT_FS else 'M5')
+    # rate studies (AMP2203_FS, M5) go to the M5 folder with the rate in the name; power-amp rate studies
+    # (AMP2203_POWER_DIVISOR, M6) to M6 with the divisor too
+    m6 = config.POWER_DIVISOR != 1 or config.NEWTON_TOL
+    out = config.REPORT_DIR / ('M6' if m6 else 'M4' if config.FS == config.DEFAULT_FS else 'M5')
     out.mkdir(parents=True, exist_ok=True)
     stem = f'{datetime.date.today().strftime("%Y%m%d")}_full_acceptance'
-    if config.FS != config.DEFAULT_FS:
+    if config.FS != config.DEFAULT_FS or m6:
         stem += f'_fs{config.FS}'
+    if config.POWER_DIVISOR != 1:
+        stem += f'_pdiv{config.POWER_DIVISOR}'
+    if config.NEWTON_TOL:
+        stem += f'_tol{config.NEWTON_TOL}'
     npass = sum(r[6] == 'PASS' for r in rep.rows)
     nfail = sum(r[6] == 'FAIL' for r in rep.rows)
     lines = [f'# M4 acceptance: full amplifier vs the full netlist', '',
              f'- Date: {datetime.date.today().isoformat()}, engine commit `{_git()}`, ngspice {spice.ngspice_version()}, '
-             f'fs = {config.FS} Hz, SPICE reltol {config.SPICE_RELTOL}',
+             f'fs = {config.FS} Hz' + (f' (power amp at fs / {config.POWER_DIVISOR})' if config.POWER_DIVISOR != 1 else '') +
+             (f', Newton residual tolerance {config.NEWTON_TOL} V' if config.NEWTON_TOL else '') +
+             f', SPICE reltol {config.SPICE_RELTOL}',
              f'- Netlist sha256 `{_sha(config.NETLIST)}`, tubes.lib sha256 `{_sha(config.TUBES)}`',
              '- Engine: `ampwav --block full` (volts at the jack and across the 16 Ω load), the checks of SPEC §7 M4.',
              ''] + [f'> {n}' for n in notes] + ([''] if notes else []) + [

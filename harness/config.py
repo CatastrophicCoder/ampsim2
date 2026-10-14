@@ -6,6 +6,10 @@ DEFAULT_FS = 768000            # verification rate (DECISIONS D-035; was 384 kHz
 # AMP2203_FS overrides it for rate studies (M5: the engine at 8x, 384 kHz, against SPICE at the same rate);
 # reports of such runs carry the rate in their file name
 FS = int(os.environ.get('AMP2203_FS', DEFAULT_FS))
+# AMP2203_POWER_DIVISOR = 2 runs the full amp's power amp at FS / 2 (M6 study; ampwav --power-rate-divisor)
+POWER_DIVISOR = int(os.environ.get('AMP2203_POWER_DIVISOR', 1))
+# AMP2203_NEWTON_TOL sets the engine's Newton residual tolerance in volts (M6 study; ampwav --newton-tol)
+NEWTON_TOL = os.environ.get('AMP2203_NEWTON_TOL')
 INPUT_VOLTS_PER_FS = 4.361     # 0 dBFS = +12 dBu at the jack (D-010); scales DI recordings
 
 ROOT = Path(__file__).resolve().parent.parent

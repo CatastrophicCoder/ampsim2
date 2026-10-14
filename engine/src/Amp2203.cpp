@@ -58,7 +58,9 @@ Amp2203::~Amp2203() = default;
 void Amp2203::prepare(const EngineConfig& cfg) {
     cfg_ = cfg;
     preamp_->prepare(cfg.sampleRate, cfg.paramSmoothingMs);
-    power_->prepare(cfg.sampleRate, cfg.paramSmoothingMs);
+    if (cfg_.powerAmpRateDivisor != 2)
+        cfg_.powerAmpRateDivisor = 1;
+    power_->prepare(cfg.sampleRate / cfg_.powerAmpRateDivisor, cfg.paramSmoothingMs);
     supply_->prepare(cfg.sampleRate);
     reset();
 }
@@ -72,6 +74,11 @@ void Amp2203::setParams(const Params& p) {
 void Amp2203::setFeedbackClosed(bool closed) { power_->setFeedbackResistance(closed ? PhaseInverter::R22 : kOpenLoopR22); }
 
 void Amp2203::setHalfStepTrigger(double volts) { power_->setHalfStepTrigger(volts); }
+
+void Amp2203::setNewtonResidualTolerance(double volts) {
+    preamp_->setNewtonResidualTolerance(volts);
+    power_->setNewtonResidualTolerance(volts);
+}
 
 void Amp2203::applySupplies() noexcept {
     preamp_->setSupplyVoltages(supply_->bpA(), supply_->bpX());
@@ -98,6 +105,13 @@ void Amp2203::solveDc() {
     }
     applySupplies();
     vOut_ = power_->output();
+    // rate-change filters at the DC point: the decimator holds the preamp output, the interpolator the
+    // zero-stuffed power amp output (2·v at the samples where the power amp runs, 0 between; both polyphase
+    // branches have unity DC gain)
+    decim_.fill(preamp_->output());
+    for (int n = 0; n < Halfband::kTaps; ++n)  // newest (n = kTaps − 1, even) nonzero: the next sample is a 0
+        interp_.push(n % 2 == 0 ? 2.0 * vOut_ : 0.0);
+    powerPhase_ = false;
 }
 
 void Amp2203::reset() {
@@ -111,8 +125,20 @@ double Amp2203::processSample(double x) noexcept {
     vIn_ = x * cfg_.inputVoltsPerFullScale;
     applySupplies();
     const double y = preamp_->process(vIn_);
-    power_->setSourceResistance(preamp_->rth4());
-    vOut_ = power_->process(y);
+    if (cfg_.powerAmpRateDivisor == 1) {
+        power_->setSourceResistance(preamp_->rth4());
+        vOut_ = power_->process(y);
+    } else {
+        decim_.push(y);
+        double u = 0.0;
+        if (powerPhase_) {
+            power_->setSourceResistance(preamp_->rth4());
+            u = 2.0 * power_->process(decim_.dot(halfband_.h));
+        }
+        interp_.push(u);
+        vOut_ = interp_.dot(halfband_.h);
+        powerPhase_ = !powerPhase_;
+    }
     supply_->process({power_->centreTapCurrent(), power_->screenCurrent(),
                       preamp_->supplyCurrentX() + power_->supplyCurrentX(), preamp_->supplyCurrentA()});
     const double out = vOut_ / cfg_.outputVoltsPerFullScale;

@@ -67,11 +67,14 @@ public:
     long rescuedSolves() const noexcept { return root_.rescued; }
     long unrescuedSolves() const noexcept { return root_.unrescued; }
     long matrixUpdates() const noexcept { return updates_; }
+    /// Newton residual tolerance in volts (WDF_DESIGN §4.3 default 1e-9; M6 study). Not real-time.
+    void setNewtonResidualTolerance(double volts) noexcept { residualTol_ = volts; }
 
     std::span<const Probe> probes() const noexcept { return probes_; }
 
 private:
     using Wave = std::array<double, kElements>;
+    double residualTol_ = 1e-9;
 
     void applyKnobs() noexcept;
     Wave conductances(bool dc) const noexcept;

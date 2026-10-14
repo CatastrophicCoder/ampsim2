@@ -26,6 +26,12 @@ public:
     virtual bool setFeedback(bool) { return false; }
     /// Adaptive half-step trigger of the power amp in volts (D-043; 0 = off). False if the block has none.
     virtual bool setHalfStepTrigger(double) { return false; }
+    /// Newton residual tolerance in volts (full amp, M6 study). False if the block has none.
+    virtual bool setNewtonResidualTolerance(double) { return false; }
+    /// Power amp at sampleRate / divisor (full amp, M6); call before prepare(). False if the block has none.
+    virtual bool setPowerRateDivisor(int) { return false; }
+    /// Output delay in samples added by the block (full amp at divisor 2); ampwav removes it.
+    virtual int latency() const { return 0; }
     /// Volts per full-scale sample at the input and output (only meaningful for the full amp).
     virtual double inputVoltsPerFullScale() const { return 1.0; }
     virtual double outputVoltsPerFullScale() const { return 1.0; }

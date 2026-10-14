@@ -7,6 +7,7 @@
 
 #include "amp2203/Probe.h"
 #include "amp2203/Params.h"
+#include "amp2203/detail/Halfband.h"
 #include "amp2203/detail/NewtonStats.h"
 
 namespace amp2203 {
@@ -43,6 +44,8 @@ public:
     void setFeedbackClosed(bool closed);
     /// Power-amp adaptive half-step trigger in volts (D-043; 0 = off). Not real-time.
     void setHalfStepTrigger(double volts);
+    /// Newton residual tolerance of both roots in volts (default 1e-9, WDF_DESIGN §4.3; M6 study). Not real-time.
+    void setNewtonResidualTolerance(double volts);
 
     // diagnostics (non-real-time)
     struct Stats {
@@ -58,6 +61,9 @@ public:
     /// Newton statistics of both roots together (preamp, power amp).
     Stats getStats() const;
 
+    /// Output delay in samples at the engine rate added by the power amp's rate change (0 at divisor 1; M6).
+    int latencySamples() const noexcept { return cfg_.powerAmpRateDivisor == 2 ? 2 * kHalfbandM : 0; }
+
     /// Node probes for the harness (`ampwav --dump-node`), netlist names. Values are valid after each
     /// processed sample.
     std::span<const Probe> probes() const noexcept;
@@ -72,6 +78,14 @@ private:
     std::unique_ptr<Preamp> preamp_;
     std::unique_ptr<PowerAmp> power_;
     std::unique_ptr<Supply> supply_;
+
+    // power amp at half rate (cfg_.powerAmpRateDivisor == 2): halfband decimator on the preamp output,
+    // interpolator on the power amp output (zero-stuffed, gain 2)
+    static constexpr int kHalfbandM = 17;
+    using Halfband = detail::HalfbandFir<kHalfbandM>;
+    const Halfband halfband_{10.0};
+    detail::FirWindow<Halfband::kTaps> decim_, interp_;
+    bool powerPhase_ = false;  // true: the power amp runs at this sample
 
     double vIn_ = 0.0;   // V at the input jack
     double vOut_ = 0.0;  // V across the 16 Ω load

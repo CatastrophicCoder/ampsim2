@@ -188,7 +188,10 @@ double Preamp::process(double vIn) noexcept {
     src12_.setVoltage(vbpX_);
     Wave wave;
     stage::reflected(elements(), wave);
-    const bool ok = kNet.process(root_, kRootSolver, FourTriodes{}, wave, elementOffsets(), rootOffsets());
+    auto tuned = kRootSolver;  // the M6 tolerance study only (a copy per sample when not the default)
+    tuned.config.residualTol = residualTol_;
+    const auto& newton = residualTol_ == kRootSolver.config.residualTol ? kRootSolver : tuned;
+    const bool ok = kNet.process(root_, newton, FourTriodes{}, wave, elementOffsets(), rootOffsets());
     stage::incident(elements(), wave);  // on failure wave = reflected: states unchanged
     if (ok)
         updateOutputs(vIn);

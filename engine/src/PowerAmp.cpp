@@ -159,12 +159,15 @@ void PowerAmp::halfStep(double vIn) noexcept {
             voc += h.Z[r][c] * root_.i[c];
         h.vOcPrev[r] = voc;
     }
+    auto tuned = kRootSolver;  // the M6 tolerance study only (a copy per sample when not the default)
+    tuned.config.residualTol = residualTol_;
+    const auto& newton = residualTol_ == kRootSolver.config.residualTol ? kRootSolver : tuned;
     double iterations = 0.0;
     for (const double x : {0.5 * (xPrev_ + vIn), vIn}) {
         j4_.setVoltage(x);
         Wave wave;
         stage::reflected(elements(), wave);
-        kNet.process(h, kRootSolver, TriodesPentodes{}, wave, elementOffsets(), kNoRootOffsets);
+        kNet.process(h, newton, TriodesPentodes{}, wave, elementOffsets(), kNoRootOffsets);
         stage::incident(elements(), wave);
         iterations += h.iterations;
     }
@@ -260,11 +263,14 @@ double PowerAmp::process(double vIn) noexcept {
     if (halfStepTrigger_ > 0.0)
         for (int r = 0; r < kNumRootPorts; ++r)
             half = half || std::fabs(vOc[r] - root_.vOcPrev[r]) > halfStepTrigger_;
+    auto tuned = kRootSolver;  // the M6 tolerance study only (a copy per sample when not the default)
+    tuned.config.residualTol = residualTol_;
+    const auto& newton = residualTol_ == kRootSolver.config.residualTol ? kRootSolver : tuned;
     if (half) {
         halfStep(vIn);
         updateOutputs(vIn);
     } else {
-        const bool ok = kNet.solve(root_, kRootSolver, TriodesPentodes{}, u, vOc, wave, eOff);
+        const bool ok = kNet.solve(root_, newton, TriodesPentodes{}, u, vOc, wave, eOff);
         stage::incident(elements(), wave);  // on failure wave = reflected: states unchanged
         if (ok)
             updateOutputs(vIn);

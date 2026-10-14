@@ -603,6 +603,19 @@ Notes:
   engine); a looser residual tolerance 1e-7 / 1e-6 / 1e-5 V: −6 / −12 / −22 % time, ESR vs the current engine
   −159 / −137 / −118 dB at default knobs, −124 / −114 / −62 dB hot (design criterion WDF_DESIGN §4.3; owner
   decision, not changed).
+- 2026-10-14 Q23 answered (owner): pursue exact-output tuning, a looser Newton tolerance, and the power amp at
+  half rate (two threads not chosen).
+- Power amp at half rate (`EngineConfig::powerAmpRateDivisor` = 2, halfband FIR 35 taps, Kaiser β 10, 2 × 17
+  samples delay = `Amp2203::latencySamples()`; ampwav `--power-rate-divisor`, removes the delay): full-amp
+  acceptance at 384 kHz 107 PASS (`harness/reports/M6/20261014_full_acceptance_fs384000_pdiv2.md`), DI ESR
+  −55.2 to −57.6 dB (full rate −60.8 to −62.7). 10 s DI at 384 kHz: −24 to −26 % time; vs the engine at 768 kHz
+  (48 kHz band) −74.2 dB default / −38.6 dB hot (full rate −80.8 / −52.7). The loss is the power amp's rate:
+  the filter alone (power amp at full rate on the filtered input) −95.6 / −60.9 dB vs the full-rate engine;
+  delaying the supply currents by 17 samples alone −62.3 dB hot; half-step triggers 50 / 20 V do not change it.
+- Newton residual tolerance (`ampwav --newton-tol`): acceptance at 384 kHz 107 PASS at 1e-7, 1e-6, 1e-5,
+  1e-4 V (DI ESR within 0.03 dB of 1e-9). Time (10 s DI, default / hot): 1e-9 2263 / 3042 ns; 1e-6 1979 / 2664;
+  1e-5 1759 / 2495; 1e-4 1573 / 2280; 1e-3 1483 / 2139. vs 768 kHz (48 kHz band): −80.8 / −52.7 dB for 1e-9
+  to 1e-5, −80.4 / −52.8 at 1e-4, −72.3 / −52.4 at 1e-3.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
