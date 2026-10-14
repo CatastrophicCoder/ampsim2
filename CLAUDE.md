@@ -51,7 +51,7 @@ python3 reference/spice/spice_tools.py           # prints the SPICE DC operating
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release   # add -DAMP2203_BUILD_PLUGIN=OFF to skip JUCE
 cmake --build build
 ctest --test-dir build --output-on-failure
-./build/tools/bench/amp2203_bench                          # real-time factor, 60 s of a DI clip at 48 kHz x 16 (b4 / b12 / b3 / b34 / preamp / b5 / b6 / b56: block costs)
+./build/tools/bench/amp2203_bench                          # real-time factor, 60 s of a DI clip at 48 kHz x 16 (--factor N: x N; --hot: Master, Presence 1.0; b4 / b12 / b3 / b34 / preamp / b5 / b6 / b56: block costs)
 ./build/tools/ampwav/ampwav --block full --in in.wav --out out.wav --rate 768000 --param preampVolume=0.6   # --help for all options
 source .venv/bin/activate                                  # harness commands below need the venv
 python -m harness.testbench_gen                            # regenerate harness/testbenches/*.cir (--check)

@@ -7,6 +7,7 @@
 
 #include "amp2203/Probe.h"
 #include "amp2203/Params.h"
+#include "amp2203/detail/NewtonStats.h"
 
 namespace amp2203 {
 
@@ -51,6 +52,8 @@ public:
         double   medianIterations = 0.0;  // median Newton iterations per solve (SPEC §7 M2 acceptance)
         uint64_t newtonRescued = 0;       // D-042: failures recovered by the source-stepping fallback
         uint64_t newtonUnrescued = 0;     // failures the fallback did not recover (best iterate kept)
+        detail::NewtonStats preamp;       // per root, with the iteration histogram (M6)
+        detail::NewtonStats powerAmp;
     };
     /// Newton statistics of both roots together (preamp, power amp).
     Stats getStats() const;

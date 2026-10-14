@@ -139,6 +139,8 @@ Amp2203::Stats Amp2203::getStats() const {
     s.medianIterations = all.medianIterations();
     s.newtonRescued = static_cast<uint64_t>(preamp_->rescuedSolves() + power_->rescuedSolves());
     s.newtonUnrescued = static_cast<uint64_t>(preamp_->unrescuedSolves() + power_->unrescuedSolves());
+    s.preamp = preamp_->newtonStats();
+    s.powerAmp = power_->newtonStats();
     return s;
 }
 

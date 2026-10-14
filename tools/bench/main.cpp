@@ -1,6 +1,7 @@
 // amp2203_bench — real-time factor of the full engine, and per-block costs.
 //   amp2203_bench [di.wav]   full engine, 60 s at 48 kHz x 16 on a DI clip (SPEC §7 M5.4; default: the first
 //                            WAV in reference/di/, else a 220 Hz sine), linearly interpolated to 768 kHz while running
+//   options: --factor N (engine rate 48 kHz × N instead of × 16), --hot (full engine: Master, Presence 1.0)
 //   amp2203_bench b4         ToneStackMaster: ns per sample (static knobs, knobs moving) and µs per
 //                            scattering-matrix update (SPEC §7 M1 acceptance, §6.2)
 //   amp2203_bench b12        StageV1aV1b: ns per sample at several input levels, with Preamp Volume
@@ -16,6 +17,7 @@
 #include <string>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <initializer_list>
 #include <memory>
@@ -37,7 +39,8 @@
 namespace {
 
 using Clock = std::chrono::steady_clock;
-constexpr double kRate = 48000.0 * 16;  // verification / default internal rate (D-035)
+double kRate = 48000.0 * 16;  // verification / default internal rate (D-035); --factor N: 48 kHz × N
+bool gHot = false;            // --hot: Master and Presence at 1.0 (full engine)
 
 double seconds(Clock::time_point t0) { return std::chrono::duration<double>(Clock::now() - t0).count(); }
 
@@ -49,6 +52,13 @@ int benchFull(const std::string& diPath) {
     cfg.maxBlockSize = blockSize;
     amp2203::Amp2203 amp;
     amp.prepare(cfg);
+    if (gHot) {
+        amp2203::Params p;
+        p.master = 1.0;
+        p.presence = 1.0;
+        amp.setParams(p);
+        amp.reset();
+    }
 
     ampwav::MonoWav di;
     std::string err, source = "220 Hz sine at 0.1 FS";
@@ -86,6 +96,13 @@ int benchFull(const std::string& diPath) {
     std::printf("  Newton: %llu solves, median %.0f, max %.0f, failures %llu (rescued %llu)  (checksum %g)\n",
                 static_cast<unsigned long long>(st.newtonSolves), st.medianIterations, st.maxIterationsUsed,
                 static_cast<unsigned long long>(st.newtonFailures), static_cast<unsigned long long>(st.newtonRescued), sink);
+    for (const auto& [name, ns] : {std::pair{"preamp", &st.preamp}, std::pair{"power amp", &st.powerAmp}}) {
+        std::printf("  %s iterations:", name);
+        for (int k = 0; k <= ns->maxIterations; ++k)
+            std::printf(" %d:%.1f%%", k, 100.0 * static_cast<double>(ns->histogram[static_cast<size_t>(k)]) /
+                                          static_cast<double>(ns->solves));
+        std::printf("\n");
+    }
     return 0;
 }
 
@@ -359,6 +376,18 @@ int benchPowerAmp() {
 }
 
 int main(int argc, char** argv) {
+    // options --factor N and --hot, anywhere; the rest as before
+    std::vector<char*> args{argv[0]};
+    for (int k = 1; k < argc; ++k) {
+        if (std::strcmp(argv[k], "--factor") == 0 && k + 1 < argc)
+            kRate = 48000.0 * std::atoi(argv[++k]);
+        else if (std::strcmp(argv[k], "--hot") == 0)
+            gHot = true;
+        else
+            args.push_back(argv[k]);
+    }
+    argc = static_cast<int>(args.size());
+    argv = args.data();
     if (argc > 1 && std::strcmp(argv[1], "b4") == 0)
         return benchToneStack();
     if (argc > 1 && std::strcmp(argv[1], "b12") == 0)
@@ -376,7 +405,7 @@ int main(int argc, char** argv) {
     if (argc > 1 && std::strcmp(argv[1], "b56") == 0)
         return benchPowerAmp();
     if (argc > 1 && std::string(argv[1]).find(".wav") == std::string::npos) {
-        std::fprintf(stderr, "usage: amp2203_bench [di.wav|b4|b12|b3|b34|preamp|b5|b6|b56]\n");
+        std::fprintf(stderr, "usage: amp2203_bench [--factor N] [--hot] [di.wav|b4|b12|b3|b34|preamp|b5|b6|b56]\n");
         return 1;
     }
     std::string di;

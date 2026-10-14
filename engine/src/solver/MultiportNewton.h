@@ -14,11 +14,14 @@ using Vec = std::array<double, K>;
 template <int K>
 using Mat = std::array<std::array<double, K>, K>;
 
-/// Solves J·x = r in place (x returned in r) by Gaussian elimination with partial pivoting.
-/// Returns false if a pivot is zero or not finite.
-template <int K>
-bool solveLinear(Mat<K>& J, Vec<K>& r) noexcept {
-    for (int k = 0; k < K; ++k) {
+namespace lu {
+/// Elimination step k of solveLinear, then the steps after it: every loop bound is a compile-time constant
+/// (unrolled by the compiler; the same operations in the same order as the loop form; M6).
+template <int K, int k>
+inline bool eliminate(Mat<K>& J, Vec<K>& r) noexcept {
+    if constexpr (k == K) {
+        return true;
+    } else {
         int p = k;
         double best = std::fabs(J[k][k]);
         for (int i = k + 1; i < K; ++i)
@@ -39,7 +42,17 @@ bool solveLinear(Mat<K>& J, Vec<K>& r) noexcept {
                 J[i][j] -= f * J[k][j];
             r[i] -= f * r[k];
         }
+        return eliminate<K, k + 1>(J, r);
     }
+}
+}  // namespace lu
+
+/// Solves J·x = r in place (x returned in r) by Gaussian elimination with partial pivoting.
+/// Returns false if a pivot is zero or not finite.
+template <int K>
+bool solveLinear(Mat<K>& J, Vec<K>& r) noexcept {
+    if (!lu::eliminate<K, 0>(J, r))
+        return false;
     for (int i = K - 1; i >= 0; --i) {
         double s = r[i];
         for (int j = i + 1; j < K; ++j)

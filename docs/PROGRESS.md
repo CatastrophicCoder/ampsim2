@@ -556,6 +556,54 @@ Notes:
   0.53 at 16x (target ≥ 10; plugin at the 8x default 0.97–1.17), and under automation at high Master 90
   first-solve Newton failures at 768 kHz, all rescued (D-042, D-045). 2x / 4x have no SPICE pass (D-047).
 
+## M6 — Performance (owner scope 2026-10-14: performance work only; the other SPEC §7 M6 items stay open)
+- [x] Step 0: baseline at the 8x default (384 kHz)
+- [x] Step 1: build settings (no change adopted)
+- [~] Step 2: device equations
+- [~] Step 3: dense linear algebra / SIMD
+- [ ] Step 4: linear parts at a lower rate (analysis first)
+- [ ] Step 5: re-verification, M6 report
+Plan (2026-10-14; SPEC §7 M6 "performance work", WDF_DESIGN §4; goal: real-time headroom at the 8x default
+without loosening any tolerance):
+
+Step 0 — Baseline. `amp2203_bench --factor N` (engine rate 48 kHz × N; default 16 as before). Profile at 8x
+(macOS `sample`), per-block ns, Newton iteration distribution at 384 kHz.
+
+Step 1 — Build settings (engine and plugin): LTO, `-mcpu` for Apple Silicon, FMA contraction. Results change at
+the rounding level only; checked with the null test against the previous build.
+
+Step 2 — Device equations (≈ 26 % in the M5 profile): exp / log1p / pow / atan / Wright omega replaced by
+polynomial or rational approximations, or tables (WDF_DESIGN §4 M6 list), with a stated error bound per
+function. Gate: device unit tests vs the SPICE DC sweeps and the finite-difference Jacobian checks unchanged in
+tolerance; Newton iterations not increased.
+
+Step 3 — Dense parts (solve 32 %, J build 19 %, network products 11 %): structure (J = I + Z·D, D block
+diagonal), memory layout, NEON via the compiler. xsimd (SPEC lists it) would be a new dependency: asked before
+use.
+
+Step 4 — Linear parts at a lower rate: which parts are separable from the roots (the tone stack is inside the
+preamp tree, D-033; supply B7). Analysis and a proposal before any change, as partitions moved results before
+(Q17, Q19).
+
+Step 5 — Full-amp acceptance at 384 and 768 kHz, M3 cascade, plugin null test, automation, pluginval / auval;
+bench and plugin real-time factors at 2x–16x; M6 report.
+
+Risks: approximations change results (bounded per function, verified end to end); speedups unknown until
+measured; any tolerance failure is reported with options, not loosened.
+Notes:
+- 2026-10-14 Step 0: `amp2203_bench --factor 8`: 2270–2313 ns per engine sample, real-time factor 1.13–1.15;
+  `--hot` (Master, Presence 1.0) 3130 ns, 0.83. At 16x 2221 / 2602 ns. Profile at 8x (default knobs): solveLinear
+  28 %, Newton loop incl. J build 22 %, libm (pow, exp, log1p, log, Wright omega) 23 %, network products 13 %.
+  Iterations per solve (default): preamp 2 in 91 %, power amp 2 in 95 %; hot power amp 2–4 in 77 %.
+- Step 1: LTO −3 %, `-mcpu=apple-m4` 0 %, `-ffp-contract=off` +5 % (60 s bench, 8x); not adopted (timing noise
+  level; LTO would apply to the plugin build only).
+- Step 3: elimination unrolled at compile time (bit-identical output): −1 to −3 % end to end (10 s DI at 384 kHz,
+  default / hot). Tried and not adopted (scratch builds): reusing the LU for a step after a small step (same
+  convergence test): ≤ 5 % faster, and from a 1 V threshold the output moves (ESR −72 / −67 dB vs the current
+  engine); a looser residual tolerance 1e-7 / 1e-6 / 1e-5 V: −6 / −12 / −22 % time, ESR vs the current engine
+  −159 / −137 / −118 dB at default knobs, −124 / −114 / −62 dB hot (design criterion WDF_DESIGN §4.3; owner
+  decision, not changed).
+
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
 - Q1 (M0): git init + baseline commit? — Answered 2026-10-12: yes; repo-local author CatastrophicCoder.
