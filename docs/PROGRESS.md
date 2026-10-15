@@ -756,6 +756,8 @@ Notes:
   automation, plugin CPU.
 - Done (D-057): plugin CPU under automation 18.7 … 24.6 % (default base), 22.8 … 33.5 % (every knob 10); static
   ≈ 19 % / 32.5 %. Accuracy: acceptance and HOT unchanged; knob jump PASS (B1234 −39.2 … −55.1 dB, B56 −63.2 dB).
+- 2026-10-15 (main after PR #1): plugin reinstalled to ~/Library/Audio/Plug-Ins (VST3, AU); pluginval strictness 5
+  SUCCESS for VST3 and AU, auval PASS (`harness/reports/M6/20261015_pluginval_*.log`, `…_auval.log`).
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
