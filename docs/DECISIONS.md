@@ -914,3 +914,18 @@ Consequences: samples that converged in ≤ 12 / 16 iterations are unchanged bit
 exact J4: 107 PASS (`…_20261015_full_acceptance_fs384000_j4exact.md`); HOT 21 PASS, 0 FAIL (was 4 FAIL on
 newton_failures), DI ESR within 0.08 dB, max 17–19 iterations. At 2x / 4x the DI clips have 0 failures; only loud
 9 kHz sines (and 5 kHz at 2x) still fail. Worst case per sample rises (32 iterations before the fallback).
+
+## D-053 Exact J4 with the power amp at half rate: coupling at the power-amp samples, no decimation filter
+Date: 2026-10-15 · Status: implemented as an engine option (owner: "run 1 and 2"); not used by the plugin
+Context: with `powerAmpRateDivisor = 2` the exact J4 coupling (X1) was switched off (`Amp2203::exactJ4()`), so A1's
+half-rate runs used the Thevenin J4 (HOT −13 dB). A same-sample coupling cannot pass through the halfband
+decimator (17 engine samples of delay in the loop).
+Decision: with exact J4 and divisor 2 the junction is solved exactly at the samples where the power amp runs (the
+preamp's linearised Thevenin source at y taken directly, no decimation filter); in between the preamp solves with
+the held load current; the power amp output goes through the halfband interpolator as before. Latency 17 engine
+samples (was 34 with the decimator). Divisor 1 is unchanged bit for bit.
+Consequences (`harness/reports/M6/20261015_x2_rates_a1_div2_exact.md`, maxIter 32): vs SPICE worst HOT −22.5 / −26.3 /
+−33.2 dB at 2x / 4x / 8x (PASS; was −13.0), CRUNCH / DRIVE ≤ −38.0 dB; unseen settings vs 16x worst −18.9 / −20.6 /
+−26.8 dB; cost 24 / 46 / 89 % of one core (HOT 36 / 63 / 115 %), full-rate power amp 34 / 67 / 129 % (HOT 52 / 92 /
+166 %). Without the decimation filter the preamp content above a quarter of the engine rate folds into the power amp:
+non-harmonic power on 5 / 9 kHz sines −4.6 … −29.1 dB (full rate at the same engine rate: −6.4 … −36.6 dB).

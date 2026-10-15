@@ -135,16 +135,29 @@ double Amp2203::processSample(double x) noexcept {
     applySupplies();
     if (exactJ4()) {
         // preamp with the last load current, its linearised Thevenin source at y, the power amp against it,
-        // then the preamp again with the power amp's actual load current
+        // then the preamp again with the power amp's actual load current. Power amp at half rate: the same at
+        // the samples where it runs (the Thevenin source taken directly, no decimation filter in the loop),
+        // the preamp alone with the held load current in between; the output through the interpolator.
         preamp_->beginSample(vIn_);
         preamp_->solveLoaded(iY_);
-        double vTh = 0.0, rTh = 0.0;
-        preamp_->theveninAtY(iY_, vTh, rTh);
-        power_->setPreampPort(vTh, 1.0 / rTh);
-        vOut_ = power_->process(0.0);
-        iY_ = power_->preampPortCurrent();
-        preamp_->solveLoaded(iY_);
+        const bool runPower = cfg_.powerAmpRateDivisor == 1 || powerPhase_;
+        double u = 0.0;
+        if (runPower) {
+            double vTh = 0.0, rTh = 0.0;
+            preamp_->theveninAtY(iY_, vTh, rTh);
+            power_->setPreampPort(vTh, 1.0 / rTh);
+            u = power_->process(0.0);
+            iY_ = power_->preampPortCurrent();
+            preamp_->solveLoaded(iY_);
+        }
         preamp_->finishSample();
+        if (cfg_.powerAmpRateDivisor == 1) {
+            vOut_ = u;
+        } else {
+            interp_.push(runPower ? 2.0 * u : 0.0);
+            vOut_ = interp_.dot(halfband_.h);
+            powerPhase_ = !powerPhase_;
+        }
         supply_->process({power_->centreTapCurrent(), power_->screenCurrent(),
                           preamp_->supplyCurrentX() + power_->supplyCurrentX(), preamp_->supplyCurrentA()});
         const double o = vOut_ / cfg_.outputVoltsPerFullScale;

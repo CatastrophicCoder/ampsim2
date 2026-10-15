@@ -61,8 +61,11 @@ public:
     /// Newton statistics of both roots together (preamp, power amp).
     Stats getStats() const;
 
-    /// Output delay in samples at the engine rate added by the power amp's rate change (0 at divisor 1; M6).
-    int latencySamples() const noexcept { return cfg_.powerAmpRateDivisor == 2 ? 2 * kHalfbandM : 0; }
+    /// Output delay in samples at the engine rate added by the power amp's rate change (0 at divisor 1; M6):
+    /// decimator and interpolator, or the interpolator alone with the exact J4 coupling.
+    int latencySamples() const noexcept {
+        return cfg_.powerAmpRateDivisor == 2 ? (cfg_.exactJ4 ? kHalfbandM : 2 * kHalfbandM) : 0;
+    }
 
     /// Node probes for the harness (`ampwav --dump-node`), netlist names. Values are valid after each
     /// processed sample.
@@ -87,7 +90,7 @@ private:
     detail::FirWindow<Halfband::kTaps> decim_, interp_;
     bool powerPhase_ = false;  // true: the power amp runs at this sample
     double iY_ = 0.0;          // exact J4: the load current at y of the last sample (A)
-    bool exactJ4() const noexcept { return cfg_.exactJ4 && cfg_.powerAmpRateDivisor == 1; }
+    bool exactJ4() const noexcept { return cfg_.exactJ4; }
 
     double vIn_ = 0.0;   // V at the input jack
     double vOut_ = 0.0;  // V across the 16 Ω load

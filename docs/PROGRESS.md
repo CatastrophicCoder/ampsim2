@@ -711,6 +711,14 @@ Notes:
 - (2) done: Newton failures at 2x / 4x come from the preamp's 12-iteration budget (not the step limits); maxIter 32 in
   both roots of the full amp (D-052). Acceptance at 384 kHz exact J4: 107 PASS; HOT 21 PASS / 0 FAIL. `ampwav --stats`
   reports Newton failures and max iterations per root.
+- X2 with maxIter 32 (`…_x2_rates_maxiter32.md`): accuracy as before; Newton failures over 28 runs 15 (7 unrescued) /
+  4 (0) / 3 (0) at 2x / 4x / 8x (was 8723 (1376) / 2058 (147) / 128 (3)); DI cost unchanged (34 / 67 / 129 %).
+  Aliasing now measurable without solver noise: non-harmonic power on 5 / 9 kHz sines −6.4 … −19.6 dB at 2x,
+  −14.9 … −26.1 at 4x, −24.8 … −36.6 at 8x (16x −25.7 … −39.9).
+- (1) done (D-053): exact J4 with the half-rate power amp, coupled at the power-amp samples without a decimation
+  filter (`…_x2_rates_a1_div2_exact.md`): HOT −22.5 / −26.3 / −33.2 dB vs SPICE at 2x / 4x / 8x (PASS), unseen settings
+  worst −18.9 / −20.6 / −26.8 dB vs 16x, cost 24 / 46 / 89 % (HOT 36 / 63 / 115 %), latency 17 engine samples. The
+  plugin still runs the Thevenin J4 (exact J4 not enabled there).
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
