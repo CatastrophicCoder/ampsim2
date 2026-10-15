@@ -882,3 +882,21 @@ the engine do not need it). Inference cost is measured with hand-written C++ in 
 plugin have no new dependency.
 Consequences: `pip install -r requirements-ml.txt` in the venv before `python -m harness.x3_neural`.
 
+
+## D-051 One ESR tolerance of −20 dB for every ESR check, engine and real-time plugin model
+Date: 2026-10-15 · Status: accepted (owner decisions: "change the acceptance level to what the literature say
+−17 to −27 dB ESR"; threshold "−20 dB"; engine block tolerances "loosen them too")
+Context: M6 experiments X3 / X4 (neural models trained on the engine) and the owner's aim of "good enough" tonal
+accuracy at a low CPU and memory cost. The literature on real-time amp models reports ESR −17 … −27 dB with good
+listening scores (Wright et al. 2019/2020; ARCHITECTURE_STUDY §2.4, measured there against hardware recordings,
+here against SPICE). The whole-amp DRIVE / CRUNCH check was already −20 dB; the engine's per-block checks were
+−40 / −30 / −60 dB.
+Decision: every ESR tolerance in VERIFICATION §7 is −20 dB: linear block (was −60), nonlinear block Small / Nominal
+/ Hot (was −40), Overdrive (was −30), knob jump (was −40), partition at y, sines (was −26); DI partition and the
+whole-amp DRIVE / CRUNCH check stay −20. New check `plugin_model_esr_db`: a real-time plugin model (any
+architecture) vs SPICE, held-out DI clips at CRUNCH, DRIVE and HOT, 48 kHz band, first 0.1 s excluded, ≤ −20 dB.
+Tolerances that are not ESR (DC, magnitude, harmonics, power / THD, NFB, stability, Newton) are unchanged.
+Consequences: the engine's per-block checks flag only errors above −20 dB; an error such as the J4 partition error
+at HOT before X1 (−13 dB) is still caught, smaller ones (e.g. −25 dB) are not. Earlier reports keep their recorded
+tolerances; reports generated from now on score against −20 dB. Against the new check: X3 (CRUNCH only) −16.5 …
+−17.1 dB, X4 −3.0 … −7.1 dB, the engine −39.6 … −56.1 dB.

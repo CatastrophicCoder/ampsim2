@@ -9,16 +9,17 @@ TOLERANCES = {
     'tb_dc_rel_error': (0.005, 'max'),              # M0 testbench sanity vs F (0.5 %)
     'linear_mag_db_20_10k': (0.1, 'max'),
     'linear_mag_db_10k_20k': (0.3, 'max'),
-    'linear_esr_db': (-60.0, 'max'),
-    'nonlinear_esr_db': (-40.0, 'max'),             # Small / Nominal / Hot
-    'nonlinear_esr_db_overdrive': (-30.0, 'max'),
+    'linear_esr_db': (-20.0, 'max'),                # D-051 (was -60)
+    'nonlinear_esr_db': (-20.0, 'max'),             # Small / Nominal / Hot; D-051 (was -40)
+    'nonlinear_esr_db_overdrive': (-20.0, 'max'),   # D-051 (was -30)
     'harmonics_2_5_db': (0.5, 'max'),
     'total_power_rel': (0.05, 'max'),
     'total_thd_pp': (0.5, 'max'),
     'total_esr_db': (-20.0, 'max'),
+    'plugin_model_esr_db': (-20.0, 'max'),          # real-time plugin model vs SPICE, DI, 48 kHz band (D-051)
     'total_harmonics_2_9_db': (1.5, 'max'),
     'newton_failures': (0, 'max'),
-    'partition_esr_db_sines': (-26.0, 'max'),        # at y (M3), VERIFICATION §7
+    'partition_esr_db_sines': (-20.0, 'max'),        # at y (M3), VERIFICATION §7; D-051 (was -26)
     'partition_esr_db_di': (-20.0, 'max'),
     'newton_median_iterations': (3, 'max'),        # SPEC §7 M2 acceptance
     'newton_max_iterations': (12, 'max'),          # the configured limit (WDF_DESIGN §4 maxIter)

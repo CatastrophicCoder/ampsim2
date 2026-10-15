@@ -7,7 +7,7 @@ Each case ramps knob targets 0 → 1 in 10 ms during a 1 kHz tone (B4: 1 V on th
 nominal 0.1 V at the guitar input). The engine runs
 through `ampwav --knob-ramp` (it smooths the targets and updates its scattering matrix every
 kParamUpdateInterval samples). The reference is SPICE with the pot resistances as expressions of recorded
-rotation nodes that follow the same smoothed trajectory continuously. Pass: no NaN/Inf and ESR ≤ −40 dB
+rotation nodes that follow the same smoothed trajectory continuously. Pass: no NaN/Inf and ESR ≤ −20 dB (D-051; was −40 dB)
 over the ramp and the 20 ms after it. Peak error and error energy above 5 kHz are reported as information.
 Writes harness/reports/M<n>/<YYYYMMDD>_<block>_knob_jump.md.
 
@@ -155,7 +155,7 @@ def main():
     x = dc + setup['tone_v'] * np.sin(2 * np.pi * TONE_HZ * t)
     with tempfile.TemporaryDirectory(prefix='amp2203_knob_') as d, ThreadPoolExecutor() as ex:
         rows = list(ex.map(lambda c: run_case(block_id, c, x, d), setup['cases']))
-    limit = -40.0
+    limit = -20.0  # D-051 (was -40)
     ms = setup['milestone']
     lines = [f'# {ms} report: {block_id.upper()} knob-jump test', '',
              f'- Date: {datetime.date.today().isoformat()}, engine commit `{_git()}`, ngspice '

@@ -737,3 +737,5 @@ _(Claude Code: add questions here and also ask them in the session.)_
   optimise the solver first (accuracy unchanged; measured per step). Done (D-046): real-time factor 0.42 → 0.53;
   re-verification (B56, cascade, M4 acceptance, null test) unchanged; automation 90 first-solve failures, all
   rescued. M5 stops here for review.
+- Q25 (M6): acceptance target for the real-time plugin? — Answered 2026-10-15: −20 dB ESR (literature −17 … −27 dB) for
+  every ESR check, the engine's per-block checks included (D-051).
