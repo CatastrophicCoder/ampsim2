@@ -206,32 +206,33 @@ three candidates differ by < 0.4 % and give the same result within 0.1 dB. Worst
 
 ## 5. Reference DC operating point (default parameters, from SPICE)
 
-Defaults: vol 0.6, treble/middle/bass/presence 0.5, master 0.3, rv1 4 kΩ, vnl 505 V, rsrc 100 Ω.
+Defaults: vol 0.6, treble/middle/bass/presence 0.5, master 0.3, rv1 4 kΩ, vnl 505 V, rsrc 100 Ω. EL34 parameters
+fitted to the Ei-RC data sheet curves (D-058; with Koren's set the EL34s idled at 34.08 mA plate / 4.57 mA screen).
 
 | Node | Voltage | Node | Voltage |
 |---|---|---|---|
-| ct (B+, OT CT) | 488.708 V | p2a | 231.130 V |
-| nScr | 485.649 V | k2a | 1.404 V |
-| bpX | 402.336 V | k2b | 231.686 V |
-| bpA | 389.350 V | p3a | 270.881 V |
-| nbias | −46.364 V | p3b | 262.271 V |
-| p1a | 296.402 V | k3 | 44.933 V |
-| k1a | 2.510 V | nF | 43.522 V |
-| p1b | 352.433 V | nG | 13.484 V |
-| k1b | 3.692 V | pA / pB (EL34 plates) | 487.662 / 487.580 V |
+| ct (B+, OT CT) | 491.347 V | p2a | 232.577 V |
+| nScr | 488.880 V | k2a | 1.414 V |
+| bpX | 404.998 V | k2b | 233.140 V |
+| bpA | 391.921 V | p3a | 272.611 V |
+| nbias | −46.364 V | p3b | 263.951 V |
+| p1a | 298.326 V | k3 | 45.250 V |
+| k1a | 2.527 V | nF | 43.828 V |
+| p1b | 354.750 V | nG | 13.579 V |
+| k1b | 3.717 V | pA / pB (EL34 plates) | 490.463 / 490.394 V |
 
 | Current | Value |
 |---|---|
-| V1a plate (R4) | 0.930 mA |
-| V1b plate (R7) | 0.369 mA |
-| V2a plate (R12) | 1.712 mA |
-| V2b cathode (R13) | 2.317 mA |
-| PI plates (R18 / R21) | 1.603 / 1.401 mA |
-| R29 (preamp + PI total from nScr) | 8.331 mA |
-| Choke (Lch) | 26.60 mA |
-| EL34 plate, per tube | 34.08 mA |
-| EL34 screen, per tube | 4.57 mA |
-| Total HT current (Vht) | 162.9 mA |
+| V1a plate (R4) | 0.936 mA |
+| V1b plate (R7) | 0.372 mA |
+| V2a plate (R12) | 1.724 mA |
+| V2b cathode (R13) | 2.331 mA |
+| PI plates (R18 / R21) | 1.614 / 1.410 mA |
+| R29 (preamp + PI total from nScr) | 8.388 mA |
+| Choke (Lch) | 21.45 mA |
+| EL34 plate, per tube | 28.77 mA |
+| EL34 screen, per tube | 3.26 mA |
+| Total HT current (Vht) | 136.5 mA |
 
 Regenerate with `python3 reference/spice/spice_tools.py` after any netlist change.
 

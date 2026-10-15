@@ -40,5 +40,5 @@ X2b bpX p2a k2b 12AX7
 R13 k2b 0 100k
 
 *** supply (inserted by the harness)
-Vsup_bpA bpA 0 DC 389.349603
-Vsup_bpX bpX 0 DC 402.335999
+Vsup_bpA bpA 0 DC 391.921506
+Vsup_bpX bpX 0 DC 404.998185

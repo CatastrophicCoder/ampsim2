@@ -784,6 +784,10 @@ Notes:
   kvb 40.4, kg2 2243; error vs the curves median 3.7 / 2.7 % (current set 11.5 / 28.2 %). Full amp: output impedance
   20–23 Ω (was 14–16), clean 87 W (101), clipped 156–163 W (182–194), harmonics mostly within 1 dB, centroid −1 … −2 %.
   Not a cause of "dark"; the higher output impedance makes the resistive-load difference larger.
+- Owner 2026-10-15: adopt the fitted EL34 in the reference model (D-058). Plan: tubes.lib EL34 parameters (bias network A4
+  unchanged); engine `devices::Pentode` defaults; regenerate tests/data el34 sweeps (`harness.device_sweeps`), CIRCUIT.md §5,
+  README sanity figures; re-verify: b56 block-exact, M4 acceptance at 768 kHz and at 384 kHz exact J4 + HOT, X2 at half 2x
+  (plugin config), B56 knob jump; SPICE references re-rendered (netlist hash changes).
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_

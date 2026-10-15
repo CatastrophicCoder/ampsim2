@@ -989,3 +989,16 @@ Consequences: plugin CPU (2x Half, plugin_cpu): automation of any knob or all si
 settings −18.9 dB; null test 26 / 26 at Half and Full (−138.5 dB); automation 0 failures. Knob jump vs SPICE (768 kHz)
 still PASS with less margin: B1234 −39.2 … −55.1 dB (was −50.0 … −59.4), B56 Presence −63.2 dB (was −77.0); which of
 the two changes accounts for it is not separated.
+
+## D-058 EL34 model parameters fitted to the Ei-RC data sheet curves (reference model change)
+Date: 2026-10-15 · Status: accepted (owner: "Adopt the fitted EL34 in the reference model"; changes `tubes.lib`, A5)
+Context: owner listening ("dark", "lacks gain"); M6 EL34 study (`harness/reports/M6/20261015_el34_curve_fit.md`): Koren's
+EL34 set deviated from the data sheet by a median 11.5 % on the plate curves and 28.2 % on the transfer curves.
+Decision: `tubes.lib` EL34 mu 14.77, ex 1.046, kg1 194.3, kg2 2243, kp 53.82, kvb 40.43 (was 11 / 1.35 / 650 / 4200 / 60 /
+24), fitted to 81 digitised curve points (median error 3.7 / 2.7 %) and the sheet's screen currents; the engine's
+`devices::Pentode` / `kEL34Pair` take the same values. The bias network (A4) is unchanged.
+Consequences: DC (CIRCUIT.md §5): EL34 idle 28.77 mA plate / 3.26 mA screen per tube (was 34.08 / 4.57), B+ 491.3 V (was
+488.7), total HT 136.5 mA (162.9). tests/data EL34 sweeps, the block testbenches and the C++ DC fixtures regenerated; J3
+re-measured (359.535 Ω). Every SPICE reference that contains the power amp is re-rendered (netlist hash); the
+verification reports from before this entry describe the Koren EL34. Expected from the study: output impedance ≈ 20–23 Ω
+(was 14–16), less power (clean 87 vs 101 W at 25 mV, clipped ≈ 156–163 vs 182–194 W).

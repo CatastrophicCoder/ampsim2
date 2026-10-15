@@ -78,5 +78,5 @@ Vin j4s 0 DC 0 AC 1
 Rth_j4 j4s y {rth_j4}
 
 *** preamp load (inserted by the harness)
-Isink_bpA bpA 0 DC 0.00129863961
-Isink_bpX bpX 0 DC 0.0040289243
+Isink_bpA bpA 0 DC 0.00130766783
+Isink_bpX bpX 0 DC 0.00405561586

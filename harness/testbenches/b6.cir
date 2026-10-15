@@ -47,13 +47,13 @@ K3 Lp2 Ls {kot}
 Rload out 0 16
 
 *** J5a (inserted by the harness)
-Vrec_p3a j5a 0 DC 270.880925
+Vrec_p3a j5a 0 DC 272.611263
 Rth_j5a j5a p3a {rth_j5a}
 
 *** J5b (inserted by the harness)
-Vrec_p3b j5b 0 DC 262.270582
+Vrec_p3b j5b 0 DC 263.951199
 Rth_j5b j5b p3b {rth_j5b}
 
 *** recorded (inserted by the harness)
-Vrec_ct ct 0 DC 488.708422
-Vrec_nscr nScr 0 DC 485.649287
+Vrec_ct ct 0 DC 491.346637
+Vrec_nscr nScr 0 DC 488.880467

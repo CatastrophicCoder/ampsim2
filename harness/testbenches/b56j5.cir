@@ -89,5 +89,5 @@ Ej5b j5b 0 p3b 0 1
 Rth_j5b j5b p3b6 {rth_j5b}
 
 *** preamp load (inserted by the harness)
-Isink_bpA bpA 0 DC 0.00129863961
-Isink_bpX bpX 0 DC 0.0040289243
+Isink_bpA bpA 0 DC 0.00130766783
+Isink_bpX bpX 0 DC 0.00405561586

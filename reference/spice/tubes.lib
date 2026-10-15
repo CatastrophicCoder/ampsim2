@@ -14,7 +14,8 @@ Dg gx k DGRID
 .ends 12AX7
 
 * Pentode pin order: plate screen grid cathode
-.subckt EL34 p s g k params: mu=11 ex=1.35 kg1=650 kg2=4200 kp=60 kvb=24 rgi=1000 ccg=15p cpg=1p ccp=8p
+* EL34 parameters fitted to the Ei-RC data sheet curves (D-058; Koren's set was mu=11 ex=1.35 kg1=650 kg2=4200 kp=60 kvb=24)
+.subckt EL34 p s g k params: mu=14.77 ex=1.046 kg1=194.3 kg2=2243 kp=53.82 kvb=40.43 rgi=1000 ccg=15p cpg=1p ccp=8p
 Be1 e1 0 V = max(V(s,k),1m)/kp*ln(1+exp(kp*(1/mu+V(g,k)/max(V(s,k),1m))))
 Re1 e1 0 1G
 Bp p k I = 2*pwr(max(V(e1),0),ex)/kg1*atan(V(p,k)/kvb)

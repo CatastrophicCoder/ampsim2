@@ -25,7 +25,7 @@ struct PentodeCurrents {
 /// helpers, the diode's CJO / TT and the inter-electrode capacitances are not part of the device.
 /// `count` scales every current and derivative: 2 = a matched pair with identical drive (SPEC §4.2 B6).
 struct Pentode {
-    double mu = 11.0, ex = 1.35, kg1 = 650.0, kg2 = 4200.0, kp = 60.0, kvb = 24.0;
+    double mu = 14.77, ex = 1.046, kg1 = 194.3, kg2 = 2243.0, kp = 53.82, kvb = 40.43;  // D-058 (was Koren 11 / 1.35 / 650 / 4200 / 60 / 24)
     GridDiode grid{1e-9, 1.0, 1000.0 + 1.0};
     double count = 1.0;
 
@@ -69,9 +69,9 @@ struct Pentode {
     }
 };
 
-/// EL34 with the tubes.lib parameters (mu=11 ex=1.35 kg1=650 kg2=4200 kp=60 kvb=24 rgi=1000).
+/// EL34 with the tubes.lib parameters (mu=14.77 ex=1.046 kg1=194.3 kg2=2243 kp=53.82 kvb=40.43 rgi=1000; D-058).
 inline const Pentode kEL34{};
 /// Matched EL34 pair with identical drive (V4 ‖ V5, V6 ‖ V7): every current doubled.
-inline const Pentode kEL34Pair{11.0, 1.35, 650.0, 4200.0, 60.0, 24.0, {1e-9, 1.0, 1000.0 + 1.0}, 2.0};
+inline const Pentode kEL34Pair{14.77, 1.046, 194.3, 2243.0, 53.82, 40.43, {1e-9, 1.0, 1000.0 + 1.0}, 2.0};
 
 }  // namespace amp2203::devices

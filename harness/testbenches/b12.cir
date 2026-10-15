@@ -28,4 +28,4 @@ R6 k1b 0 10k
 R7 bpA p1b 100k
 
 *** supply (inserted by the harness)
-Vsup_bpA bpA 0 DC 389.349603
+Vsup_bpA bpA 0 DC 391.921506

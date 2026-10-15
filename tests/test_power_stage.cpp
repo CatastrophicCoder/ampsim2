@@ -13,7 +13,7 @@ using amp2203::PowerStage;
 
 namespace {
 constexpr double kFs = 768000.0;
-constexpr double kP3a = 270.8809249953309, kP3b = 262.2705821268219;  // F op (ngspice 47)
+constexpr double kP3a = 272.6112625407083, kP3b = 263.9511987003812;  // F op (ngspice 47)
 
 double probe(const PowerStage& s, const std::string& name) {
     for (const auto& p : s.probes())
@@ -27,21 +27,21 @@ double probe(const PowerStage& s, const std::string& name) {
 TEST_CASE("PowerStage starts at the DC operating point", "[stage6][m4]") {
     PowerStage s;
     s.prepare(kFs);
-    s.setSupplyVoltages(488.70842163204327, 485.64928691750646);
+    s.setSupplyVoltages(491.3466370439178, 488.8804667528911);
     s.reset(kP3a, kP3b);
-    const std::pair<const char*, double> ref[] = {{"ngn", -46.36312745114321}, {"nor", -46.36312745114321},
-                                                  {"nbias", -46.36358785048281}, {"g4", -46.36312159151525},
-                                                  {"s4", 481.0819124250908},   {"pa", 487.6615211930245},
-                                                  {"pb", 487.5797411890199},   {"s6", 481.08174006997325}};
+    const std::pair<const char*, double> ref[] = {{"ngn", -46.3631274511432}, {"nor", -46.3631274511432},
+                                                  {"nbias", -46.36358785048281}, {"g4", -46.3631215915153},
+                                                  {"s4", 485.6163911912913},   {"pa", 490.4627514780715},
+                                                  {"pb", 490.3937077859763},   {"s6", 485.6161768945823}};
     for (const auto& [n, v] : ref) {
         INFO(n << ": " << probe(s, n) << " (SPICE " << v << ")");
         REQUIRE(std::fabs(probe(s, n) / v - 1.0) < 5e-3);
     }
     INFO("ip tube A " << probe(s, "ip_tube_a") << " B " << probe(s, "ip_tube_b") << " is A " << probe(s, "is_tube_a"));
-    REQUIRE(std::fabs(probe(s, "ip_tube_a") - 0.03407830267111851) < 1e-3);
-    REQUIRE(std::fabs(probe(s, "ip_tube_b") - 0.03407802821202568) < 1e-3);
-    REQUIRE(std::fabs(probe(s, "is_tube_a") - 0.0045673744924156524) < 0.3e-3);
-    REQUIRE(std::fabs(probe(s, "is_tube_b") - 0.00456754684753321) < 0.3e-3);
+    REQUIRE(std::fabs(probe(s, "ip_tube_a") - 0.0287723165965592) < 1e-3);
+    REQUIRE(std::fabs(probe(s, "ip_tube_b") - 0.0287720186576503) < 1e-3);
+    REQUIRE(std::fabs(probe(s, "is_tube_a") - 0.0032641827099544754) < 0.3e-3);
+    REQUIRE(std::fabs(probe(s, "is_tube_b") - 0.0032641827099544754) < 0.3e-3);
     // the centre tap supplies both plates (KCL at DC)
     REQUIRE(std::fabs(s.centreTapCurrent() - probe(s, "ip_a") - probe(s, "ip_b")) < 1e-9);
     REQUIRE(std::fabs(s.screenCurrent() - probe(s, "is_a") - probe(s, "is_b")) < 1e-12);
@@ -49,7 +49,7 @@ TEST_CASE("PowerStage starts at the DC operating point", "[stage6][m4]") {
     const double out = s.output();
     for (int n = 0; n < 8192; ++n)
         REQUIRE(std::fabs(s.process(kP3a, kP3b) - out) < 1e-9);  // silence in, silence out (SPEC §3.6)
-    REQUIRE(std::fabs(probe(s, "pa") - 487.6615211930245) < 5e-3 * 487.66);
+    REQUIRE(std::fabs(probe(s, "pa") - 490.4627514780715) < 5e-3 * 490.46);
     REQUIRE(s.newtonStats().failures == 0);
 }
 

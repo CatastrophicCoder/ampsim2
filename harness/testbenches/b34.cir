@@ -36,8 +36,8 @@ RVR2a tw y {1Meg*(1-atap(master))+1}
 RVR2b y 0 {1Meg*atap(master)+1}
 
 *** J2 (inserted by the harness)
-Vin j2s 0 DC 352.432789 AC 1
+Vin j2s 0 DC 354.750235 AC 1
 Rth_j2 j2s p1b {rth_j2}
 
 *** supply (inserted by the harness)
-Vsup_bpX bpX 0 DC 402.335999
+Vsup_bpX bpX 0 DC 404.998185

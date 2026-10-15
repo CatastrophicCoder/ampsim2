@@ -32,5 +32,5 @@ Vin j4s 0 DC 0 AC 1
 Rth_j4 j4s y {rth_j4}
 
 *** recorded (inserted by the harness)
-Vrec_out out 0 DC 4.23024587e-05
-Vrec_bpx bpX 0 DC 402.335999
+Vrec_out out 0 DC 4.26007353e-05
+Vrec_bpx bpX 0 DC 404.998185
