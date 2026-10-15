@@ -719,6 +719,11 @@ Notes:
   filter (`…_x2_rates_a1_div2_exact.md`): HOT −22.5 / −26.3 / −33.2 dB vs SPICE at 2x / 4x / 8x (PASS), unseen settings
   worst −18.9 / −20.6 / −26.8 dB vs 16x, cost 24 / 46 / 89 % (HOT 36 / 63 / 115 %), latency 17 engine samples. The
   plugin still runs the Thevenin J4 (exact J4 not enabled there).
+- Listening set (owner 2026-10-15): `python -m harness.listening` → `harness/cache/listening/20261015/` (not committed):
+  DI GTR L / GTR RR 10–30 s at CRUNCH, DRIVE, HOT; engine 16x reference, full-rate power amp 2x / 4x / 8x, half rate
+  2x / 4x, X4 network, X3 (CRUNCH); named / blind (KEY.txt) / difference; same gain per excerpt and preset, 32-bit
+  float. Difference RMS vs the reference: CRUNCH / DRIVE −52 … −94 dBFS (engine variants), HOT −27 … −58 dBFS;
+  networks −13 … −29 dBFS. No cabinet in the files.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
