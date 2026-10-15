@@ -694,6 +694,13 @@ Notes:
   5 / 9 kHz sines thousands to ≈ 140 000 per 2 s at 2x / 4x (and up to 11 496 at 8x, 20 at 16x), which dominate the
   aliasing figures there. Cost ≈ 3.4–3.6 µs per engine sample (HOT 4.3–5.5): 34 / 67 / 129 % of one core at 2x / 4x
   / 8x (HOT 52 / 92 / 166 %). Limiting factor at lower rates: Newton convergence, not ESR.
+- A1 result: (a) Newton tolerance 1e-5 V (`…_x2_rates_a1_tol1e-5.md`): accuracy as X2 (worst HOT −26.2 / −33.2 /
+  −38.7 dB at 2x / 4x / 8x, PASS); cost 36 / 58 / 106 % of one core (HOT 45 / 77 / 157 %); Newton failures fewer
+  (DI + validation runs: 6568 / 1380 / 22, unrescued 1048 / 138 / 3), loud 5 / 9 kHz sines still fail at 2x / 4x.
+  (b) plus the power amp at half rate (`…_a1_div2_tol1e-5.md`): not a test of exact J4 — `Amp2203::exactJ4()` is off
+  when the power amp runs at half rate, so these runs used the Thevenin J4: HOT −13.0 dB at every rate (FAIL), CRUNCH
+  / DRIVE pass; cost 17 / 31 / 55 % (HOT 27 / 44 / 75 %). ampwav `--stats` now reports `exact_j4` as in effect.
+  Exact J4 with the half-rate power amp is not implemented (open).
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
