@@ -794,6 +794,7 @@ Notes:
   at 1e-8, noted in the report); half 2x plugin config vs SPICE HOT −23.1 dB, unseen −19.6 dB; B56 knob jump −64.0 dB;
   null test 26 / 26; plugin CPU static 31.6 % (every knob 10), automation 22.2 … 24.4 %. SPICE sanity: NFB 5.1 / 4.7 /
   4.6 dB (was 6.6 / 6.2 / 6.0), clean 87 / 112 / 126 W at 25 / 30 / 40 mV (was 101 / 133 / 151 W).
+- Plugin with the fitted EL34 reinstalled (VST3, AU); pluginval strictness 5 SUCCESS for both, auval PASS.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
