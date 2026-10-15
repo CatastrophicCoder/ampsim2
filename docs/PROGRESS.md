@@ -758,6 +758,18 @@ Notes:
   ≈ 19 % / 32.5 %. Accuracy: acceptance and HOT unchanged; knob jump PASS (B1234 −39.2 … −55.1 dB, B56 −63.2 dB).
 - 2026-10-15 (main after PR #1): plugin reinstalled to ~/Library/Audio/Plug-Ins (VST3, AU); pluginval strictness 5
   SUCCESS for VST3 and AU, auval PASS (`harness/reports/M6/20261015_pluginval_*.log`, `…_auval.log`).
+- Owner listening in Logic (2026-10-15): "very dark", "lacks gain", Master "just adds volume"; cab IR after the plugin;
+  compared with a real 2203. Review of O3 / A5 (owner request), SPICE studies on copies, reference unchanged:
+  - O3: C5 1 nF top-to-wiper matches the drawing. New O8: C2 100 pF V1a plate–cathode is on the drawing but missing
+    from the netlist; adding it darkens V1a → V1b by 0.3 dB at 5 kHz, 0.7 … 0.9 dB at 10 kHz.
+  - A5 12AX7: Koren's set vs RCA datasheet: 250 V / −2 V 0.95 mA (1.2), gm 1.67 (1.6) mA/V, rp 53.7 (62.5) kΩ; 100 V /
+    −1 V 0.10 mA (0.5), gm 0.59 (1.25), rp 141 (80) kΩ. Sarti et al. DAFx-07 set (mu 100.8, ex 1.4979, kg1 1890, kp 828,
+    kvb 72, Vct 0.612) matches both points (1.22 mA / 1.62 / 61.4; 0.50 mA / 1.22 / 82.0). Full amp with it: DC −1.6 …
+    −6.6 V, CRUNCH / DRIVE 220 Hz 0.3 V: output −0.3 dB, harmonics H2–H9 within 0.0 … 3.8 dB, spectral centroid +2 %.
+  - A5 EL34 (Koren set) vs Philips class A (250 / 250 V, −12.2 V): Ia 113 (100) mA, Ig2 19.3 (14.9) mA, gm 13.1 (11)
+    mA/V, ra 34 (15) kΩ; effect on the sound not studied.
+  Neither O3 nor the 12AX7 set explains "dark / lacks gain"; open candidates: resistive 16 Ω load (README known
+  limitation), EL34 model, input level.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
