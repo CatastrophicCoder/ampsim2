@@ -770,6 +770,15 @@ Notes:
     mA/V, ra 34 (15) kΩ; effect on the sound not studied.
   Neither O3 nor the 12AX7 set explains "dark / lacks gain"; open candidates: resistive 16 Ω load (README known
   limitation), EL34 model, input level.
+- EL34 study (owner request; SPICE copies, reference unchanged): no published Koren EL34 fit found; JJ datasheet typical
+  point Ua 250 V, Ug2 265 V, Ia 100 mA, S 11 mA/V, Ri 15 kΩ, mu g2-g1 11. Current set there: gm 12.2 mA/V, ri 38.8 kΩ.
+  One-point fit (mu, ex, kg1, kg2 kept): kp 49.97, kvb 58.9 → gm 11.0, ri 15.0 kΩ; softer knee (Vg1 0 V, Va 50 V:
+  159 vs 254 mA), not validated against curves. Full amp, current / fit: clean power (CLEAN 25 mV) 101 / 82.5 W
+  (THD 3.2 / 1.9 %); clipped output at DRIVE Master 0.6–1.0 and HOT 182–194 / 132–137 W into 16 Ω; harmonics
+  H2–H9 mostly within 0–2 dB (H2 at Master 0.6: −38.6 / −53.2 dB); spectral centroid −1 … −7 % with the fit.
+  Closed-loop output impedance (16 Ω vs open load) 14.1 / 15.7 / 16.0 Ω at 100 Hz / 1 kHz / 5 kHz (fit: 14.6 / 16.2 /
+  16.5 Ω): about equal to the load, so a speaker's rising impedance would raise the real amp's output at resonance
+  and at high frequencies relative to the 16 Ω resistor (not yet simulated). Neither EL34 set explains "dark".
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
