@@ -724,6 +724,8 @@ Notes:
   2x / 4x, X4 network, X3 (CRUNCH); named / blind (KEY.txt) / difference; same gain per excerpt and preset, 32-bit
   float. Difference RMS vs the reference: CRUNCH / DRIVE −52 … −94 dBFS (engine variants), HOT −27 … −58 dBFS;
   networks −13 … −29 dBFS. No cabinet in the files.
+- Owner listening result 2026-10-15: full-rate power amp at 4x and half-rate power amp at 2x sound identical to the
+  16x reference; the X3 / X4 networks sound weaker, with clearly less gain, most of all at HOT.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
