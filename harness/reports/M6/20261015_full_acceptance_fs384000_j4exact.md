@@ -1,6 +1,6 @@
 # M4 acceptance: full amplifier vs the full netlist
 
-- Date: 2026-10-15, engine commit `f17a4fc (dirty)`, ngspice 47, fs = 384000 Hz, J4 exact, SPICE reltol 1e-08
+- Date: 2026-10-15, engine commit `831e393 (dirty)`, ngspice 47, fs = 384000 Hz, J4 exact, SPICE reltol 1e-08
 - Netlist sha256 `7bea8385e4adb04e`, tubes.lib sha256 `9ec33154be8127d7`
 - Engine: `ampwav --block full` (volts at the jack and across the 16 Ω load), the checks of SPEC §7 M4.
 
@@ -71,8 +71,8 @@ PASS 107 · FAIL 0
 | clean | newton_max_iterations | CLEAN SIN-1000Hz-0.025V | 6 | ≤ 32 | PASS |
 | clean | total_power_rel | CLEAN SIN-1000Hz-0.025V | 0.001105 | ≤ 0.05 | PASS |
 | clean | total_thd_pp | CLEAN SIN-1000Hz-0.025V | 0.0006695 pp | ≤ 0.5 | PASS |
-| stability | stability_out_v | max |out| | 4.409e-05 V | ≤ 0.001 | PASS |
-| stability | stability_growth | RMS last 10 s − first 10 s | 1.83e-12 V | ≤ 1e-06 | PASS |
+| stability | stability_out_v | max |out| | 4.389e-05 V | ≤ 0.001 | PASS |
+| stability | stability_growth | RMS last 10 s − first 10 s | 5.497e-12 V | ≤ 1e-06 | PASS |
 | stability | newton_failures | 60 s silence | 0 | ≤ 0 | PASS |
 | stability | newton_unrescued | 60 s silence | 0 | — | INFO |
 | stability | newton_median_iterations | 60 s silence | 1 | ≤ 3 | PASS |
@@ -190,7 +190,7 @@ PASS 107 · FAIL 0
 
 ## Stability
 
-60 s silence at Preamp / Master / Presence 1.0: max |out| 4.41e-05 V, RMS first / last 10 s 4.23e-05 / 4.23e-05 V.
+60 s silence at Preamp / Master / Presence 1.0: max |out| 4.39e-05 V, RMS first / last 10 s 4.23e-05 / 4.23e-05 V.
 
 ## Delayed-NFB break
 

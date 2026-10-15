@@ -29,7 +29,7 @@ class PowerAmp {
 public:
     using PI = PhaseInverter;
     using PS = PowerStage;
-    static constexpr int kParamUpdateInterval = 32;
+    static constexpr int kParamUpdateInterval = 128;  // samples between matrix updates while a knob moves (D-057; was 32)
     static constexpr int kNodes = 21, kElements = 42, kRootPorts = 11;  // 10 tube ports + the preamp at y
     static constexpr double kDefaultHalfStepTrigger = 100.0;  // V; D-043 (0 = off)
 

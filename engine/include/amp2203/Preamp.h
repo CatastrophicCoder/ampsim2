@@ -27,7 +27,7 @@ class Preamp {
 public:
     static constexpr double kSupplyBpA = 389.349603;  // CIRCUIT.md §5; B7 sets them in M4
     static constexpr double kSupplyBpX = 402.335999;
-    static constexpr int kParamUpdateInterval = 32;
+    static constexpr int kParamUpdateInterval = 128;  // samples between matrix updates while a knob moves (D-057; was 32)
     static constexpr int kNodes = 20, kElements = 38, kRootPorts = 9;  // 8 triode ports + the load at y
 
     // Component values, CIRCUIT.md §1 and tubes.lib (SI units).

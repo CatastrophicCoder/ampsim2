@@ -118,7 +118,7 @@ void Preamp::applyKnobs() noexcept {
     auto zeroWave = stage::plainResistors<decltype(elements())>();
     for (int k = 0; k < kNumElements; ++k)
         zeroWave[static_cast<size_t>(k)] = zeroWave[static_cast<size_t>(k)] && kElementSupplySign[k] == 0;
-    kNet.updateMatrices(root_, conductances(false), {}, &zeroWave);
+    kNet.updateMatrices(root_, conductances(false), {}, &zeroWave, false);  // plain double (D-057)
     ++updates_;
 
     // R_th4 as ToneStackMaster (D-015): VR2b ‖ (VR2a + VR3b + VR5 + VR4), capacitors open, k2b shorted

@@ -973,3 +973,19 @@ knob 10: 35.6 %, 0 Newton failures (48.8 %, 5777 rescued without). Null test 26 
 cost 4.9 / 6.3 / 9.6 / 13.0 µs per engine sample (min / median / 90 % / max, all six knobs jumping 0 ↔ 1 every 50 ms),
 which includes ampwav setting every knob each sample (the plugin sets them once per block); the plugin's cost under
 automation is not measured yet.
+
+## D-057 Full amp roots: matrix updates in double precision, every 128 samples while a knob moves
+Date: 2026-10-15 · Status: accepted (owner: "run 3", both changes; refines D-026 for `Preamp` / `PowerAmp`)
+Context: plugin CPU under knob automation (`harness/reports/M6/20261015_plugin_cpu.md` before this change): one knob
+moving 45.8 … 67.7 %, all six 84.6 … 87.1 % (static 18.9 %); 76 % of the time in the double-double MNA solve of the
+matrix updates (every 32 samples while a knob is smoothed).
+Decision: `mna::rootTransfer` and its helpers are templated on the arithmetic (DD default, or double);
+`RootNetwork::updateMatrices` takes it as a flag. `Preamp` and `PowerAmp` (the full amp's roots) update in double and
+every 128 samples (`kParamUpdateInterval`, was 32). DC solves, the standalone sub-blocks and the R-type fixtures keep
+double-double (D-026 unchanged there).
+Consequences: plugin CPU (2x Half, plugin_cpu): automation of any knob or all six 18.7 … 24.6 % from the default knobs,
+22.8 … 33.5 % from every knob 10 (static 32.5 %), 0 Newton failures. Static accuracy unchanged: full acceptance at
+384 kHz exact J4 107 PASS (ESR identical), HOT 21 PASS (DI ESR within 0.14 dB); half 2x vs SPICE HOT −22.4 dB, unseen
+settings −18.9 dB; null test 26 / 26 at Half and Full (−138.5 dB); automation 0 failures. Knob jump vs SPICE (768 kHz)
+still PASS with less margin: B1234 −39.2 … −55.1 dB (was −50.0 … −59.4), B56 Presence −63.2 dB (was −77.0); which of
+the two changes accounts for it is not separated.

@@ -1,6 +1,6 @@
 # M4 acceptance: full amplifier vs the full netlist
 
-- Date: 2026-10-15, engine commit `f17a4fc (dirty)`, ngspice 47, fs = 384000 Hz, J4 exact, SPICE reltol 1e-08
+- Date: 2026-10-15, engine commit `831e393 (dirty)`, ngspice 47, fs = 384000 Hz, J4 exact, SPICE reltol 1e-08
 - Netlist sha256 `7bea8385e4adb04e`, tubes.lib sha256 `9ec33154be8127d7`
 - Engine: `ampwav --block full` (volts at the jack and across the 16 Ω load), the checks of SPEC §7 M4.
 
@@ -16,17 +16,17 @@ PASS 21 · FAIL 0
 | hot | newton_unrescued | HOT SIN-220Hz-0.3V | 0 | — | INFO |
 | hot | newton_median_iterations | HOT SIN-220Hz-0.3V | 2 | ≤ 3 | PASS |
 | hot | newton_max_iterations | HOT SIN-220Hz-0.3V | 7 | ≤ 32 | PASS |
-| hot | total_esr_db | HOT DI-GTR L | -41.4 dB | ≤ -20 | PASS |
+| hot | total_esr_db | HOT DI-GTR L | -41.54 dB | ≤ -20 | PASS |
 | hot | newton_failures | HOT DI-GTR L | 0 | ≤ 0 | PASS |
 | hot | newton_unrescued | HOT DI-GTR L | 0 | — | INFO |
 | hot | newton_median_iterations | HOT DI-GTR L | 2 | ≤ 3 | PASS |
 | hot | newton_max_iterations | HOT DI-GTR L | 17 | ≤ 32 | PASS |
-| hot | total_esr_db | HOT DI-GTR LL | -42.05 dB | ≤ -20 | PASS |
+| hot | total_esr_db | HOT DI-GTR LL | -42.12 dB | ≤ -20 | PASS |
 | hot | newton_failures | HOT DI-GTR LL | 0 | ≤ 0 | PASS |
 | hot | newton_unrescued | HOT DI-GTR LL | 0 | — | INFO |
 | hot | newton_median_iterations | HOT DI-GTR LL | 2 | ≤ 3 | PASS |
 | hot | newton_max_iterations | HOT DI-GTR LL | 18 | ≤ 32 | PASS |
-| hot | total_esr_db | HOT DI-GTR R | -42.65 dB | ≤ -20 | PASS |
+| hot | total_esr_db | HOT DI-GTR R | -42.59 dB | ≤ -20 | PASS |
 | hot | newton_failures | HOT DI-GTR R | 0 | ≤ 0 | PASS |
 | hot | newton_unrescued | HOT DI-GTR R | 0 | — | INFO |
 | hot | newton_median_iterations | HOT DI-GTR R | 2 | ≤ 3 | PASS |
@@ -42,9 +42,9 @@ PASS 21 · FAIL 0
 | Preset | Signal | ESR | best lag | harm. 2–9 | THD F / E | Power F / E | min v(ct) F / E |
 |---|---|---|---|---|---|---|---|
 | HOT | SIN-220Hz-0.3V | -58.9 dB | 0 | 0.01 dB | 46.17 / 46.17 % | 183.4 / 183.4 W | — |
-| HOT | DI-GTR L | -41.4 dB | 0 | — | — | — | — |
-| HOT | DI-GTR LL | -42.0 dB | 0 | — | — | — | — |
-| HOT | DI-GTR R | -42.7 dB | 0 | — | — | — | — |
+| HOT | DI-GTR L | -41.5 dB | 0 | — | — | — | — |
+| HOT | DI-GTR LL | -42.1 dB | 0 | — | — | — | — |
+| HOT | DI-GTR R | -42.6 dB | 0 | — | — | — | — |
 | HOT | DI-GTR RR | -41.8 dB | 0 | — | — | — | — |
 
 ## Delayed-NFB break

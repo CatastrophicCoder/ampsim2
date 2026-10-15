@@ -82,10 +82,13 @@ struct RootNetwork {
     /// resistors without a supply offset): their Xe columns are left out of the open-circuit product (M6; the
     /// sum then skips exact zeros and is grouped differently, so results change at the rounding level).
     /// Returns false (state unchanged) if singular.
+    /// `doubleDouble`: the solve in double-double (D-026, default) or plain double (D-057, the full amp's roots).
     bool updateMatrices(State& s, const EVec& G, std::span<const mna::Mutual> mutual = {},
-                        const std::array<bool, P>* zeroWave = nullptr) const noexcept {
+                        const std::array<bool, P>* zeroWave = nullptr, bool doubleDouble = true) const noexcept {
         double Xe[N][P], Xr[N][K];
-        if (!mna::rootTransfer(elements, root, G, Xe, Xr, mutual))
+        const bool ok = doubleDouble ? mna::rootTransfer<P, K, N, mna::DD>(elements, root, G, Xe, Xr, mutual)
+                                     : mna::rootTransfer<P, K, N, double>(elements, root, G, Xe, Xr, mutual);
+        if (!ok)
             return false;
         s.activeCount = 0;
         for (int j = 0; j < P; ++j)

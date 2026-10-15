@@ -749,6 +749,13 @@ Notes:
   (from every knob 10: 54.4 … 67.7 %); all six moving 84.6 … 87.1 %; host block 64 as 512; 1 rescued failure in 31
   runs. Profile with all knobs moving: 76 % in the double-double MNA solve of the matrix updates (D-026; every 32
   samples while a knob is smoothed), Newton + LU 14 %, libm 5 %.
+- Owner 2026-10-15: run both: (a) plain double instead of double-double for the matrix updates and (b) a longer
+  update interval. Plan: `mna` routines templated on the scalar (DD / double); `Preamp` and `PowerAmp` (the full amp's
+  roots) update in double and every 128 samples (was 32); sub-blocks, DC solves and the fixtures keep DD. Verify:
+  ctest, knob-jump vs SPICE (b1234, b56), full acceptance at 384 kHz exact J4 + HOT, X2 at half 2x, null test,
+  automation, plugin CPU.
+- Done (D-057): plugin CPU under automation 18.7 … 24.6 % (default base), 22.8 … 33.5 % (every knob 10); static
+  ≈ 19 % / 32.5 %. Accuracy: acceptance and HOT unchanged; knob jump PASS (B1234 −39.2 … −55.1 dB, B56 −63.2 dB).
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
