@@ -31,7 +31,7 @@ C5 1 nF across Preamp Volume top-to-wiper; "50+50 µF" cans modelled as 50 µF p
 
 ## Assumed values (not on the schematic)
 HT source 505 V behind 100 Ω; bias −60 V at the C20 node with RV1 = 4 kΩ; Koren 12AX7 parameters (generic); EL34 parameters fitted to the Ei-RC data sheet curves (D-058); resistive
-16 Ω load; ideal guitar source.
+ideal guitar source. The load is a representative nominal 16 Ω 4x12 speaker impedance (D-059; was a 16 Ω resistor).
 
 ## Output transformer (Hammond 1750U datasheet)
 OT 1.7 kΩ : 16 Ω (nominal ratio), DCR 15.36 / 16.56 Ω per half-primary (Blue–White on the pA side) and
@@ -57,7 +57,8 @@ runs it at ≈ 27 mA; the inductance at that current is not specified and stays 
 - Speed: ≈ 27x slower than real time for the full amp.
 
 ## Known limitations
-No rectifier/ripple or mains-transformer dynamics, no OT core saturation or hysteresis, no reactive
-speaker load, generic 12AX7 model. The Koren pentode screen equation gives ~0 screen current at this
+No rectifier/ripple or mains-transformer dynamics, no OT core saturation or hysteresis, generic 12AX7 model, a
+representative (not measured) speaker impedance with no cone breakup or acoustic output (the cab IR follows the
+speaker voltage). The Koren pentode screen equation gives ~0 screen current at this
 bias, so `tubes.lib` computes screen current from the same E1 term as the plate current, plus diversion
 of plate current to the screen when the plate swings low.

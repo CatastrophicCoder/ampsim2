@@ -43,9 +43,9 @@ TEST_CASE("PowerAmp starts at the full-netlist DC operating point", "[stage56][m
         INFO(n << ": " << probe(s, n) << " (SPICE " << v << ")");
         REQUIRE(std::fabs(probe(s, n) / v - 1.0) < 5e-3);
     }
-    // F's speaker node carries the NFB DC current through R22 (CIRCUIT.md §5: 42.6 µV)
+    // F's speaker node carries the NFB DC current through R22 (CIRCUIT.md §5: 42.4 µV)
     INFO("out " << s.output());
-    REQUIRE(std::fabs(s.output() - 4.26007352859038e-05) < 1e-7);
+    REQUIRE(std::fabs(s.output() - 4.240884065521802e-05) < 1e-7);
     REQUIRE(std::fabs(probe(s, "ip_tube_a") - 0.0287723165965592) < 1e-3);
     REQUIRE(std::fabs(probe(s, "is_tube_b") - 0.0032641827099544754) < 0.3e-3);
 

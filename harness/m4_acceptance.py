@@ -155,6 +155,7 @@ def _sine_compare(rep, section, pid, sig, f_res, e_res, sag=False):
         row['harm'], h_ref, h = _harm_2_9(f_res['out'][:n], e_res['out'][:n], f0)
         rep.add(section, 'total_harmonics_2_9_db', f'{pid} {sig.id}', row['harm'], ' dB')
         row['thd'] = (metrics.thd_percent(h_ref), metrics.thd_percent(h))
+        # nominal power V²/16 Ω (the load is the D-059 speaker impedance): the same formula for F and the engine
         row['power'] = (metrics.mean_power(f_res['out'], 16.0), metrics.mean_power(e_res['out'], 16.0))
     if sag:
         row['sag'] = (float(np.min(f_res['ct'])), float(np.min(e_res['ct'])))

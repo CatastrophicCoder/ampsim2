@@ -33,7 +33,7 @@ PARTITION = {
     'B4': 'C10 R15 C11 C12 RVR3a RVR3b RVR5 RVR4a RVR4b RVR2a RVR2b',
     'B5': 'C9 R17 R16 R19 C15 R20 R23 C17 RVR6 R22 X3a X3b R18 R21',
     'B6': ('C14 C16 C18 R24 R25 C19 Vc20 R27 R26 RRV1 R31 R33 R32 R34 R35 R37 R36 R38 X4 X5 X6 X7 '
-           'Lp1 Lp2 Ls Rwp1 Rwp2 Rws K1 K2 K3 Rload'),
+           'Lp1 Lp2 Ls Rwp1 Rwp2 Rws K1 K2 K3 Rspk_e Lspk_e Rspk_le Rspk_m Lspk_m Cspk_m'),  # speaker load D-059
     'B7': 'Vht Rsrc C23 Lch Rch C22 R29 C21b R8 C21a',
 }
 

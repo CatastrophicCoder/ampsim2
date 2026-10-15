@@ -34,9 +34,11 @@ PowerAmp::PowerAmp() {
 
 void PowerAmp::prepare(double sampleRate, double smoothingMs) {
     for (auto* c : {&c9_, &c15_, &c17_, &cgk3a_, &cgp3a_, &cpk3a_, &cgk3b_, &cgp3b_, &cpk3b_, &c14_, &c16_, &c18_,
-                    &c19_, &cgkA_, &cgpA_, &cpkA_, &cgkB_, &cgpB_, &cpkB_})
+                    &c19_, &cgkA_, &cgpA_, &cpkA_, &cgkB_, &cgpB_, &cpkB_, &cspkM_})
         c->prepare(sampleRate);
     ot_.prepare(sampleRate);
+    lspkE_.prepare(sampleRate);
+    lspkM_.prepare(sampleRate);
     presence_.prepare(sampleRate, smoothingMs);
     applyKnobs();
 }
@@ -93,9 +95,14 @@ PowerAmp::Wave PowerAmp::conductances(bool dc) const noexcept {
     G[eRwp1] = rwp1_.wdf.G;
     G[eRwp2] = rwp2_.wdf.G;
     G[eRws] = rws_.wdf.G;
-    G[eRload] = rload_.wdf.G;
+    G[eRspkE] = rspkE_.wdf.G;
+    G[eRspkLe] = rspkLe_.wdf.G;
+    G[eRspkM] = rspkM_.wdf.G;
+    G[eCspkM] = dc ? 0.0 : cspkM_.wdf.G;
     for (int w = 0; w < 3; ++w)
         G[kWindings[w]] = dc ? kWindingDcConductance : ot_.conductance(w, w);
+    G[eLspkE] = dc ? kWindingDcConductance : lspkE_.conductance(0, 0);  // speaker inductors: shorts at DC
+    G[eLspkM] = dc ? kWindingDcConductance : lspkM_.conductance(0, 0);
     return G;
 }
 
@@ -112,6 +119,8 @@ void PowerAmp::rescaleReactive(double ratio) noexcept {
     for (auto* c : reactive())
         c->rescale(ratio, true);
     ot_.rescaleState(ratio);
+    lspkE_.rescaleState(ratio);
+    lspkM_.rescaleState(ratio);
 }
 
 void PowerAmp::applyKnobs() noexcept {
@@ -131,6 +140,8 @@ void PowerAmp::applyKnobs() noexcept {
             G = conductances(false);
             for (int w = 0; w < 3; ++w)
                 G[kWindings[w]] = step * ot_.conductance(w, w);
+            G[eLspkE] = step * lspkE_.conductance(0, 0);
+            G[eLspkM] = step * lspkM_.conductance(0, 0);
             for (auto* c : reactive())
                 c->rescale(1.0 / step, false);
         }
@@ -152,6 +163,8 @@ void PowerAmp::halfStep(double vIn) noexcept {
             c->wdf.b = bLast_[k++];
         for (auto& w : ot_.w)
             w.wdf.b = bLast_[k++];
+        lspkE_.w[0].wdf.b = bLast_[k++];
+        lspkM_.w[0].wdf.b = bLast_[k++];
     }
     rescaleReactive(0.5);
     auto& h = half_;
@@ -231,10 +244,14 @@ void PowerAmp::reset(double vInDc) {
     for (auto [c, e] : {std::pair{&cgk3a_, eCgk3a}, {&cgp3a_, eCgp3a}, {&cpk3a_, eCpk3a}, {&cgk3b_, eCgk3b},
                         {&cgp3b_, eCgp3b}, {&cpk3b_, eCpk3b}, {&c14_, eC14}, {&c16_, eC16}, {&c18_, eC18},
                         {&c19_, eC19}, {&cgkA_, eCgkA}, {&cgpA_, eCgpA}, {&cpkA_, eCpkA}, {&cgkB_, eCgkB},
-                        {&cgpB_, eCgpB}, {&cpkB_, eCpkB}})
+                        {&cgpB_, eCgpB}, {&cpkB_, eCpkB}, {&cspkM_, eCspkM}})
         c->setDcVoltage(across(e));
     const auto& v = root_.node;
     ot_.setDcCurrents({(v[pA] - v[pA1]) / PS::Rwp1, (v[pB1] - v[pB]) / PS::Rwp2, v[sl] / PS::Rws});
+    // speaker load at DC: both inductors short, so the Re current flows through Le and Lm (D-059)
+    const double iSpk = (v[out] - v[spk1]) / PS::RspkE;
+    lspkE_.setDcCurrents({iSpk});
+    lspkM_.setDcCurrents({iSpk});
     xPrev_ = vInDc;
     vThPrev_ = portVTh_;
     updateOutputs(vInDc);
@@ -261,6 +278,8 @@ double PowerAmp::process(double vIn) noexcept {
             bLast_[k++] = c->wdf.b;
         for (const auto& w : ot_.w)
             bLast_[k++] = w.wdf.b;
+        bLast_[k++] = lspkE_.w[0].wdf.b;
+        bLast_[k++] = lspkM_.w[0].wdf.b;
     }
     Wave wave;
     stage::reflected(elements(), wave);

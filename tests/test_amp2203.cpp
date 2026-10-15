@@ -39,10 +39,10 @@ TEST_CASE("Amp2203 starts at the full-netlist DC operating point", "[amp2203][m4
     REQUIRE(std::fabs(probe(amp, "ip_tube_a") - 0.0287723165965592) < 1e-3);  // ±1 mA per tube
     REQUIRE(std::fabs(probe(amp, "is_tube_a") - 0.0032641827099544754) < 0.3e-3);
 
-    // silence in, silence out (SPEC §3.6: within 1 µV of the DC output; F's speaker node carries 42.6 µV
+    // silence in, silence out (SPEC §3.6: within 1 µV of the DC output; F's speaker node carries 42.4 µV
     // of NFB DC current through R22, and so does the engine)
     const double outDc = probe(amp, "out");
-    REQUIRE(std::fabs(outDc - 4.26007352859038e-05) < 1e-7);
+    REQUIRE(std::fabs(outDc - 4.240884065521802e-05) < 1e-7);
     std::vector<double> x(8192, 0.0);
     amp.process(x.data(), static_cast<int>(x.size()));
     for (double y : x)

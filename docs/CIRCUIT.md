@@ -109,7 +109,8 @@ verification. In the engine B5 and B6 form one block B56 with no junction at the
 | R35,R37 / R36,R38 | 1 kΩ 5 W each | screens – nScr | (pair equivalent 500 Ω) |
 | V4–V7 | EL34 | cathodes to gnd | Fixed bias; V4‖V5 plate pA, V6‖V7 plate pB |
 | OT | see §3 | pA – ct – pB, secondary out – gnd | |
-| Rload | 16 Ω | out – gnd | |
+| Rspk_e / Lspk_e ‖ Rspk_le | 13 Ω / 1.0 mH ‖ 45 Ω | out – spk1 – spk2 | Speaker load (D-059): voice coil R, inductance with eddy loss |
+| Rspk_m ‖ Lspk_m ‖ Cspk_m | 37 Ω ‖ 29.4437 mH ‖ 86.0297 µF | spk2 – gnd | Motional resonance 100 Hz, Q 2; \|Z\| 20 / 50 / 14 / 15 / 35 / 48 Ω at 50 / 100 / 400 / 1k / 5k / 10k Hz |
 
 Bias Thevenin check: Vth = −60 V · 51 kΩ / 66 kΩ = −46.364 V; Rth = 15 kΩ ‖ 51 kΩ = 11.59 kΩ.
 
@@ -234,6 +235,9 @@ fitted to the Ei-RC data sheet curves (D-058; with Koren's set the EL34s idled a
 | EL34 screen, per tube | 3.26 mA |
 | Total HT current (Vht) | 136.5 mA |
 
+The speaker load (D-059) leaves these values unchanged to the digits shown (the speaker node carries 42.4 µV of NFB DC,
+was 42.6 µV with the 16 Ω resistor).
+
 Regenerate with `python3 reference/spice/spice_tools.py` after any netlist change.
 
 ---
@@ -246,7 +250,7 @@ Regenerate with `python3 reference/spice/spice_tools.py` after any netlist chang
 | O2 | Middle pot wiring | As drawn: C12 to wiper, Bass bottom to top lug | ≤ 1.4 dB, only at low Middle settings |
 | O3 | C5 1 nF | VR1 top to wiper | Brightness vs Preamp Volume setting |
 | O4 | "50+50 µF" filter cans | 50 µF per node | Sag and ripple time constants |
-| O5 | NFB tap | 16 Ω output with 16 Ω load | Feedback amount if taken from another tap |
+| O5 | NFB tap | 16 Ω output with the speaker load (D-059) | Feedback amount if taken from another tap |
 | O6 | Low input | Not modelled | Feature only |
 | O7 | OT half-primary orientation | Blue–White (15.36 Ω) on the pA side (V4/V5) | ±0.6 Ω winding asymmetry, about ±40 mV DC per side |
 | O8 | C2 100 pF V1a plate–cathode (drawing 2203 STD Preamp iss. 4) | Not in the netlist (found 2026-10-15) | −0.3 dB at 5 kHz, −0.7 … −0.9 dB at 10 kHz into V1b (SPICE study) |

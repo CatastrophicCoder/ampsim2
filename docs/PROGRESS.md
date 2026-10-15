@@ -802,6 +802,10 @@ Notes:
 - Speaker-load study (`harness/reports/M6/20261015_speaker_load_study.md`): with three 4x12-style impedances instead of
   16 Ω the speaker voltage gains +3 … +4.7 dB at 100 Hz and +1.8 … +4.7 dB at 5 kHz (+2.7 … +5.1 at 8 kHz), −0.3 … −0.9 dB
   at 400 Hz – 1 kHz; driven tones at the owner's settings: centroid +11 … +21 %, 5–10 kHz energy +1.7 … +3.5 dB.
+- Owner 2026-10-15: put the "typical" speaker load into the reference and the engine (D-059). Plan: netlist Rload →
+  Re 13 Ω + (Le 1.0 mH ‖ 45 Ω) + (Res 37 Ω ‖ Lm ‖ Cm at 100 Hz, Q 2); engine B56 (`PowerAmp`) and B6 (`PowerStage`): two
+  nodes, six elements (inductors as one-winding CoupledInductors, the capacitor a DcCapacitor; DC states, half-step
+  rescaling); testbench_gen / blocks / CLEAN power label; C++ DC fixtures, CIRCUIT.md §5, README; re-verify as after D-058.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_

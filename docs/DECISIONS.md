@@ -1002,3 +1002,17 @@ Consequences: DC (CIRCUIT.md §5): EL34 idle 28.77 mA plate / 3.26 mA screen per
 re-measured (359.535 Ω). Every SPICE reference that contains the power amp is re-rendered (netlist hash); the
 verification reports from before this entry describe the Koren EL34. Expected from the study: output impedance ≈ 20–23 Ω
 (was 14–16), less power (clean 87 vs 101 W at 25 mV, clipped ≈ 156–163 vs 182–194 W).
+
+## D-059 Speaker load: representative nominal 16 Ω 4x12 impedance instead of the 16 Ω resistor (reference model change)
+Date: 2026-10-15 · Status: accepted (owner: "put the typical speaker load into the reference and engine")
+Context: owner listening ("dark", needs Treble / Presence 7); speaker-load study (`harness/reports/M6/20261015_speaker_load_study.md`):
+with the D-058 EL34 the closed-loop output impedance is ≈ 20–23 Ω, so a speaker's rising impedance raises the speaker
+voltage +3 … +4.7 dB at 100 Hz and +1.8 … +4.7 dB at 5 kHz relative to a resistor. No published Thiele–Small data for the
+Celestion G12T-75 was found.
+Decision: `Rload out 0 16` → Rspk_e 13 Ω + (Lspk_e 1.0 mH ‖ Rspk_le 45 Ω) + (Rspk_m 37 Ω ‖ Lspk_m 29.4437 mH ‖ Cspk_m
+86.0297 µF; 100 Hz, Q 2), the study's "typical" variant. Engine: B56 (`PowerAmp`) and B6 (`PowerStage`) get nodes spk1 / spk2
+and six elements; the inductors are one-winding `CoupledInductors` (shorts at DC, trapezoidal, half-step rescaling in B56),
+the capacitor a `DcCapacitor`. The plugin output stays the speaker voltage / 60 V. Power metrics keep V²/16 Ω as a nominal
+figure. The parameters are representative, not measured.
+Consequences: DC unchanged except v(out) 42.4 µV (was 42.6). Every SPICE reference that contains the power amp is
+re-rendered; reports before this entry describe the 16 Ω resistor.
