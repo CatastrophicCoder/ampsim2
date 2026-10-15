@@ -900,3 +900,17 @@ Consequences: the engine's per-block checks flag only errors above −20 dB; an 
 at HOT before X1 (−13 dB) is still caught, smaller ones (e.g. −25 dB) are not. Earlier reports keep their recorded
 tolerances; reports generated from now on score against −20 dB. Against the new check: X3 (CRUNCH only) −16.5 …
 −17.1 dB, X4 −3.0 … −7.1 dB, the engine −39.6 … −56.1 dB.
+
+## D-052 Newton iteration limit 32 in the full amp's roots (preamp B1234, power amp B56)
+Date: 2026-10-15 · Status: accepted (owner: "run 1 and 2", Newton convergence at 2x / 4x)
+Context: M6 X2 / A1: at 2x / 4x of 48 kHz the preamp root failed to converge in 12 iterations (DI: up to 80
+first-solve failures and 29 unrescued per 5 s clip at 2x; loud 5 / 9 kHz sines up to ≈ 140 000 per 2 s), the power
+amp at HOT in 16 (rescued). Diagnosis (preamp, scratch builds): step limits ×4 left the DI failures unchanged; maxIter
+64: every case converged, the DI clips in ≤ 21 iterations at 2x and ≤ 17 at 4x (median 2), the sines in ≤ 47–60.
+Failing at 12 was also the expensive path: the fallback runs up to 14 more solves.
+Decision: `Preamp` and `PowerAmp` use maxIter 32 (`FourTriodes::solverK(32)`, `TriodesPentodes::solverK(32)`); the
+standalone sub-blocks keep 12. VERIFICATION §7 "max ≤ configured limit" follows (32 for b1234, b56, full).
+Consequences: samples that converged in ≤ 12 / 16 iterations are unchanged bit for bit. Full acceptance at 384 kHz,
+exact J4: 107 PASS (`…_20261015_full_acceptance_fs384000_j4exact.md`); HOT 21 PASS, 0 FAIL (was 4 FAIL on
+newton_failures), DI ESR within 0.08 dB, max 17–19 iterations. At 2x / 4x the DI clips have 0 failures; only loud
+9 kHz sines (and 5 kHz at 2x) still fail. Worst case per sample rises (32 iterations before the fallback).

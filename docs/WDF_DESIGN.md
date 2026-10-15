@@ -134,7 +134,7 @@ Algorithm (per sample):
 1. Initial guess: linear extrapolation from the two previous solutions, v = v[n−1] + (v[n−1] − v[n−2]),
    with each port's extrapolated step clamped to its step limit; after a sample whose solve failed, the
    trend restarts at zero (v[n−2] := v[n−1]) (DECISIONS D-029, D-034).
-2. Up to `maxIter` (default 12) iterations; per-port step limits, upward and downward separately
+2. Up to `maxIter` (default 12; 32 in the full amp's two roots, DECISIONS D-052) iterations; per-port step limits, upward and downward separately
    (triode blocks: grid ports +50 V / −1000 V, plate ports ±50 V, D-034, D-037). Steps into cutoff are harmless
    and the device equations cannot overflow (closed-form ω, stable softplus), so the limits only shape
    convergence. The step is scaled uniformly so that no port exceeds its limit (this keeps the Newton

@@ -36,10 +36,22 @@ COST_SECONDS = 10.0
 LIMIT = tolerances.TOLERANCES['plugin_model_esr_db'][0]
 
 
+_ENGINE_ID = None
+
+
+def _engine_id():
+    """Hash of the ampwav binary: cached runs belong to the engine build that made them."""
+    global _ENGINE_ID
+    if _ENGINE_ID is None:
+        _ENGINE_ID = hashlib.sha256(x3.AMPWAV.read_bytes()).hexdigest()[:16]
+    return _ENGINE_ID
+
+
 def _run(x48, knobs, factor, opts, stats_only=False):
     """Full amp (exact J4) at 48 kHz × factor on a 48 kHz full-scale input. Returns (out at 48 kHz, stats).
     Cached by input, knobs, factor and options (not for cost runs)."""
-    key = hashlib.sha256(x48.astype(np.float64).tobytes() + json.dumps([knobs, factor, opts], sort_keys=True).encode())
+    key = hashlib.sha256(x48.astype(np.float64).tobytes() + json.dumps([knobs, factor, opts], sort_keys=True).encode()
+                         + _engine_id().encode())
     path = CACHE / f'{key.hexdigest()[:24]}.npz'
     if path.exists() and not stats_only:
         with np.load(path) as z:

@@ -701,6 +701,16 @@ Notes:
   when the power amp runs at half rate, so these runs used the Thevenin J4: HOT −13.0 dB at every rate (FAIL), CRUNCH
   / DRIVE pass; cost 17 / 31 / 55 % (HOT 27 / 44 / 75 %). ampwav `--stats` now reports `exact_j4` as in effect.
   Exact J4 with the half-rate power amp is not implemented (open).
+- Owner 2026-10-15: run (1) exact J4 with the half-rate power amp and (2) Newton convergence at 2x / 4x.
+  Plan (2) first: per-block Newton counts in `ampwav --stats`; diagnose the 2x / 4x failures (which block, which
+  ports, step-limited or not; diagnostic maxIter / step limits); then a rate-aware fix, e.g. D-043's adaptive
+  substeps generalised to the preamp and to m > 2, with bounded cost; verify with `harness.x2_rates` and the 16x
+  acceptance unchanged. Plan (1): the halfband filters put 34 engine samples of delay between the preamp and the
+  half-rate power amp, so a same-sample (exact) J4 cannot span them; test the load current at y fed back with that
+  delay (approximation) against the HOT SPICE references, report before adopting.
+- (2) done: Newton failures at 2x / 4x come from the preamp's 12-iteration budget (not the step limits); maxIter 32 in
+  both roots of the full amp (D-052). Acceptance at 384 kHz exact J4: 107 PASS; HOT 21 PASS / 0 FAIL. `ampwav --stats`
+  reports Newton failures and max iterations per root.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_

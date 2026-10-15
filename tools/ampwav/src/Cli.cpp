@@ -57,10 +57,13 @@ void writeStats(const std::string& path, const Options& o, double rate, size_t s
       << "  \"median_iterations\": " << st.medianIterations << ",\n"
       << "  \"newton_rescued\": " << st.newtonRescued << ",\n"
       << "  \"newton_unrescued\": " << st.newtonUnrescued << ",\n"
+      << "  \"newton_failures_preamp\": " << st.preamp.failures << ",\n"
+      << "  \"newton_failures_power\": " << st.powerAmp.failures << ",\n"
+      << "  \"max_iterations_preamp\": " << st.preamp.maxIterations << ",\n"
+      << "  \"max_iterations_power\": " << st.powerAmp.maxIterations << ",\n"
       << "  \"power_rate_divisor\": " << o.powerRateDivisor << ",\n"
       << "  \"newton_residual_tol\": " << o.newtonTol.value_or(1e-9) << ",\n"
-      // in effect: the engine runs the exact J4 coupling only with the power amp at full rate (Amp2203::exactJ4)
-      << "  \"exact_j4\": " << (o.exactJ4 && o.powerRateDivisor == 1 ? "true" : "false") << "\n"
+      << "  \"exact_j4\": " << (o.exactJ4 ? "true" : "false") << "\n"
       << "}\n";
 }
 
