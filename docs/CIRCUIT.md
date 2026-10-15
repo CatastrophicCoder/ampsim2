@@ -254,6 +254,6 @@ Regenerate with `python3 reference/spice/spice_tools.py` after any netlist chang
 | A2 | OT values | Hammond 1750U replacement datasheet, primary inductance fitted (§3, D-023) | Power, LF/HF response, feedback |
 | A3 | Choke 5 H / 115 Ω | Hammond 194F replacement datasheet; L specified at 120 mA DC, the amp runs it at ≈ 27 mA (D-024) | Screen node dynamics, supply DC |
 | A4 | Bias −60 V at C20, RV1 4 kΩ | Assumed | Idle current, crossover |
-| A5 | Koren generic tube parameters | Generic | Overall voltages and distortion |
+| A5 | Tube parameters | 12AX7: Koren generic; EL34: fitted to the Ei-RC data sheet curves (D-058) | Overall voltages and distortion |
 
 Any change to these must be made in the netlist first, re-verified, and logged in `DECISIONS.md`.

@@ -788,6 +788,12 @@ Notes:
   unchanged); engine `devices::Pentode` defaults; regenerate tests/data el34 sweeps (`harness.device_sweeps`), CIRCUIT.md §5,
   README sanity figures; re-verify: b56 block-exact, M4 acceptance at 768 kHz and at 384 kHz exact J4 + HOT, X2 at half 2x
   (plugin config), B56 knob jump; SPICE references re-rendered (netlist hash changes).
+- D-058 done: re-verified against the new references: M4 full acceptance (768 kHz) 107 PASS (CRUNCH / DRIVE DI −61.1 …
+  −63.0 dB), 384 kHz exact J4 107 PASS, HOT 21 PASS (DI −42.2 … −43.3 dB); b56 106 PASS, b5open 88 PASS, b6 95 PASS / 2 FAIL
+  (the known 5 kHz 20 V discretisation FAILs, D-043; SWP-lo reference rendered at RELTOL 1e-7 after "timestep too small"
+  at 1e-8, noted in the report); half 2x plugin config vs SPICE HOT −23.1 dB, unseen −19.6 dB; B56 knob jump −64.0 dB;
+  null test 26 / 26; plugin CPU static 31.6 % (every knob 10), automation 22.2 … 24.4 %. SPICE sanity: NFB 5.1 / 4.7 /
+  4.6 dB (was 6.6 / 6.2 / 6.0), clean 87 / 112 / 126 W at 25 / 30 / 40 mV (was 101 / 133 / 151 W).
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
