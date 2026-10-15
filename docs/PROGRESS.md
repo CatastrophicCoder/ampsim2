@@ -742,6 +742,8 @@ Notes:
   Full (ampwav `--volts-per-fs`, `--keep-delay`). Found after the decision: at every knob 1.0 the half-rate power amp
   without half-steps has 656 rescued first-solve failures per 5 s and costs 5371 vs 3501 ns per engine sample;
   automation at every knob 1.0 up to 10.4 µs. Raised with the owner.
+- Owner 2026-10-15: half-steps back on at half rate (D-056). Plugin CPU 2x Half FIR: default 20.6 %, HOT 32.9 %, every
+  knob 10 35.6 % (0 failures). Null test 26 / 26; automation 0 failures. Open: plugin CPU under knob automation.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_

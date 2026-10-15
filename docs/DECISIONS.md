@@ -960,3 +960,16 @@ every knob 1.0, 5 s DI, half 2x): the power amp's first solves fail 656 times wi
 rescued, 5371 vs 3501 ns per engine sample (tolerance 1e-4); automation at every knob 1.0: up to 1732 rescued
 failures per run and up to 10.4 µs per engine sample (was 0 and ≈ 6 µs). Open: owner review of the half-step choice
 at extreme settings.
+
+## D-056 Plugin: adaptive half-steps back on with the power amp at half rate
+Date: 2026-10-15 · Status: accepted (owner: "turn half-steps back on at half rate"; revises the half-step part of D-055)
+Context: after D-055, every knob at 1.0 showed that without half-steps the half-rate power amp's first solves fail
+(656 per 5 s, all rescued) and the sample costs more (5371 vs 3501 ns, engine).
+Decision: the plugin keeps the D-043 half-steps at both power-amp rates (`setAdaptiveHalfSteps(true)`); the Newton
+tolerance stays 1e-4 V (D-055).
+Consequences: plugin CPU at 2x Half, 60 s DI GTR L, FIR: default 20.6 %, HOT 32.9 % (28.5 % without half-steps), every
+knob 10: 35.6 %, 0 Newton failures (48.8 %, 5777 rescued without). Null test 26 / 26 at Half and Full (worst
+−138.5 dB). Automation (96 kHz, Half, exact J4, 1e-4 V, one run at a time): 56 runs, 0 non-finite, 0 failures; ampwav
+cost 4.9 / 6.3 / 9.6 / 13.0 µs per engine sample (min / median / 90 % / max, all six knobs jumping 0 ↔ 1 every 50 ms),
+which includes ampwav setting every knob each sample (the plugin sets them once per block); the plugin's cost under
+automation is not measured yet.

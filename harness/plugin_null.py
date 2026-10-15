@@ -71,7 +71,7 @@ def one(name, x, filt):
         _run([RENDER, 'up', '--in', d / 'x.wav', '--out', d / 'up.wav', '--factor', FACTOR, '--filter', filt])
         _run([config.AMPWAV, '--block', 'full', '--units', 'fs', '--in', d / 'up.wav', '--out', d / 'eng.wav',
               '--rate', HOST_RATE * FACTOR, '--j4', 'exact', '--power-rate-divisor', 2 if half else 1,
-              '--newton-tol', NEWTON_TOL, '--half-step-trigger', 0 if half else 100,  # the plugin's settings (D-055)
+              '--newton-tol', NEWTON_TOL, '--half-step-trigger', 100,  # the plugin's settings (D-055, D-056)
               '--volts-per-fs', repr(PLUGIN_VOLTS_PER_FS), '--keep-delay'])
         _run([RENDER, 'down', '--in', d / 'eng.wav', '--out', d / 'ref.wav', '--factor', FACTOR, '--filter', filt])
         a, b = read_wav(d / 'plug.wav')[0], read_wav(d / 'ref.wav')[0]

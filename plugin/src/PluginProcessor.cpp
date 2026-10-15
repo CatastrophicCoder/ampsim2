@@ -81,10 +81,9 @@ void Amp2203Processor::rebuild(double hostRate, int maxBlock) {
     cfg.powerAmpRateDivisor = activePowerRate_ == 1 ? 2 : 1;
     cfg.exactJ4 = true;  // preamp → power amp junction solved exactly (M6 X1, D-053, D-054)
     engine_.prepare(cfg);
-    // D-055: Newton residual tolerance 1e-4 V; no adaptive half-steps when the power amp runs at half rate (the
-    // step decision there flips on last-bit differences, M6); the D-043 trigger at full rate
+    // D-055: Newton residual tolerance 1e-4 V; adaptive half-steps (D-043) at both power-amp rates (D-056)
     engine_.setNewtonResidualTolerance(kNewtonTolerance);
-    engine_.setAdaptiveHalfSteps(cfg.powerAmpRateDivisor == 1);
+    engine_.setAdaptiveHalfSteps(true);
     pushParams();
     engine_.reset();  // DC operating point at the current knobs (SPEC §3.6)
     trim_.reset(hostRate, 0.02);
