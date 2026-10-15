@@ -779,6 +779,11 @@ Notes:
   Closed-loop output impedance (16 Ω vs open load) 14.1 / 15.7 / 16.0 Ω at 100 Hz / 1 kHz / 5 kHz (fit: 14.6 / 16.2 /
   16.5 Ω): about equal to the load, so a speaker's rising impedance would raise the real amp's output at resonance
   and at high frequencies relative to the 16 Ω resistor (not yet simulated). Neither EL34 set explains "dark".
+- EL34 curve fit (owner request; poppler installed for the data sheet; `harness/reports/M6/20261015_el34_curve_fit.md`):
+  Koren parameters fitted to 81 digitised Ei-RC curve points: mu 14.77, ex 1.046, kg1 194.3, kp 53.82,
+  kvb 40.4, kg2 2243; error vs the curves median 3.7 / 2.7 % (current set 11.5 / 28.2 %). Full amp: output impedance
+  20–23 Ω (was 14–16), clean 87 W (101), clipped 156–163 W (182–194), harmonics mostly within 1 dB, centroid −1 … −2 %.
+  Not a cause of "dark"; the higher output impedance makes the resistive-load difference larger.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
