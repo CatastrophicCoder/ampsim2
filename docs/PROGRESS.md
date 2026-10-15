@@ -738,6 +738,10 @@ Notes:
   Newton tolerance 1e-6 / 1e-5 / 1e-4 V (`…_half2x_off_tol*.md`): accuracy identical, failures 12 (2 unrescued),
   engine 22.3 / 21.5 / 19.4 % (HOT 29.4 / 28.3 / 27.1 %). Profile (half 2x, HOT): LU solves 29 %, libm pow / exp / log
   26 %, rest of the Newton loops 34 %, WDF 6 %.
+- Owner 2026-10-15: adopt both (tolerance 1e-4 V, no half-steps at half rate), D-055. Null test 26 / 26 at Half and
+  Full (ampwav `--volts-per-fs`, `--keep-delay`). Found after the decision: at every knob 1.0 the half-rate power amp
+  without half-steps has 656 rescued first-solve failures per 5 s and costs 5371 vs 3501 ns per engine sample;
+  automation at every knob 1.0 up to 10.4 µs. Raised with the owner.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_

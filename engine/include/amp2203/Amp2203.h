@@ -44,6 +44,8 @@ public:
     void setFeedbackClosed(bool closed);
     /// Power-amp adaptive half-step trigger in volts (D-043; 0 = off). Not real-time.
     void setHalfStepTrigger(double volts);
+    /// Adaptive half-steps in the power amp on (the D-043 trigger) or off (D-055: off with the half-rate power amp).
+    void setAdaptiveHalfSteps(bool on);
     /// Newton residual tolerance of both roots in volts (default 1e-9, WDF_DESIGN §4.3; M6 study). Not real-time.
     void setNewtonResidualTolerance(double volts);
 

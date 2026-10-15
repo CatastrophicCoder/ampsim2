@@ -36,6 +36,15 @@ public:
     virtual int latency() const { return 0; }
     /// Volts per full-scale sample at the input and output (only meaningful for the full amp).
     virtual double inputVoltsPerFullScale() const { return 1.0; }
+    /// Input volts per full-scale sample (full amp, `--volts-per-fs`). False if the block has none.
+    virtual bool setInputVoltsPerFullScale(double) { return false; }
+    /// Full-scale input samples in, volts out. The full amp passes them to the engine unchanged (bit-exact as the
+    /// plugin); other blocks scale to volts first.
+    virtual void processFullScale(double* v, int numSamples) noexcept {
+        for (int n = 0; n < numSamples; ++n)
+            v[n] *= inputVoltsPerFullScale();
+        processVolts(v, numSamples);
+    }
     virtual double outputVoltsPerFullScale() const { return 1.0; }
 };
 

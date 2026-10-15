@@ -92,6 +92,9 @@ void printUsage(std::ostream& os) {
           "                Params are then set every sample (knob-jump test, VERIFICATION §7)\n"
           "  --half-step-trigger  power amp (b56, full): compute a sample as two half-steps when a root\n"
           "                Thevenin voltage moves more than this many volts (D-043; 0 = off)\n"
+          "  --keep-delay  keep the block's output delay (full amp at power-rate divisor 2) instead of removing it\n"
+          "  --volts-per-fs  full amp, fs units: input volts per full-scale sample (default 4.361, D-010); the\n"
+          "                samples reach the engine unscaled, as in the plugin\n"
           "  --nfb         full amp NFB diagnostic (SPEC §7 M4): closed (default) or open (R22 -> 1 TOhm)\n"
           "  --power-rate-divisor  full amp: 2 runs the power amp at half the rate behind halfband filters (M6);\n"
           "                the filters' delay is removed from the output and the dumps\n"
@@ -179,6 +182,18 @@ std::optional<Options> parseArgs(const std::vector<std::string>& args, std::stri
                 return std::nullopt;
             }
             o.halfStepTrigger = x;
+        } else if (a == "--keep-delay") {
+            o.keepDelay = true;
+        } else if (a == "--volts-per-fs") {
+            std::string v;
+            if (!value(v)) return std::nullopt;
+            char* end = nullptr;
+            const double x = std::strtod(v.c_str(), &end);
+            if (end == v.c_str() || *end != '\0' || !(x > 0.0)) {
+                error = "--volts-per-fs expects volts > 0, got '" + v + "'";
+                return std::nullopt;
+            }
+            o.voltsPerFs = x;
         } else if (a == "--j4") {
             std::string v;
             if (!value(v)) return std::nullopt;
@@ -312,6 +327,10 @@ int run(const Options& o, std::ostream& log) {
     }
     runner->prepare(rate, o.blockSize);
     runner->setParams(o.params);
+    if (o.voltsPerFs && !runner->setInputVoltsPerFullScale(*o.voltsPerFs)) {
+        log << "ampwav: block '" << o.block << "' has no input scale option\n";
+        return 1;
+    }
     if (o.halfStepTrigger && !runner->setHalfStepTrigger(*o.halfStepTrigger)) {
         log << "ampwav: block '" << o.block << "' has no half-step option\n";
         return 1;
@@ -360,14 +379,18 @@ int run(const Options& o, std::ostream& log) {
         supply.push_back(std::move(w.samples));
     }
 
-    std::vector<double> y = in.samples;
-    if (o.units == Units::FullScale)
-        for (double& s : y)
-            s *= runner->inputVoltsPerFullScale();
+    std::vector<double> y = in.samples;  // full-scale samples stay unscaled: processFullScale (bit-exact as the plugin)
+    const bool fullScale = o.units == Units::FullScale;
+    auto process = [&](double* v, int n) {
+        if (fullScale)
+            runner->processFullScale(v, n);
+        else
+            runner->processVolts(v, n);
+    };
 
     // a block with an output delay (full amp at power-rate divisor 2) runs `latency` samples longer on the
     // last input value (supplies likewise); the first `latency` output and dump samples are then dropped
-    const size_t latency = static_cast<size_t>(runner->latency());
+    const size_t latency = o.keepDelay ? 0 : static_cast<size_t>(runner->latency());
     const size_t outLength = y.size();
     if (!y.empty())
         y.resize(outLength + latency, y.back());
@@ -406,18 +429,18 @@ int run(const Options& o, std::ostream& log) {
                 runner->setParams(paramsAt(n));
             for (size_t k = 0; k < supply.size(); ++k)
                 runner->setSupply(o.supplies[k].node, supply[k][n]);
-            runner->processVolts(y.data() + n, 1);
+            process(y.data() + n, 1);
             for (size_t k = 0; k < dumps.size(); ++k)
                 dumps[k][n] = *dumpSrc[k];
         }
     } else if (dumps.empty()) {
         for (size_t pos = 0; pos < total; pos += static_cast<size_t>(o.blockSize)) {
             const auto n = static_cast<int>(std::min(static_cast<size_t>(o.blockSize), total - pos));
-            runner->processVolts(y.data() + pos, n);
+            process(y.data() + pos, n);
         }
     } else {
         for (size_t n = 0; n < total; ++n) {
-            runner->processVolts(y.data() + n, 1);
+            process(y.data() + n, 1);
             for (size_t k = 0; k < dumps.size(); ++k)
                 dumps[k][n] = *dumpSrc[k];
         }

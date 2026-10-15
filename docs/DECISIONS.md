@@ -936,9 +936,27 @@ sounds identical to the 16x reference)
 Decision: Oversampling default 2x (was 8x, D-048), Power Amp Rate default Half (was Full, D-049); the plugin's
 engine always runs the exact J4 coupling (D-053). The other factors and Full stay selectable.
 Consequences: plugin CPU (`amp2203_render` now reports processBlock time) on 60 s DI GTR L at 48 kHz: 25.1 % / 24.8 %
-of one core (FIR / IIR), HOT 39.2 % / 39.1 %; latency 58 (FIR) / 13 (IIR) samples. Null test at 2x Half vs ampwav
-(same options, the reference re-delayed by the 17-sample interpolator delay and fed the plugin's exact +12 dBu scale):
-25 PASS, 1 FAIL (5 kHz −6 dBFS IIR −53.5 dB): with the power amp at half rate the D-043 half-step decision (100 V
-trigger) flips on last-bit input differences and the two discretisations differ locally by up to −27 dB; with the
-trigger off the same perturbation stays at −105 dB. Full rate: 26 PASS. Automation (96 kHz, Half, exact J4): 56 runs,
+of one core (FIR / IIR), HOT 39.2 % / 39.1 %; latency 58 (FIR) / 13 (IIR) samples. Null test at 2x Half: first 25 PASS,
+1 FAIL; corrected in D-055 (the FAIL came from the null test's own reference, not from the plugin). Separately measured:
+with the power amp at half rate a 1.5e-5 change of the input level (4.361 vs the plugin's exact 4.361064 V per full
+scale) flips some D-043 half-step decisions, and the two discretisations then differ locally by up to −27 dB (5 kHz
+−40 dBFS); with the trigger off the same change stays at −105 dB. Full rate: 26 PASS. Automation (96 kHz, Half, exact J4): 56 runs,
 0 non-finite, 0 Newton failures; 5.5–6.2 µs per engine sample while knobs move (static ≈ 2.5).
+
+## D-055 Plugin: Newton tolerance 1e-4 V; no adaptive half-steps with the power amp at half rate
+Date: 2026-10-15 · Status: accepted (owner: "adopt both, use 1e-4"; revises D-049's tolerance for the plugin and D-043
+for the half-rate power amp)
+Context: half rate 2x (`harness/reports/M6/20261015_x2_rates_half*.md`): Newton tolerance 1e-9 → 1e-4 V leaves every
+accuracy figure unchanged (HOT −22.6 dB vs SPICE, unseen settings −19.7 dB) and cuts first-solve failures 40 → 12
+(unrescued 31 → 2) and engine cost 24 → 19.4 % (HOT 32 → 27.1 %); half-steps off at 2x: accuracy unchanged, HOT
+36 → 32 %, no switch sensitivity (D-054).
+Decision: the plugin sets the Newton residual tolerance to 1e-4 V (`kNewtonTolerance`) and turns the adaptive
+half-steps off when the power amp runs at half rate (`Amp2203::setAdaptiveHalfSteps`); full rate keeps the D-043
+trigger. The engine defaults (1e-9 V, 100 V) stay for verification. ampwav: `--volts-per-fs` (the plugin's exact input
+scale, full-scale samples reach the engine unscaled) and `--keep-delay` (keep the half-rate output delay).
+Consequences: null test at 2x Half / Full with the plugin's settings, input scale and delay: 26 / 26 PASS, worst
+−138.5 dB (the earlier FAIL was the reference's padding of the removed delay). Measured after the decision (static,
+every knob 1.0, 5 s DI, half 2x): the power amp's first solves fail 656 times without half-steps (0 with them), all
+rescued, 5371 vs 3501 ns per engine sample (tolerance 1e-4); automation at every knob 1.0: up to 1732 rescued
+failures per run and up to 10.4 µs per engine sample (was 0 and ≈ 6 µs). Open: owner review of the half-step choice
+at extreme settings.

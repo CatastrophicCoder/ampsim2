@@ -13,6 +13,8 @@ constexpr const char* kKnobNames[] = {"Preamp Volume", "Treble", "Middle", "Bass
 
 juce::String tenths(float v, int) { return juce::String(v, 1); }
 
+constexpr double kNewtonTolerance = 1e-4;  // V, D-055 (engine default 1e-9 for verification)
+
 }  // namespace
 
 int Amp2203Processor::factorFor(int choice) noexcept {
@@ -79,6 +81,10 @@ void Amp2203Processor::rebuild(double hostRate, int maxBlock) {
     cfg.powerAmpRateDivisor = activePowerRate_ == 1 ? 2 : 1;
     cfg.exactJ4 = true;  // preamp → power amp junction solved exactly (M6 X1, D-053, D-054)
     engine_.prepare(cfg);
+    // D-055: Newton residual tolerance 1e-4 V; no adaptive half-steps when the power amp runs at half rate (the
+    // step decision there flips on last-bit differences, M6); the D-043 trigger at full rate
+    engine_.setNewtonResidualTolerance(kNewtonTolerance);
+    engine_.setAdaptiveHalfSteps(cfg.powerAmpRateDivisor == 1);
     pushParams();
     engine_.reset();  // DC operating point at the current knobs (SPEC §3.6)
     trim_.reset(hostRate, 0.02);

@@ -62,6 +62,8 @@ def one(base, knobset, kind, name, x):
             args += ['--j4', config.J4]
         if config.NEWTON_TOL:
             args += ['--newton-tol', config.NEWTON_TOL]
+        if config.POWER_DIVISOR == 2:
+            args += ['--half-step-trigger', '0']  # no adaptive half-steps at half rate, as the plugin (D-055)
         args += [a for k, v in BASES[base].items() if k not in knobset for a in ('--param', f'{k}={v!r}')]
         for k in knobset:
             args += ramps(k, kind, len(x) / config.FS)

@@ -10,11 +10,12 @@ polyphase IIR). Signals at 48 kHz: sines (100 Hz, 1 kHz, 5 kHz at −40 / −20 
     python -m harness.plugin_null [--factor 2|4|8|16] [--power-rate half|full] [--jobs N]
 
 With the half-rate power amp the processor's output carries the engine's rate-change delay
-(Amp2203::latencySamples(), at the engine rate), which ampwav removes; the reference gets it back before the down
-stage (the first engine output sample repeated).
+(Amp2203::latencySamples()); ampwav keeps it too (`--keep-delay`). ampwav gets the plugin's exact input scale
+(`--volts-per-fs`) and engine settings, so both runs see the same samples.
 """
 import argparse
 import datetime
+import math
 import os
 import subprocess
 import tempfile
@@ -32,10 +33,11 @@ from .wavio import read_wav, write_wav
 HOST_RATE = 48000
 FACTOR = 2
 POWER_RATE = 'half'
-HALF_RATE_DELAY = 17  # engine samples: Amp2203::latencySamples() with exact J4 at divisor 2
 RENDER = config.ROOT / 'build' / 'plugin' / 'amp2203_render_artefacts' / 'Release' / 'amp2203_render'
 LIMIT_DB = -60.0
-PLUGIN_VOLTS_PER_FS = 0.7746 * np.sqrt(2.0) * 10 ** (12 / 20)  # Interface Level +12 dBu (PluginProcessor)
+NEWTON_TOL = 1e-4  # V, the plugin's (D-055)
+# Interface Level +12 dBu, computed as PluginProcessor::interfaceVoltsPerFullScale (same libm calls)
+PLUGIN_VOLTS_PER_FS = 0.7746 * math.sqrt(2.0) * math.pow(10.0, 12.0 / 20.0)
 
 
 def signals():
@@ -67,13 +69,10 @@ def one(name, x, filt):
         log = _run([RENDER, 'plugin', '--in', d / 'x.wav', '--out', d / 'plug.wav', '--factor', FACTOR, '--filter', filt,
                     '--param', f'powerAmpRate={1 if half else 0}'])
         _run([RENDER, 'up', '--in', d / 'x.wav', '--out', d / 'up.wav', '--factor', FACTOR, '--filter', filt])
-        u, rate = read_wav(d / 'up.wav')  # the plugin's exact +12 dBu scale vs ampwav's 4.361 V per full scale
-        write_wav(d / 'up.wav', u * PLUGIN_VOLTS_PER_FS / config.INPUT_VOLTS_PER_FS, rate)
         _run([config.AMPWAV, '--block', 'full', '--units', 'fs', '--in', d / 'up.wav', '--out', d / 'eng.wav',
-              '--rate', HOST_RATE * FACTOR, '--j4', 'exact', '--power-rate-divisor', 2 if half else 1])
-        if half:
-            e, rate = read_wav(d / 'eng.wav')
-            write_wav(d / 'eng.wav', np.concatenate([np.full(HALF_RATE_DELAY, e[0]), e[:len(e) - HALF_RATE_DELAY]]), rate)
+              '--rate', HOST_RATE * FACTOR, '--j4', 'exact', '--power-rate-divisor', 2 if half else 1,
+              '--newton-tol', NEWTON_TOL, '--half-step-trigger', 0 if half else 100,  # the plugin's settings (D-055)
+              '--volts-per-fs', repr(PLUGIN_VOLTS_PER_FS), '--keep-delay'])
         _run([RENDER, 'down', '--in', d / 'eng.wav', '--out', d / 'ref.wav', '--factor', FACTOR, '--filter', filt])
         a, b = read_wav(d / 'plug.wav')[0], read_wav(d / 'ref.wav')[0]
     n = min(len(a), len(b))

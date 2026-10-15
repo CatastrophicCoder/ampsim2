@@ -76,6 +76,8 @@ void Amp2203::setFeedbackClosed(bool closed) { power_->setFeedbackResistance(clo
 
 void Amp2203::setHalfStepTrigger(double volts) { power_->setHalfStepTrigger(volts); }
 
+void Amp2203::setAdaptiveHalfSteps(bool on) { power_->setHalfStepTrigger(on ? PowerAmp::kDefaultHalfStepTrigger : 0.0); }
+
 void Amp2203::setNewtonResidualTolerance(double volts) {
     preamp_->setNewtonResidualTolerance(volts);
     power_->setNewtonResidualTolerance(volts);
