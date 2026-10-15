@@ -665,6 +665,22 @@ Notes:
   settings vs teacher −8.4 dB overall (best −10.9 dB); at Preamp Volume 0 or Master 0 (near-silent output) +23.7 …
   +62.2 dB: the input skip (output = network + input) has to cancel the input there. Non-harmonic power on 5 / 9 kHz
   sines −18.7 … −23.3 dB (teacher −25.7 … −39.9 dB). Cost 442 ns per 48 kHz sample (static knobs folded into the bias).
+- X6 plan, block boundaries for per-block models (owner 2026-10-15: "run the boundary measurement"):
+  `harness/boundary_study.py`, engine only (ampwav full amp, 768 kHz, `--j4 exact`). Candidate boundaries p1a, p1b,
+  p2a, k2b, y and the supply nodes bpa, bpx, dumped in one run per knob setting. Settings: Preamp Volume 0.2 / 0.6 /
+  1.0, each with every downstream knob (Treble, Middle, Bass, Master, Presence) at 0 and at 1 one at a time, all at 0,
+  all at 1, and the defaults (13 per Volume); signals: DI GTR L and GTR RR, first 5 s, at 0 and +12 dB. Metric: ESR
+  in the 48 kHz band of a boundary node at a changed setting vs the same node at the default downstream knobs (each
+  minus its value at t = 0). A boundary is clean for a knob when that change stays ≤ −20 dB (D-051) and is also
+  reported against −40 dB.
+- X6 result (`harness/reports/M6/20261015_x6_boundaries.md`, 156 renders, 5 min): worst ESR of each boundary vs
+  downstream knobs, raw / above 20 Hz (20 Hz high-pass added: the raw figure is dominated by sub-audio B+ sag drift).
+  p1a (no knobs upstream): Volume / tone / Presence ≤ −30.7 dB, Master −27.5 dB above 20 Hz (raw up to +15 dB).
+  p1b: each knob ≤ −20.5 dB above 20 Hz, all downstream knobs at once −19.4 dB (raw up to +29 dB). p2a / k2b: Master
+  −17.3 / −17.4 dB above 20 Hz (coupled, via the supply bpx); k2b Middle / Bass −20.5 / −22.5 dB (J3 loading);
+  treble and Presence ≤ −35 dB. y: Presence −36.4 dB. Supply nodes bpa / bpx change by +3 … +26 dB with the knobs
+  (they carry the coupling). Implication: a split at y and at p1a / p1b is within −20 dB in the audio band; any
+  preamp block reaching p2a or later needs the supply (power-amp current draw) as an input, or Master as a proxy.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
