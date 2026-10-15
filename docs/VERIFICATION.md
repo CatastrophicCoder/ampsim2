@@ -131,18 +131,19 @@ See `WDF_DESIGN.md` §5.5.
 |---|---|
 | Device DC sweeps | 0.1 % / 1 nA |
 | Linear block magnitude (B4) | ≤ 0.1 dB (20 Hz–10 kHz), ≤ 0.3 dB (10–20 kHz) |
-| Linear block time-domain ESR | ≤ −60 dB |
-| Knob jump (SPEC §6.2: each knob 0→1 in 10 ms during a 1 kHz tone) | No NaN/Inf; ESR vs SPICE with time-varying pots on the same smoothed rotation trajectory ≤ −40 dB over the sweep and the 20 ms after it (D-025) |
+| Linear block time-domain ESR | ≤ −20 dB (D-051; was −60 dB) |
+| Knob jump (SPEC §6.2: each knob 0→1 in 10 ms during a 1 kHz tone) | No NaN/Inf; ESR vs SPICE with time-varying pots on the same smoothed rotation trajectory ≤ −20 dB over the sweep and the 20 ms after it (D-025; D-051, was −40 dB) |
 | DC operating point (any block) | ≤ 0.5 % per node (EL34 currents: ±1 mA plate, ±0.3 mA screen) |
-| Block-exact ESR, nonlinear, Small/Nominal/Hot | ≤ −40 dB |
-| Block-exact ESR, Overdrive | ≤ −30 dB |
+| Block-exact ESR, nonlinear, Small/Nominal/Hot | ≤ −20 dB (D-051; was −40 dB) |
+| Block-exact ESR, Overdrive | ≤ −20 dB (D-051; was −30 dB) |
 | Block-exact harmonics 2–5 | within 0.5 dB |
-| Partition error at y (M3) | ≤ −26 dB sines, ≤ −20 dB DI, at the loaded y: the SPICE chain's v_oc(y) through the J4 source into the PI (b56) vs F (D-036; report; triggers upgrade path if exceeded) |
+| Partition error at y (M3) | ≤ −20 dB sines (D-051; was −26 dB), ≤ −20 dB DI, at the loaded y: the SPICE chain's v_oc(y) through the J4 source into the PI (b56) vs F (D-036; report; triggers upgrade path if exceeded) |
 | Total, CLEAN power | ±5 % of SPICE, THD ±0.5 pp |
 | Total, DRIVE/CRUNCH ESR | ≤ −20 dB; harmonics 2–9 within 1.5 dB |
+| Real-time plugin model (any architecture, M6), whole amp vs SPICE | ESR ≤ −20 dB on the held-out DI clips at CRUNCH, DRIVE and HOT, 48 kHz band, first 0.1 s excluded (D-051) |
 | NFB amount | ±0.5 dB at 100 Hz / 1 kHz / 5 kHz |
 | Stability | 60 s silence at max settings: |out| < 1 mV, no growth |
-| Newton | 0 failures on the standard signal set; max iterations ≤ the configured limit (12; 16 for the power amp B56 and the full amp, D-045) |
+| Newton | 0 failures on the standard signal set; max iterations ≤ the configured limit (12; 32 for the preamp B1234, the power amp B56 and the full amp, D-052; was 16, D-045) |
 
 ESR on heavily clipped signals is sensitive to tiny timing differences at sharp edges. If a check fails
 mainly because of edge timing, also report ESR after a 5 kHz low-pass on both signals and the harmonic

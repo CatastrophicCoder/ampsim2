@@ -21,6 +21,11 @@ struct EngineConfig {
     /// 1: the power amp (B56) runs at sampleRate; 2: at sampleRate / 2 behind a halfband decimator, its output
     /// interpolated back (M6). The engine then delays the output by latencySamples().
     int    powerAmpRateDivisor     = 1;
+    /// M6 X1: the preamp → power amp junction at the master wiper solved exactly (a load port on both roots,
+    /// the preamp linearised as a Thevenin source each sample) instead of v_oc(y) behind R_th4 (D-015).
+    /// With powerAmpRateDivisor = 2 the junction is solved exactly at the samples where the power amp runs
+    /// (no decimation filter in the loop) and the preamp holds the last load current in between (M6).
+    bool   exactJ4                 = false;
 };
 
 }  // namespace amp2203

@@ -13,6 +13,8 @@ constexpr const char* kKnobNames[] = {"Preamp Volume", "Treble", "Middle", "Bass
 
 juce::String tenths(float v, int) { return juce::String(v, 1); }
 
+constexpr double kNewtonTolerance = 1e-4;  // V, D-055 (engine default 1e-9 for verification)
+
 }  // namespace
 
 int Amp2203Processor::factorFor(int choice) noexcept {
@@ -42,12 +44,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout Amp2203Processor::layout() {
                                                       juce::NormalisableRange<float>(-48.0f, 12.0f, 0.1f), 0.0f,
                                                       juce::AudioParameterFloatAttributes().withLabel("dB")));
     l.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"oversampling", 1}, "Oversampling",
-                                                       juce::StringArray{"2x", "4x", "8x", "16x"}, 2));
+                                                       juce::StringArray{"2x", "4x", "8x", "16x"}, 0));  // 2x (D-054)
     l.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"oversamplingFilter", 1}, "Oversampling Filter",
                                                        juce::StringArray{"Linear phase (FIR)", "Low latency (IIR)"}, 0));
-    // power amp at the oversampled rate or at half of it (M6, D-049; faster, less accurate)
+    // power amp at the oversampled rate or at half of it (M6, D-049, D-053; default Half, D-054)
     l.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"powerAmpRate", 1}, "Power Amp Rate",
-                                                       juce::StringArray{"Full", "Half"}, 0));
+                                                       juce::StringArray{"Full", "Half"}, 1));
     return l;
 }
 
@@ -77,7 +79,11 @@ void Amp2203Processor::rebuild(double hostRate, int maxBlock) {
     cfg.sampleRate = hostRate * activeFactor_;
     cfg.maxBlockSize = maxBlock * activeFactor_;
     cfg.powerAmpRateDivisor = activePowerRate_ == 1 ? 2 : 1;
+    cfg.exactJ4 = true;  // preamp → power amp junction solved exactly (M6 X1, D-053, D-054)
     engine_.prepare(cfg);
+    // D-055: Newton residual tolerance 1e-4 V; adaptive half-steps (D-043) at both power-amp rates (D-056)
+    engine_.setNewtonResidualTolerance(kNewtonTolerance);
+    engine_.setAdaptiveHalfSteps(true);
     pushParams();
     engine_.reset();  // DC operating point at the current knobs (SPEC §3.6)
     trim_.reset(hostRate, 0.02);

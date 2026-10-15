@@ -10,9 +10,10 @@ from harness.presets import PRESETS
 
 class TestM2Scoring(unittest.TestCase):
     def test_b12_checks_are_scored_in_m2_only(self):
-        self.assertEqual(tolerances.status('M2', 'b12', 'nonlinear_esr_db', -45.0)[1], 'PASS')
-        self.assertEqual(tolerances.status('M2', 'b12', 'nonlinear_esr_db', -35.0)[1], 'FAIL')
-        self.assertEqual(tolerances.status('M2', 'b12', 'nonlinear_esr_db_overdrive', -35.0)[1], 'PASS')
+        self.assertEqual(tolerances.status('M2', 'b12', 'nonlinear_esr_db', -25.0)[1], 'PASS')  # limit -20 dB (D-051)
+        self.assertEqual(tolerances.status('M2', 'b12', 'nonlinear_esr_db', -15.0)[1], 'FAIL')
+        self.assertEqual(tolerances.status('M2', 'b12', 'nonlinear_esr_db_overdrive', -25.0)[1], 'PASS')
+        self.assertEqual(tolerances.status('M2', 'b12', 'nonlinear_esr_db_overdrive', -15.0)[1], 'FAIL')
         self.assertEqual(tolerances.status('M2', 'b12', 'newton_median_iterations', 3)[1], 'PASS')
         self.assertEqual(tolerances.status('M2', 'b12', 'newton_median_iterations', 4)[1], 'FAIL')
         self.assertEqual(tolerances.status('M2', 'b12', 'newton_max_iterations', 12)[1], 'PASS')

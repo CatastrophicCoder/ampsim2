@@ -57,8 +57,13 @@ void writeStats(const std::string& path, const Options& o, double rate, size_t s
       << "  \"median_iterations\": " << st.medianIterations << ",\n"
       << "  \"newton_rescued\": " << st.newtonRescued << ",\n"
       << "  \"newton_unrescued\": " << st.newtonUnrescued << ",\n"
+      << "  \"newton_failures_preamp\": " << st.preamp.failures << ",\n"
+      << "  \"newton_failures_power\": " << st.powerAmp.failures << ",\n"
+      << "  \"max_iterations_preamp\": " << st.preamp.maxIterations << ",\n"
+      << "  \"max_iterations_power\": " << st.powerAmp.maxIterations << ",\n"
       << "  \"power_rate_divisor\": " << o.powerRateDivisor << ",\n"
-      << "  \"newton_residual_tol\": " << o.newtonTol.value_or(1e-9) << "\n"
+      << "  \"newton_residual_tol\": " << o.newtonTol.value_or(1e-9) << ",\n"
+      << "  \"exact_j4\": " << (o.exactJ4 ? "true" : "false") << "\n"
       << "}\n";
 }
 
@@ -70,6 +75,7 @@ void printUsage(std::ostream& os) {
           "              [--units volts|fs] [--block-size N] [--stats stats.json] [--list-nodes]\n"
           "              [--knob-ramp knob=start,duration,from,to ...] [--supply node=file.wav ...]\n"
           "              [--nfb closed|open] [--power-rate-divisor 1|2] [--newton-tol V]\n"
+          "              [--j4 thevenin|exact]\n"
           "\n"
           "  --block       full, preamp (= b1234), b12, b3, b34, b4, b5, b6, b56; b7 is a pass-through\n"
           "  --in          mono WAV; 64-bit float is read bit-exact, other formats via 32-bit float\n"
@@ -86,10 +92,14 @@ void printUsage(std::ostream& os) {
           "                Params are then set every sample (knob-jump test, VERIFICATION §7)\n"
           "  --half-step-trigger  power amp (b56, full): compute a sample as two half-steps when a root\n"
           "                Thevenin voltage moves more than this many volts (D-043; 0 = off)\n"
+          "  --keep-delay  keep the block's output delay (full amp at power-rate divisor 2) instead of removing it\n"
+          "  --volts-per-fs  full amp, fs units: input volts per full-scale sample (default 4.361, D-010); the\n"
+          "                samples reach the engine unscaled, as in the plugin\n"
           "  --nfb         full amp NFB diagnostic (SPEC §7 M4): closed (default) or open (R22 -> 1 TOhm)\n"
           "  --power-rate-divisor  full amp: 2 runs the power amp at half the rate behind halfband filters (M6);\n"
           "                the filters' delay is removed from the output and the dumps\n"
           "  --newton-tol  full amp: Newton residual tolerance in volts (default 1e-9, M6 study)\n"
+          "  --j4          full amp: preamp -> power amp junction: thevenin (default, D-015) or exact (M6 X1)\n"
           "  --supply      drive a recorded input of the block from a WAV of the same length and rate, set every\n"
           "                sample: supply nodes (bpa, bpx, ct, nscr), the NFB speaker voltage (b5: out) or the\n"
           "                second PI output (b6: p3b) (partition studies and B5 / B6 tests, VERIFICATION §1)\n";
@@ -172,6 +182,26 @@ std::optional<Options> parseArgs(const std::vector<std::string>& args, std::stri
                 return std::nullopt;
             }
             o.halfStepTrigger = x;
+        } else if (a == "--keep-delay") {
+            o.keepDelay = true;
+        } else if (a == "--volts-per-fs") {
+            std::string v;
+            if (!value(v)) return std::nullopt;
+            char* end = nullptr;
+            const double x = std::strtod(v.c_str(), &end);
+            if (end == v.c_str() || *end != '\0' || !(x > 0.0)) {
+                error = "--volts-per-fs expects volts > 0, got '" + v + "'";
+                return std::nullopt;
+            }
+            o.voltsPerFs = x;
+        } else if (a == "--j4") {
+            std::string v;
+            if (!value(v)) return std::nullopt;
+            if (v != "thevenin" && v != "exact") {
+                error = "--j4 expects thevenin or exact, got '" + v + "'";
+                return std::nullopt;
+            }
+            o.exactJ4 = v == "exact";
         } else if (a == "--newton-tol") {
             std::string v;
             if (!value(v)) return std::nullopt;
@@ -287,12 +317,20 @@ int run(const Options& o, std::ostream& log) {
     }
     const double rate = in.sampleRate;
 
+    if (o.exactJ4 && !runner->setExactJ4(true)) {
+        log << "ampwav: block '" << o.block << "' has no J4 option\n";
+        return 1;
+    }
     if (o.powerRateDivisor != 1 && !runner->setPowerRateDivisor(o.powerRateDivisor)) {
         log << "ampwav: block '" << o.block << "' has no power-amp rate option\n";
         return 1;
     }
     runner->prepare(rate, o.blockSize);
     runner->setParams(o.params);
+    if (o.voltsPerFs && !runner->setInputVoltsPerFullScale(*o.voltsPerFs)) {
+        log << "ampwav: block '" << o.block << "' has no input scale option\n";
+        return 1;
+    }
     if (o.halfStepTrigger && !runner->setHalfStepTrigger(*o.halfStepTrigger)) {
         log << "ampwav: block '" << o.block << "' has no half-step option\n";
         return 1;
@@ -341,14 +379,18 @@ int run(const Options& o, std::ostream& log) {
         supply.push_back(std::move(w.samples));
     }
 
-    std::vector<double> y = in.samples;
-    if (o.units == Units::FullScale)
-        for (double& s : y)
-            s *= runner->inputVoltsPerFullScale();
+    std::vector<double> y = in.samples;  // full-scale samples stay unscaled: processFullScale (bit-exact as the plugin)
+    const bool fullScale = o.units == Units::FullScale;
+    auto process = [&](double* v, int n) {
+        if (fullScale)
+            runner->processFullScale(v, n);
+        else
+            runner->processVolts(v, n);
+    };
 
     // a block with an output delay (full amp at power-rate divisor 2) runs `latency` samples longer on the
     // last input value (supplies likewise); the first `latency` output and dump samples are then dropped
-    const size_t latency = static_cast<size_t>(runner->latency());
+    const size_t latency = o.keepDelay ? 0 : static_cast<size_t>(runner->latency());
     const size_t outLength = y.size();
     if (!y.empty())
         y.resize(outLength + latency, y.back());
@@ -387,18 +429,18 @@ int run(const Options& o, std::ostream& log) {
                 runner->setParams(paramsAt(n));
             for (size_t k = 0; k < supply.size(); ++k)
                 runner->setSupply(o.supplies[k].node, supply[k][n]);
-            runner->processVolts(y.data() + n, 1);
+            process(y.data() + n, 1);
             for (size_t k = 0; k < dumps.size(); ++k)
                 dumps[k][n] = *dumpSrc[k];
         }
     } else if (dumps.empty()) {
         for (size_t pos = 0; pos < total; pos += static_cast<size_t>(o.blockSize)) {
             const auto n = static_cast<int>(std::min(static_cast<size_t>(o.blockSize), total - pos));
-            runner->processVolts(y.data() + pos, n);
+            process(y.data() + pos, n);
         }
     } else {
         for (size_t n = 0; n < total; ++n) {
-            runner->processVolts(y.data() + n, 1);
+            process(y.data() + n, 1);
             for (size_t k = 0; k < dumps.size(); ++k)
                 dumps[k][n] = *dumpSrc[k];
         }

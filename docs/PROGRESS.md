@@ -635,6 +635,127 @@ Notes:
   knob-robust, usable with other plugins). Written: `docs/ARCHITECTURE_STUDY.md` (literature, products,
   candidates A–E against latency / authenticity / CPU / knobs / verifiability / effort). M6 waits for the
   owner's direction.
+- 2026-10-14 Owner: run experiments X1 and X3 (ARCHITECTURE_STUDY §6); PyTorch 2.14.1 approved for X3.
+- X1 (branch `m6-x1-j4`): exact J4 coupling (`EngineConfig::exactJ4`, ampwav `--j4 exact`, harness
+  `AMP2203_J4=exact`): a load port rY at y on both roots (preamp: given current; power amp: the preamp's
+  linearised Thevenin source, rTh = Z_yy − Z_yp·D·(I + Z_pp·D)⁻¹·Z_py, every sample), preamp solved, power amp
+  solved against it, preamp re-solved (warm) with the actual load current. At 384 kHz: HOT 220 Hz ESR −12.6 →
+  −58.9 dB, harmonics 11.6 → 0.01 dB, HOT DI −13 → −41.5 … −42.7 dB (the HOT DI clips keep 5–8 rescued
+  first-solve failures each: 4 FAIL on newton_failures, `…_j4exact_hot.md`); full acceptance 107 PASS, CLEAN
+  (Master 1.0) −31.2 → −60.1 dB, the rest within 0.5 dB (`…_j4exact.md`). Cost at 384 kHz (10 s DI): 3352 / 4497
+  ns default / hot (main 2242 / 3016; the extra open port alone +6 %).
+- X3 (`harness/x3_neural.py`, report `harness/reports/M6/20261015_x3_neural.md`): LSTM-32 at 48 kHz trained on
+  the engine (768 kHz, CRUNCH, four DI tracks × four input gains; CPU, Adam 1e-3 with gradient clipping 1.0 after
+  5e-3 diverged at epoch ≈ 80; 1200 epochs, 78 min). Vs SPICE on the held-out 5 s CRUNCH DI clips: −16.5 …
+  −17.1 dB (teacher −48.7 … −49.1 dB); validation vs teacher −14.5 dB. Non-harmonic power on 5 / 9 kHz sines:
+  −6.3 … −17.0 dB (teacher −25.7 … −39.9 dB). Cost: 439 ns per 48 kHz sample in plain C++ (2.1 % of one core).
+  Training is resumable (`train_state.pt`, written at every validation).
+- X4 plan (owner 2026-10-15: knobs Preamp Volume, Master, Presence as inputs; tone stack at 0.5):
+  `harness/x4_conditioned.py`. LSTM-32 as X3 with the three knob values as extra inputs (constant per segment).
+  Teacher: ampwav full amp at 768 kHz with `--j4 exact` (X1; valid at high Master). Data: 96 training settings
+  (each knob uniform in [0, 1], one in five at 0 or 1 so the corners are covered), each a 20 s segment of a random
+  DI track (between the held-out first 5 s and last 20 s) at a random input gain; 16 validation settings on the
+  last 20 s. Training as X3 (Adam 1e-3, clipping 1.0), 2400 epochs, resumable. Evaluation: vs SPICE on the
+  held-out 5 s DI clips at CRUNCH, DRIVE and HOT (cached 384 kHz references, 48 kHz band), X3 alongside at
+  CRUNCH; vs the teacher at the 16 unseen settings; aliasing at CRUNCH and HOT; C++ cost.
+- X4 result (report `harness/reports/M6/20261015_x4_conditioned.md`): render 112 × 20 s (the Mac slept from 01:16;
+  jobs now run under `caffeinate -s -i`), training 2400 epochs, 2 h 26 min, validation flat at −8.1 dB from epoch
+  ≈ 1300. Vs SPICE (held-out 5 s DI, 48 kHz band): CRUNCH −3.0 … −3.8 dB (X3 at the same clips −16.5 … −17.1 dB),
+  DRIVE −5.0 … −5.4 dB, HOT −6.8 … −7.1 dB; teacher −48.7 … −49.0 / −55.7 … −56.1 / −39.6 … −40.1 dB. Unseen
+  settings vs teacher −8.4 dB overall (best −10.9 dB); at Preamp Volume 0 or Master 0 (near-silent output) +23.7 …
+  +62.2 dB: the input skip (output = network + input) has to cancel the input there. Non-harmonic power on 5 / 9 kHz
+  sines −18.7 … −23.3 dB (teacher −25.7 … −39.9 dB). Cost 442 ns per 48 kHz sample (static knobs folded into the bias).
+- X6 plan, block boundaries for per-block models (owner 2026-10-15: "run the boundary measurement"):
+  `harness/boundary_study.py`, engine only (ampwav full amp, 768 kHz, `--j4 exact`). Candidate boundaries p1a, p1b,
+  p2a, k2b, y and the supply nodes bpa, bpx, dumped in one run per knob setting. Settings: Preamp Volume 0.2 / 0.6 /
+  1.0, each with every downstream knob (Treble, Middle, Bass, Master, Presence) at 0 and at 1 one at a time, all at 0,
+  all at 1, and the defaults (13 per Volume); signals: DI GTR L and GTR RR, first 5 s, at 0 and +12 dB. Metric: ESR
+  in the 48 kHz band of a boundary node at a changed setting vs the same node at the default downstream knobs (each
+  minus its value at t = 0). A boundary is clean for a knob when that change stays ≤ −20 dB (D-051) and is also
+  reported against −40 dB.
+- X6 result (`harness/reports/M6/20261015_x6_boundaries.md`, 156 renders, 5 min): worst ESR of each boundary vs
+  downstream knobs, raw / above 20 Hz (20 Hz high-pass added: the raw figure is dominated by sub-audio B+ sag drift).
+  p1a (no knobs upstream): Volume / tone / Presence ≤ −30.7 dB, Master −27.5 dB above 20 Hz (raw up to +15 dB).
+  p1b: each knob ≤ −20.5 dB above 20 Hz, all downstream knobs at once −19.4 dB (raw up to +29 dB). p2a / k2b: Master
+  −17.3 / −17.4 dB above 20 Hz (coupled, via the supply bpx); k2b Middle / Bass −20.5 / −22.5 dB (J3 loading);
+  treble and Presence ≤ −35 dB. y: Presence −36.4 dB. Supply nodes bpa / bpx change by +3 … +26 dB with the knobs
+  (they carry the coupling). Implication: a split at y and at p1a / p1b is within −20 dB in the audio band; any
+  preamp block reaching p2a or later needs the supply (power-amp current draw) as an input, or Master as a proxy.
+- Owner 2026-10-15: leave the per-block route; run X2, then A1.
+- X2 / A1 plan: `harness/x2_rates.py` (A1 = the same script with `--power-rate-divisor 2` and / or `--newton-tol`).
+  Full amp with exact J4 at 2x / 4x / 8x of 48 kHz (96 / 192 / 384 kHz). Scored as the plugin model check (D-051):
+  vs SPICE (cached 384 kHz references, 48 kHz band) on the held-out 5 s DI clips at CRUNCH, DRIVE and HOT; vs the
+  engine at 16x on the 16 X4 validation settings (10 s each); Newton failures (rescued / not) on every run;
+  aliasing on 5 / 9 kHz sines vs 16x at CRUNCH and HOT; cost from `ampwav --stats` on 10 s DI (default and HOT
+  knobs), run one at a time, as % of one core at 48 kHz (oversampling filters not included).
+- X2 result (`harness/reports/M6/20261015_x2_rates.md`): vs SPICE worst CRUNCH / DRIVE / HOT −46.4 / −49.9 / −26.2 dB at
+  2x, −48.5 / −55.6 / −33.2 at 4x, −48.7 / −55.8 / −38.6 at 8x (all PASS ≤ −20 dB); unseen settings vs 16x worst
+  −20.6 / −26.9 / −39.1 dB. Newton: unrescued failures per 5 s DI clip 6 … 29 at 2x, 0 at 4x and 8x; on loud
+  5 / 9 kHz sines thousands to ≈ 140 000 per 2 s at 2x / 4x (and up to 11 496 at 8x, 20 at 16x), which dominate the
+  aliasing figures there. Cost ≈ 3.4–3.6 µs per engine sample (HOT 4.3–5.5): 34 / 67 / 129 % of one core at 2x / 4x
+  / 8x (HOT 52 / 92 / 166 %). Limiting factor at lower rates: Newton convergence, not ESR.
+- A1 result: (a) Newton tolerance 1e-5 V (`…_x2_rates_a1_tol1e-5.md`): accuracy as X2 (worst HOT −26.2 / −33.2 /
+  −38.7 dB at 2x / 4x / 8x, PASS); cost 36 / 58 / 106 % of one core (HOT 45 / 77 / 157 %); Newton failures fewer
+  (DI + validation runs: 6568 / 1380 / 22, unrescued 1048 / 138 / 3), loud 5 / 9 kHz sines still fail at 2x / 4x.
+  (b) plus the power amp at half rate (`…_a1_div2_tol1e-5.md`): not a test of exact J4 — `Amp2203::exactJ4()` is off
+  when the power amp runs at half rate, so these runs used the Thevenin J4: HOT −13.0 dB at every rate (FAIL), CRUNCH
+  / DRIVE pass; cost 17 / 31 / 55 % (HOT 27 / 44 / 75 %). ampwav `--stats` now reports `exact_j4` as in effect.
+  Exact J4 with the half-rate power amp is not implemented (open).
+- Owner 2026-10-15: run (1) exact J4 with the half-rate power amp and (2) Newton convergence at 2x / 4x.
+  Plan (2) first: per-block Newton counts in `ampwav --stats`; diagnose the 2x / 4x failures (which block, which
+  ports, step-limited or not; diagnostic maxIter / step limits); then a rate-aware fix, e.g. D-043's adaptive
+  substeps generalised to the preamp and to m > 2, with bounded cost; verify with `harness.x2_rates` and the 16x
+  acceptance unchanged. Plan (1): the halfband filters put 34 engine samples of delay between the preamp and the
+  half-rate power amp, so a same-sample (exact) J4 cannot span them; test the load current at y fed back with that
+  delay (approximation) against the HOT SPICE references, report before adopting.
+- (2) done: Newton failures at 2x / 4x come from the preamp's 12-iteration budget (not the step limits); maxIter 32 in
+  both roots of the full amp (D-052). Acceptance at 384 kHz exact J4: 107 PASS; HOT 21 PASS / 0 FAIL. `ampwav --stats`
+  reports Newton failures and max iterations per root.
+- X2 with maxIter 32 (`…_x2_rates_maxiter32.md`): accuracy as before; Newton failures over 28 runs 15 (7 unrescued) /
+  4 (0) / 3 (0) at 2x / 4x / 8x (was 8723 (1376) / 2058 (147) / 128 (3)); DI cost unchanged (34 / 67 / 129 %).
+  Aliasing now measurable without solver noise: non-harmonic power on 5 / 9 kHz sines −6.4 … −19.6 dB at 2x,
+  −14.9 … −26.1 at 4x, −24.8 … −36.6 at 8x (16x −25.7 … −39.9).
+- (1) done (D-053): exact J4 with the half-rate power amp, coupled at the power-amp samples without a decimation
+  filter (`…_x2_rates_a1_div2_exact.md`): HOT −22.5 / −26.3 / −33.2 dB vs SPICE at 2x / 4x / 8x (PASS), unseen settings
+  worst −18.9 / −20.6 / −26.8 dB vs 16x, cost 24 / 46 / 89 % (HOT 36 / 63 / 115 %), latency 17 engine samples. The
+  plugin still runs the Thevenin J4 (exact J4 not enabled there).
+- Listening set (owner 2026-10-15): `python -m harness.listening` → `harness/cache/listening/20261015/` (not committed):
+  DI GTR L / GTR RR 10–30 s at CRUNCH, DRIVE, HOT; engine 16x reference, full-rate power amp 2x / 4x / 8x, half rate
+  2x / 4x, X4 network, X3 (CRUNCH); named / blind (KEY.txt) / difference; same gain per excerpt and preset, 32-bit
+  float. Difference RMS vs the reference: CRUNCH / DRIVE −52 … −94 dBFS (engine variants), HOT −27 … −58 dBFS;
+  networks −13 … −29 dBFS. No cabinet in the files.
+- Owner listening result 2026-10-15: full-rate power amp at 4x and half-rate power amp at 2x sound identical to the
+  16x reference; the X3 / X4 networks sound weaker, with clearly less gain, most of all at HOT.
+- Owner 2026-10-15: (1) put half-rate power amp at 2x into the plugin and measure its CPU; (2) close the CPU gap.
+  Plan (1): plugin engine with exact J4; defaults Oversampling 2x, Power Amp Rate Half (SPEC §6.3, DECISIONS);
+  `amp2203_render` reports processing time; plugin CPU on 60 s DI at default and HOT knobs, FIR and IIR filters;
+  re-run plugin_null and automation. Plan (2): Newton tolerance 1e-6 / 1e-5 / 1e-4 V at half rate 2x (accuracy vs
+  SPICE, unseen settings, cost; adoption is the owner's decision, D-049); profile the engine at half rate 2x.
+- (1) done (D-054): plugin defaults 2x / Half / exact J4; plugin CPU 25 % (HOT 39 %) incl. oversampling; null test
+  25 / 26 (half-step decision sensitivity at half rate); automation 0 failures.
+- (2) measured, not adopted (owner decisions): half rate 2x with the half-step trigger off
+  (`…_x2_rates_half_trigger_off.md`): accuracy as with it (HOT −22.6 dB, unseen −19.7 dB), engine 24 / 32 %; plus
+  Newton tolerance 1e-6 / 1e-5 / 1e-4 V (`…_half2x_off_tol*.md`): accuracy identical, failures 12 (2 unrescued),
+  engine 22.3 / 21.5 / 19.4 % (HOT 29.4 / 28.3 / 27.1 %). Profile (half 2x, HOT): LU solves 29 %, libm pow / exp / log
+  26 %, rest of the Newton loops 34 %, WDF 6 %.
+- Owner 2026-10-15: adopt both (tolerance 1e-4 V, no half-steps at half rate), D-055. Null test 26 / 26 at Half and
+  Full (ampwav `--volts-per-fs`, `--keep-delay`). Found after the decision: at every knob 1.0 the half-rate power amp
+  without half-steps has 656 rescued first-solve failures per 5 s and costs 5371 vs 3501 ns per engine sample;
+  automation at every knob 1.0 up to 10.4 µs. Raised with the owner.
+- Owner 2026-10-15: half-steps back on at half rate (D-056). Plugin CPU 2x Half FIR: default 20.6 %, HOT 32.9 %, every
+  knob 10 35.6 % (0 failures). Null test 26 / 26; automation 0 failures. Open: plugin CPU under knob automation.
+- Plugin CPU under knob automation (`python -m harness.plugin_cpu`, `amp2203_render --automate`, report
+  `harness/reports/M6/20261015_plugin_cpu.md`): static 18.9 % (every knob 10: 32.1 %); one knob moving 45.8 … 55.0 %
+  (from every knob 10: 54.4 … 67.7 %); all six moving 84.6 … 87.1 %; host block 64 as 512; 1 rescued failure in 31
+  runs. Profile with all knobs moving: 76 % in the double-double MNA solve of the matrix updates (D-026; every 32
+  samples while a knob is smoothed), Newton + LU 14 %, libm 5 %.
+- Owner 2026-10-15: run both: (a) plain double instead of double-double for the matrix updates and (b) a longer
+  update interval. Plan: `mna` routines templated on the scalar (DD / double); `Preamp` and `PowerAmp` (the full amp's
+  roots) update in double and every 128 samples (was 32); sub-blocks, DC solves and the fixtures keep DD. Verify:
+  ctest, knob-jump vs SPICE (b1234, b56), full acceptance at 384 kHz exact J4 + HOT, X2 at half 2x, null test,
+  automation, plugin CPU.
+- Done (D-057): plugin CPU under automation 18.7 … 24.6 % (default base), 22.8 … 33.5 % (every knob 10); static
+  ≈ 19 % / 32.5 %. Accuracy: acceptance and HOT unchanged; knob jump PASS (B1234 −39.2 … −55.1 dB, B56 −63.2 dB).
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
@@ -707,3 +828,5 @@ _(Claude Code: add questions here and also ask them in the session.)_
   optimise the solver first (accuracy unchanged; measured per step). Done (D-046): real-time factor 0.42 → 0.53;
   re-verification (B56, cascade, M4 acceptance, null test) unchanged; automation 90 first-solve failures, all
   rescued. M5 stops here for review.
+- Q25 (M6): acceptance target for the real-time plugin? — Answered 2026-10-15: −20 dB ESR (literature −17 … −27 dB) for
+  every ESR check, the engine's per-block checks included (D-051).

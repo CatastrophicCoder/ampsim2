@@ -28,12 +28,23 @@ public:
     virtual bool setHalfStepTrigger(double) { return false; }
     /// Newton residual tolerance in volts (full amp, M6 study). False if the block has none.
     virtual bool setNewtonResidualTolerance(double) { return false; }
+    /// Exact J4 coupling (full amp, M6 X1); call before prepare(). False if the block has none.
+    virtual bool setExactJ4(bool) { return false; }
     /// Power amp at sampleRate / divisor (full amp, M6); call before prepare(). False if the block has none.
     virtual bool setPowerRateDivisor(int) { return false; }
     /// Output delay in samples added by the block (full amp at divisor 2); ampwav removes it.
     virtual int latency() const { return 0; }
     /// Volts per full-scale sample at the input and output (only meaningful for the full amp).
     virtual double inputVoltsPerFullScale() const { return 1.0; }
+    /// Input volts per full-scale sample (full amp, `--volts-per-fs`). False if the block has none.
+    virtual bool setInputVoltsPerFullScale(double) { return false; }
+    /// Full-scale input samples in, volts out. The full amp passes them to the engine unchanged (bit-exact as the
+    /// plugin); other blocks scale to volts first.
+    virtual void processFullScale(double* v, int numSamples) noexcept {
+        for (int n = 0; n < numSamples; ++n)
+            v[n] *= inputVoltsPerFullScale();
+        processVolts(v, numSamples);
+    }
     virtual double outputVoltsPerFullScale() const { return 1.0; }
 };
 

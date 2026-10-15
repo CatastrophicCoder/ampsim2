@@ -1,0 +1,2 @@
+# M6 experiment X3 only (D-050): the neural-model study (python -m harness.x3_neural). Not needed by the harness.
+torch==2.14.1

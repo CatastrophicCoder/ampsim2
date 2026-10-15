@@ -10,10 +10,11 @@ namespace {
 
 using namespace stage1234;
 using devices::FourTriodes;
+using devices::FourTriodesLoad;
 
 constexpr stage::RootNetwork<kNumNodes, kNumElements, kNumRootPorts> kNet{kElements, kRoot};
-const solver::MultiportNewton<8> kRootSolver = FourTriodes::solver(12);
-const solver::MultiportNewton<8> kDcSolver = FourTriodes::solver(500);  // reset() only
+const solver::MultiportNewton<kNumRootPorts> kRootSolver = FourTriodes::solverK<kNumRootPorts>(32);
+const solver::MultiportNewton<kNumRootPorts> kDcSolver = FourTriodes::solverK<kNumRootPorts>(500);  // reset() only
 
 }  // namespace
 
@@ -117,7 +118,7 @@ void Preamp::applyKnobs() noexcept {
     auto zeroWave = stage::plainResistors<decltype(elements())>();
     for (int k = 0; k < kNumElements; ++k)
         zeroWave[static_cast<size_t>(k)] = zeroWave[static_cast<size_t>(k)] && kElementSupplySign[k] == 0;
-    kNet.updateMatrices(root_, conductances(false), {}, &zeroWave);
+    kNet.updateMatrices(root_, conductances(false), {}, &zeroWave, false);  // plain double (D-057)
     ++updates_;
 
     // R_th4 as ToneStackMaster (D-015): VR2b ‖ (VR2a + VR3b + VR5 + VR4), capacitors open, k2b shorted
@@ -144,8 +145,8 @@ void Preamp::reset(double vInDc) {
     sources[eR7] = vbpA_;
     sources[eR12] = vbpX_;
     const Wave eOff = elementOffsets();
-    kNet.solveDc(root_, kDcSolver, FourTriodes{}, conductances(true), sources, eOff, rootOffsets(),
-                 {-1.0, 0.5 * vbpA_, -1.0, 0.5 * vbpA_, -1.5, 0.5 * vbpX_, -1.5, 0.5 * vbpX_});
+    kNet.solveDc(root_, kDcSolver, FourTriodesLoad{}, conductances(true), sources, eOff, rootOffsets(),
+                 {-1.0, 0.5 * vbpA_, -1.0, 0.5 * vbpA_, -1.5, 0.5 * vbpX_, -1.5, 0.5 * vbpX_, 0.0});
 
     auto across = [&](Element e) { return kNet.elementVoltage(root_, e, eOff); };
     c1_.setDcVoltage(across(eK1a));
@@ -173,6 +174,13 @@ void Preamp::reset(double vInDc) {
 }
 
 double Preamp::process(double vIn) noexcept {
+    beginSample(vIn);
+    solveLoaded(0.0);
+    finishSample();
+    return out_;
+}
+
+void Preamp::beginSample(double vIn) noexcept {
     bool moving = volume_.step();
     moving |= treble_.step();
     moving |= middle_.step();
@@ -190,16 +198,77 @@ double Preamp::process(double vIn) noexcept {
     src4_.setVoltage(vbpA_);
     src7_.setVoltage(vbpA_);
     src12_.setVoltage(vbpX_);
-    Wave wave;
-    stage::reflected(elements(), wave);
+    vInNow_ = vIn;
+    solvedOnce_ = false;
+    stage::reflected(elements(), reflected_);
+    eOff_ = elementOffsets();
+    kNet.openCircuit(root_, reflected_, eOff_, rootOffsets(), u_, vOc_);
+    saved_ = {root_.v, root_.vPrev, root_.i, root_.vOcPrev};
+    savedNode_ = root_.node;
+}
+
+bool Preamp::solveLoaded(double iY) noexcept {
+    // the first call of a sample predicts from the last samples; a repeated call (corrected load current)
+    // starts at the first call's solution with no trend, and the trend is then restored to the last sample's
+    const bool repeat = solvedOnce_ && ok_;
+    const auto failures = root_.stats.failures;
+    if (repeat) {
+        root_.vPrev = root_.v;  // no extrapolation: v is already this sample's solution for the old current
+    } else {
+        root_.v = saved_[0];
+        root_.vPrev = saved_[1];
+        root_.i = saved_[2];
+        root_.vOcPrev = saved_[3];
+        root_.node = savedNode_;
+    }
     auto tuned = kRootSolver;  // the M6 tolerance study only (a copy per sample when not the default)
     tuned.config.residualTol = residualTol_;
     const auto& newton = residualTol_ == kRootSolver.config.residualTol ? kRootSolver : tuned;
-    const bool ok = kNet.process(root_, newton, FourTriodes{}, wave, elementOffsets(), rootOffsets());
-    stage::incident(elements(), wave);  // on failure wave = reflected: states unchanged
-    if (ok)
-        updateOutputs(vIn);
-    return out_;
+    root_.i[rY] = iY;
+    incident_ = reflected_;
+    ok_ = kNet.solve(root_, newton, FourTriodesLoad{iY}, u_, vOc_, incident_, eOff_);
+    if (repeat && root_.stats.failures == failures)
+        root_.vPrev = saved_[0];  // the trend for the next sample: this sample's solution vs the last one
+    solvedOnce_ = true;
+    return ok_;
+}
+
+void Preamp::theveninAtY(double iY, double& vTh, double& rTh) const noexcept {
+    // linearised at the solution: v = vOc − Z·i, i_p = i_p(v_p), i_y given. A change of i_y moves the triode
+    // ports by dv_p = −(I + Z_pp·D)⁻¹·Z_py·di_y, so v_y = vTh − rTh·i_y with
+    // rTh = Z_yy − Z_yp·D·(I + Z_pp·D)⁻¹·Z_py
+    constexpr int P = 8;
+    solver::Vec<kNumRootPorts> i;
+    solver::Mat<kNumRootPorts> d9;
+    FourTriodes::eval<kNumRootPorts>(root_.v, i, d9);
+    solver::Mat<P> A;
+    solver::Vec<P> x;
+    for (int r = 0; r < P; ++r) {
+        for (int c = 0; c < P; ++c) {
+            double s = r == c ? 1.0 : 0.0;
+            for (int m = FourTriodes::kBlockBegin[c]; m < FourTriodes::kBlockEnd[c]; ++m)
+                s += root_.Z[r][m] * d9[m][c];
+            A[r][c] = s;
+        }
+        x[r] = root_.Z[r][rY];
+    }
+    rTh = root_.Z[rY][rY];
+    if (solver::solveLinear<P>(A, x)) {
+        for (int r = 0; r < P; ++r) {
+            double dx = 0.0;
+            for (int m = FourTriodes::kBlockBegin[r]; m < FourTriodes::kBlockEnd[r]; ++m)
+                dx += d9[r][m] * x[m];
+            rTh -= root_.Z[rY][r] * dx;
+        }
+    }
+    vTh = root_.v[rY] + rTh * iY;
+}
+
+void Preamp::finishSample() noexcept {
+    // on failure incident_ = reflected: states unchanged
+    stage::incident(elements(), ok_ ? incident_ : reflected_);
+    if (ok_)
+        updateOutputs(vInNow_);
 }
 
 }  // namespace amp2203

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cmath>
 #include <span>
 #include <type_traits>
 
@@ -30,17 +31,25 @@ struct Mutual {
 
 namespace detail {
 
+// scalar helpers for the two precisions: DD (D-026, default) and double (M6 D-057: the full amp's run-time updates)
+inline double lead(DD x) noexcept { return x.hi; }
+inline double lead(double x) noexcept { return x; }
+inline double toDouble(DD x) noexcept { return x.toDouble(); }
+inline double toDouble(double x) noexcept { return x; }
+inline double magnitude(DD x) noexcept { return abs(x); }
+inline double magnitude(double x) noexcept { return std::fabs(x); }
+
 /// Gaussian elimination with partial pivoting on an N×N system with M right-hand sides, in place.
 /// Returns false if a pivot is exactly zero (floating node).
-template <int N, int M>
-bool solve(std::type_identity_t<std::array<std::array<DD, N>, N>>& Y,
-           std::type_identity_t<std::array<std::array<DD, N>, M>>& rhs) noexcept {
+template <int N, int M, class T = DD>
+bool solve(std::type_identity_t<std::array<std::array<T, N>, N>>& Y,
+           std::type_identity_t<std::array<std::array<T, N>, M>>& rhs) noexcept {
     for (int k = 0; k < N; ++k) {
         int p = k;
         for (int i = k + 1; i < N; ++i)
-            if (abs(Y[i][k]) > abs(Y[p][k]))
+            if (magnitude(Y[i][k]) > magnitude(Y[p][k]))
                 p = i;
-        if (Y[p][k].hi == 0.0)
+        if (lead(Y[p][k]) == 0.0)
             return false;
         if (p != k) {
             std::swap(Y[p], Y[k]);
@@ -48,8 +57,8 @@ bool solve(std::type_identity_t<std::array<std::array<DD, N>, N>>& Y,
                 std::swap(r[p], r[k]);
         }
         for (int i = k + 1; i < N; ++i) {
-            const DD f = Y[i][k] / Y[k][k];
-            if (f.hi == 0.0)
+            const T f = Y[i][k] / Y[k][k];
+            if (lead(f) == 0.0)
                 continue;
             for (int j = k; j < N; ++j)
                 Y[i][j] -= f * Y[k][j];
@@ -59,7 +68,7 @@ bool solve(std::type_identity_t<std::array<std::array<DD, N>, N>>& Y,
     }
     for (auto& r : rhs)
         for (int i = N - 1; i >= 0; --i) {
-            DD s = r[i];
+            T s = r[i];
             for (int j = i + 1; j < N; ++j)
                 s -= Y[i][j] * r[j];
             r[i] = s / Y[i][i];
@@ -67,10 +76,10 @@ bool solve(std::type_identity_t<std::array<std::array<DD, N>, N>>& Y,
     return true;
 }
 
-template <int P, int N>
-std::array<std::array<DD, N>, N> nodal(const PortNetwork<P, N>& net,
-                                       const std::type_identity_t<std::array<DD, P>>& G) noexcept {
-    std::array<std::array<DD, N>, N> Y{};
+template <int P, int N, class T = DD>
+std::array<std::array<T, N>, N> nodal(const PortNetwork<P, N>& net,
+                                      const std::type_identity_t<std::array<T, P>>& G) noexcept {
+    std::array<std::array<T, N>, N> Y{};
     for (int k = 0; k < P; ++k) {
         const int a = net.ports[k][0];
         const int b = net.ports[k][1];
@@ -87,11 +96,11 @@ std::array<std::array<DD, N>, N> nodal(const PortNetwork<P, N>& net,
 }
 
 /// Adds the mutual stamps to the nodal matrix: the port-conductance block A_kᵀ·g·A_l + A_lᵀ·g·A_k.
-template <int P, int N>
+template <int P, int N, class T = DD>
 void addMutual(const PortNetwork<P, N>& net, std::span<const Mutual> mutual,
-               std::type_identity_t<std::array<std::array<DD, N>, N>>& Y) noexcept {
+               std::type_identity_t<std::array<std::array<T, N>, N>>& Y) noexcept {
     for (const auto& m : mutual) {
-        const DD g(m.g);
+        const T g(m.g);
         for (const auto& [x, y] : {std::array<int, 2>{m.k, m.l}, std::array<int, 2>{m.l, m.k}}) {
             const int t[2] = {net.ports[x][0], net.ports[x][1]};
             const int u[2] = {net.ports[y][0], net.ports[y][1]};
@@ -169,17 +178,18 @@ bool scattering(const PortNetwork<P, N>& net, const std::type_identity_t<std::ar
 ///
 /// `mutual` adds coupled elements (off-diagonal port conductances): the Norton injection of b_j is then
 /// Σ_k G[k][j]·b_j into every coupled port k.
-template <int P, int K, int N>
+/// T: the arithmetic of the solve, DD (default, D-026) or double (D-057).
+template <int P, int K, int N, class T = DD>
 bool rootTransfer(const PortNetwork<P, N>& elements, const PortNetwork<K, N>& root,
                   const std::type_identity_t<std::array<double, P>>& G, std::type_identity_t<double[N][P]>& Xe,
                   std::type_identity_t<double[N][K]>& Xr, std::span<const Mutual> mutual = {}) noexcept {
-    std::array<DD, P> g{};
+    std::array<T, P> g{};
     for (int k = 0; k < P; ++k)
-        g[k] = DD(G[k]);
-    auto Y = detail::nodal(elements, g);
-    detail::addMutual(elements, mutual, Y);
-    std::array<std::array<DD, N>, P + K> rhs{};
-    auto inject = [&](int column, int port, const DD& value) {
+        g[k] = T(G[k]);
+    auto Y = detail::nodal<P, N, T>(elements, g);
+    detail::addMutual<P, N, T>(elements, mutual, Y);
+    std::array<std::array<T, N>, P + K> rhs{};
+    auto inject = [&](int column, int port, const T& value) {
         if (elements.ports[port][0] != kGround)
             rhs[column][elements.ports[port][0]] += value;
         if (elements.ports[port][1] != kGround)
@@ -188,23 +198,23 @@ bool rootTransfer(const PortNetwork<P, N>& elements, const PortNetwork<K, N>& ro
     for (int j = 0; j < P; ++j)  // Norton injection G_j·b_j for b_j = 1
         inject(j, j, g[j]);
     for (const auto& m : mutual) {
-        inject(m.l, m.k, DD(m.g));
-        inject(m.k, m.l, DD(m.g));
+        inject(m.l, m.k, T(m.g));
+        inject(m.k, m.l, T(m.g));
     }
     for (int r = 0; r < K; ++r) {  // 1 A drawn out of node+ and returned at node− is a −1 / +1 injection;
                                    // Xr is stored with the opposite sign (v = Xe·b − Xr·i)
         if (root.ports[r][0] != kGround)
-            rhs[P + r][root.ports[r][0]] += DD(1.0);
+            rhs[P + r][root.ports[r][0]] += T(1.0);
         if (root.ports[r][1] != kGround)
-            rhs[P + r][root.ports[r][1]] -= DD(1.0);
+            rhs[P + r][root.ports[r][1]] -= T(1.0);
     }
-    if (!detail::solve<N, P + K>(Y, rhs))
+    if (!detail::solve<N, P + K, T>(Y, rhs))
         return false;
     for (int n = 0; n < N; ++n) {
         for (int j = 0; j < P; ++j)
-            Xe[n][j] = rhs[j][n].toDouble();
+            Xe[n][j] = detail::toDouble(rhs[j][n]);
         for (int r = 0; r < K; ++r)
-            Xr[n][r] = rhs[P + r][n].toDouble();
+            Xr[n][r] = detail::toDouble(rhs[P + r][n]);
     }
     return true;
 }

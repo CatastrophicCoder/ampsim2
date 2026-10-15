@@ -36,6 +36,10 @@ public:
         amp_.setNewtonResidualTolerance(v);
         return true;
     }
+    bool setExactJ4(bool on) override {
+        cfg_.exactJ4 = on;
+        return true;
+    }
     bool setPowerRateDivisor(int d) override {
         cfg_.powerAmpRateDivisor = d;
         return true;
@@ -43,15 +47,23 @@ public:
     int latency() const override { return amp_.latencySamples(); }
 
     void processVolts(double* v, int numSamples) noexcept override {
+        for (int n = 0; n < numSamples; ++n)
+            v[n] /= cfg_.inputVoltsPerFullScale;
+        processFullScale(v, numSamples);
+    }
+    void processFullScale(double* v, int numSamples) noexcept override {
         if (numSamples > 0 && !started_) {
             amp_.reset();  // DC operating point at the knobs given (SPICE starts there too)
             started_ = true;
         }
-        for (int n = 0; n < numSamples; ++n)
-            v[n] /= cfg_.inputVoltsPerFullScale;
         amp_.process(v, numSamples);
         for (int n = 0; n < numSamples; ++n)
             v[n] *= cfg_.outputVoltsPerFullScale;
+    }
+    bool setInputVoltsPerFullScale(double v) override {
+        cfg_.inputVoltsPerFullScale = v;
+        amp_.setInputVoltsPerFullScale(v);
+        return true;
     }
 
     std::span<const amp2203::Probe> probes() const noexcept override { return amp_.probes(); }

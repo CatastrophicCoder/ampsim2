@@ -39,9 +39,12 @@ struct Options {
     std::vector<NodeDump> supplies;  // --supply node=file.wav: recorded supply voltages, set every sample
     std::string statsPath;       // optional JSON with timing and Newton statistics
     std::optional<double> halfStepTrigger;  // --half-step-trigger V (power amp, D-043)
+    bool keepDelay = false;      // --keep-delay: keep the block's output delay (plugin null test)
+    std::optional<double> voltsPerFs;  // --volts-per-fs V (full amp, fs units: the plugin's input scale)
     std::string nfb;             // --nfb closed | open (full amp only; empty = closed)
     int powerRateDivisor = 1;    // --power-rate-divisor 1 | 2 (full amp, M6)
     std::optional<double> newtonTol;  // --newton-tol V (full amp, M6 study)
+    bool exactJ4 = false;        // --j4 exact (full amp, M6 X1)
     Units units = Units::Volts;
     int blockSize = 512;
     bool listNodes = false;
