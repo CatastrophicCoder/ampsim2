@@ -795,6 +795,13 @@ Notes:
   null test 26 / 26; plugin CPU static 31.6 % (every knob 10), automation 22.2 … 24.4 %. SPICE sanity: NFB 5.1 / 4.7 /
   4.6 dB (was 6.6 / 6.2 / 6.0), clean 87 / 112 / 126 W at 25 / 30 / 40 mV (was 101 / 133 / 151 W).
 - Plugin with the fitted EL34 reinstalled (VST3, AU); pluginval strictness 5 SUCCESS for both, auval PASS.
+- Owner listening after D-058: decent with Preamp 10, Interface Level +24 dBu, Bass 0, Treble 7, Middle 1, Presence 7,
+  Master 3; "bass / mid heavy"; Master above 3 adds nothing to the driven sound. Audient iD4 MkII, DI gain ¼ up (DI lineup
+  12 dBu = 0 dBFS, 40 dB DI gain range: the correct Interface Level is below +12 dBu, so +24 drives the model ≈ 20 dB
+  above the real guitar). Engine at Preamp 10: 0.8 / 4.4 / 21.4 % THD at y for 10 / 20 / 100 mV, plateau 26–28 %.
+- Speaker-load study (`harness/reports/M6/20261015_speaker_load_study.md`): with three 4x12-style impedances instead of
+  16 Ω the speaker voltage gains +3 … +4.7 dB at 100 Hz and +1.8 … +4.7 dB at 5 kHz (+2.7 … +5.1 at 8 kHz), −0.3 … −0.9 dB
+  at 400 Hz – 1 kHz; driven tones at the owner's settings: centroid +11 … +21 %, 5–10 kHz energy +1.7 … +3.5 dB.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
