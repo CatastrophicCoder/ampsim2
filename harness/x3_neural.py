@@ -48,7 +48,7 @@ def _tracks():
     return out
 
 
-def _teacher(x48):
+def _teacher(x48, knobs=KNOBS, j4=None):
     """Full amp at 768 kHz on a 48 kHz full-scale input; output decimated to 48 kHz (full scale)."""
     hi = resample_poly(x48, TEACHER_FACTOR, 1)
     with tempfile.TemporaryDirectory(prefix='amp2203_x3_') as d:
@@ -56,7 +56,8 @@ def _teacher(x48):
         write_wav(d / 'in.wav', hi, RATE * TEACHER_FACTOR)
         args = [str(AMPWAV), '--block', 'full', '--in', str(d / 'in.wav'), '--out', str(d / 'out.wav'),
                 '--units', 'fs', '--rate', str(RATE * TEACHER_FACTOR)]
-        args += [a for k, v in KNOBS.items() for a in ('--param', f'{k}={v!r}')]
+        args += [a for k, v in knobs.items() for a in ('--param', f'{k}={v!r}')]
+        args += ['--j4', j4] if j4 else []
         r = subprocess.run(args, capture_output=True, text=True)
         if r.returncode != 0:
             raise RuntimeError(r.stderr)
@@ -232,7 +233,7 @@ def _spice_crunch_di():
     return out
 
 
-def _alias_test(student_fn):
+def _alias_test(student_fn, teacher_fn=_teacher):
     """5 kHz and 9 kHz sines at two levels: power at non-harmonic frequencies relative to the total (48 kHz),
     student vs teacher (768 kHz, decimated)."""
     rows = []
@@ -242,7 +243,7 @@ def _alias_test(student_fn):
         for amp in (0.1, 0.4):
             x = amp * np.sin(2 * np.pi * f0 * t)
             ys = student_fn(x)[n:]
-            yt = _teacher(x)[n:2 * n]
+            yt = teacher_fn(x)[n:2 * n]
 
             def nonharm(y):
                 w = np.hanning(len(y))
@@ -256,10 +257,10 @@ def _alias_test(student_fn):
     return rows
 
 
-def _cpp_cost():
-    """ns per sample of a hand-written LSTM-32 (same weights) in C++ (-O3), single thread."""
+def _cpp_cost(sd=None):
+    """ns per sample of a hand-written LSTM-32 (same weights; one audio input) in C++ (-O3), single thread."""
     import torch
-    sd = torch.load(CACHE / 'lstm32.pt', map_location='cpu')
+    sd = torch.load(CACHE / 'lstm32.pt', map_location='cpu') if sd is None else sd
     w = np.concatenate([sd[k].numpy().ravel() for k in
                         ('rnn.weight_ih_l0', 'rnn.weight_hh_l0', 'rnn.bias_ih_l0', 'rnn.bias_hh_l0', 'lin.weight',
                          'lin.bias')]).astype(np.float32)

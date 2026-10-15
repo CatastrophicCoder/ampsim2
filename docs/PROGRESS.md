@@ -650,6 +650,21 @@ Notes:
   −17.1 dB (teacher −48.7 … −49.1 dB); validation vs teacher −14.5 dB. Non-harmonic power on 5 / 9 kHz sines:
   −6.3 … −17.0 dB (teacher −25.7 … −39.9 dB). Cost: 439 ns per 48 kHz sample in plain C++ (2.1 % of one core).
   Training is resumable (`train_state.pt`, written at every validation).
+- X4 plan (owner 2026-10-15: knobs Preamp Volume, Master, Presence as inputs; tone stack at 0.5):
+  `harness/x4_conditioned.py`. LSTM-32 as X3 with the three knob values as extra inputs (constant per segment).
+  Teacher: ampwav full amp at 768 kHz with `--j4 exact` (X1; valid at high Master). Data: 96 training settings
+  (each knob uniform in [0, 1], one in five at 0 or 1 so the corners are covered), each a 20 s segment of a random
+  DI track (between the held-out first 5 s and last 20 s) at a random input gain; 16 validation settings on the
+  last 20 s. Training as X3 (Adam 1e-3, clipping 1.0), 2400 epochs, resumable. Evaluation: vs SPICE on the
+  held-out 5 s DI clips at CRUNCH, DRIVE and HOT (cached 384 kHz references, 48 kHz band), X3 alongside at
+  CRUNCH; vs the teacher at the 16 unseen settings; aliasing at CRUNCH and HOT; C++ cost.
+- X4 result (report `harness/reports/M6/20261015_x4_conditioned.md`): render 112 × 20 s (the Mac slept from 01:16;
+  jobs now run under `caffeinate -s -i`), training 2400 epochs, 2 h 26 min, validation flat at −8.1 dB from epoch
+  ≈ 1300. Vs SPICE (held-out 5 s DI, 48 kHz band): CRUNCH −3.0 … −3.8 dB (X3 at the same clips −16.5 … −17.1 dB),
+  DRIVE −5.0 … −5.4 dB, HOT −6.8 … −7.1 dB; teacher −48.7 … −49.0 / −55.7 … −56.1 / −39.6 … −40.1 dB. Unseen
+  settings vs teacher −8.4 dB overall (best −10.9 dB); at Preamp Volume 0 or Master 0 (near-silent output) +23.7 …
+  +62.2 dB: the input skip (output = network + input) has to cancel the input there. Non-harmonic power on 5 / 9 kHz
+  sines −18.7 … −23.3 dB (teacher −25.7 … −39.9 dB). Cost 442 ns per 48 kHz sample (static knobs folded into the bias).
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
