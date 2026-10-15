@@ -681,6 +681,19 @@ Notes:
   treble and Presence ≤ −35 dB. y: Presence −36.4 dB. Supply nodes bpa / bpx change by +3 … +26 dB with the knobs
   (they carry the coupling). Implication: a split at y and at p1a / p1b is within −20 dB in the audio band; any
   preamp block reaching p2a or later needs the supply (power-amp current draw) as an input, or Master as a proxy.
+- Owner 2026-10-15: leave the per-block route; run X2, then A1.
+- X2 / A1 plan: `harness/x2_rates.py` (A1 = the same script with `--power-rate-divisor 2` and / or `--newton-tol`).
+  Full amp with exact J4 at 2x / 4x / 8x of 48 kHz (96 / 192 / 384 kHz). Scored as the plugin model check (D-051):
+  vs SPICE (cached 384 kHz references, 48 kHz band) on the held-out 5 s DI clips at CRUNCH, DRIVE and HOT; vs the
+  engine at 16x on the 16 X4 validation settings (10 s each); Newton failures (rescued / not) on every run;
+  aliasing on 5 / 9 kHz sines vs 16x at CRUNCH and HOT; cost from `ampwav --stats` on 10 s DI (default and HOT
+  knobs), run one at a time, as % of one core at 48 kHz (oversampling filters not included).
+- X2 result (`harness/reports/M6/20261015_x2_rates.md`): vs SPICE worst CRUNCH / DRIVE / HOT −46.4 / −49.9 / −26.2 dB at
+  2x, −48.5 / −55.6 / −33.2 at 4x, −48.7 / −55.8 / −38.6 at 8x (all PASS ≤ −20 dB); unseen settings vs 16x worst
+  −20.6 / −26.9 / −39.1 dB. Newton: unrescued failures per 5 s DI clip 6 … 29 at 2x, 0 at 4x and 8x; on loud
+  5 / 9 kHz sines thousands to ≈ 140 000 per 2 s at 2x / 4x (and up to 11 496 at 8x, 20 at 16x), which dominate the
+  aliasing figures there. Cost ≈ 3.4–3.6 µs per engine sample (HOT 4.3–5.5): 34 / 67 / 129 % of one core at 2x / 4x
+  / 8x (HOT 52 / 92 / 166 %). Limiting factor at lower rates: Newton convergence, not ESR.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
