@@ -56,6 +56,12 @@ def one(base, knobset, kind, name, x):
         write_wav(d / 'in.wav', x)
         args = [str(config.AMPWAV), '--block', 'full', '--in', str(d / 'in.wav'), '--out', str(d / 'out.wav'),
                 '--rate', str(config.FS), '--stats', str(d / 's.json')]
+        if config.POWER_DIVISOR != 1:  # M6 configurations (AMP2203_POWER_DIVISOR, AMP2203_J4, AMP2203_NEWTON_TOL)
+            args += ['--power-rate-divisor', str(config.POWER_DIVISOR)]
+        if config.J4 != 'thevenin':
+            args += ['--j4', config.J4]
+        if config.NEWTON_TOL:
+            args += ['--newton-tol', config.NEWTON_TOL]
         args += [a for k, v in BASES[base].items() if k not in knobset for a in ('--param', f'{k}={v!r}')]
         for k in knobset:
             args += ramps(k, kind, len(x) / config.FS)
@@ -92,9 +98,10 @@ def main():
         lines.append(f'| {r["base"]} | {r["knobs"]} | {r["kind"]} | {r["signal"]} | {"yes" if r["finite"] else "NO"} | '
                      f'{r["peak"]:.1f} | {r["newton_solves"]} | {r["newton_failures"]} | {r["newton_rescued"]} | '
                      f'{r["newton_unrescued"]} | {r["median_iterations"]} / {r["max_iterations_used"]} | {r["ns_per_sample"]:.0f} |')
-    out = config.REPORT_DIR / 'M5'
+    m6 = config.POWER_DIVISOR != 1 or config.J4 != 'thevenin' or config.NEWTON_TOL
+    out = config.REPORT_DIR / ('M6' if m6 else 'M5')
     out.mkdir(parents=True, exist_ok=True)
-    path = out / f'{datetime.date.today().strftime("%Y%m%d")}_automation.md'
+    path = out / (f'{datetime.date.today().strftime("%Y%m%d")}_automation' + (f'_fs{config.FS}_pdiv{config.POWER_DIVISOR}_j4{config.J4}' if m6 else '') + '.md')
     path.write_text('\n'.join(lines) + '\n')
     print(f'automation: wrote {path.relative_to(config.ROOT)} (non-finite {nonfinite}, failures {fails}, unrescued {unresc})')
 

@@ -929,3 +929,16 @@ Consequences (`harness/reports/M6/20261015_x2_rates_a1_div2_exact.md`, maxIter 3
 −26.8 dB; cost 24 / 46 / 89 % of one core (HOT 36 / 63 / 115 %), full-rate power amp 34 / 67 / 129 % (HOT 52 / 92 /
 166 %). Without the decimation filter the preamp content above a quarter of the engine rate folds into the power amp:
 non-harmonic power on 5 / 9 kHz sines −4.6 … −29.1 dB (full rate at the same engine rate: −6.4 … −36.6 dB).
+
+## D-054 Plugin defaults: 2x oversampling, power amp at half rate, exact J4
+Date: 2026-10-15 · Status: accepted (owner: "put half-rate power amp at 2x into the plugin"; listening: half rate 2x
+sounds identical to the 16x reference)
+Decision: Oversampling default 2x (was 8x, D-048), Power Amp Rate default Half (was Full, D-049); the plugin's
+engine always runs the exact J4 coupling (D-053). The other factors and Full stay selectable.
+Consequences: plugin CPU (`amp2203_render` now reports processBlock time) on 60 s DI GTR L at 48 kHz: 25.1 % / 24.8 %
+of one core (FIR / IIR), HOT 39.2 % / 39.1 %; latency 58 (FIR) / 13 (IIR) samples. Null test at 2x Half vs ampwav
+(same options, the reference re-delayed by the 17-sample interpolator delay and fed the plugin's exact +12 dBu scale):
+25 PASS, 1 FAIL (5 kHz −6 dBFS IIR −53.5 dB): with the power amp at half rate the D-043 half-step decision (100 V
+trigger) flips on last-bit input differences and the two discretisations differ locally by up to −27 dB; with the
+trigger off the same perturbation stays at −105 dB. Full rate: 26 PASS. Automation (96 kHz, Half, exact J4): 56 runs,
+0 non-finite, 0 Newton failures; 5.5–6.2 µs per engine sample while knobs move (static ≈ 2.5).

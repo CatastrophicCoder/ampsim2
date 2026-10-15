@@ -67,6 +67,8 @@ def _run(x48, knobs, factor, opts, stats_only=False):
             args += ['--power-rate-divisor', str(opts['divisor'])]
         if opts.get('tol'):
             args += ['--newton-tol', repr(opts['tol'])]
+        if 'trigger' in opts:
+            args += ['--half-step-trigger', repr(opts['trigger'])]
         r = subprocess.run(args, capture_output=True, text=True)
         if r.returncode != 0:
             raise RuntimeError(r.stderr)
@@ -201,6 +203,7 @@ def main():
     ap.add_argument('--factors', type=int, nargs='+', default=[2, 4, 8])
     ap.add_argument('--power-rate-divisor', type=int, default=1)
     ap.add_argument('--newton-tol', type=float, default=None)
+    ap.add_argument('--half-step-trigger', type=float, default=None, help='V; 0 = off (D-043 default 100)')
     ap.add_argument('--tag', default='')
     a = ap.parse_args()
     opts = {}
@@ -208,6 +211,8 @@ def main():
         opts['divisor'] = a.power_rate_divisor
     if a.newton_tol:
         opts['tol'] = a.newton_tol
+    if a.half_step_trigger is not None:
+        opts['trigger'] = a.half_step_trigger
     run(a.factors, opts, a.tag)
 
 

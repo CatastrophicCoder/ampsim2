@@ -726,6 +726,18 @@ Notes:
   networks −13 … −29 dBFS. No cabinet in the files.
 - Owner listening result 2026-10-15: full-rate power amp at 4x and half-rate power amp at 2x sound identical to the
   16x reference; the X3 / X4 networks sound weaker, with clearly less gain, most of all at HOT.
+- Owner 2026-10-15: (1) put half-rate power amp at 2x into the plugin and measure its CPU; (2) close the CPU gap.
+  Plan (1): plugin engine with exact J4; defaults Oversampling 2x, Power Amp Rate Half (SPEC §6.3, DECISIONS);
+  `amp2203_render` reports processing time; plugin CPU on 60 s DI at default and HOT knobs, FIR and IIR filters;
+  re-run plugin_null and automation. Plan (2): Newton tolerance 1e-6 / 1e-5 / 1e-4 V at half rate 2x (accuracy vs
+  SPICE, unseen settings, cost; adoption is the owner's decision, D-049); profile the engine at half rate 2x.
+- (1) done (D-054): plugin defaults 2x / Half / exact J4; plugin CPU 25 % (HOT 39 %) incl. oversampling; null test
+  25 / 26 (half-step decision sensitivity at half rate); automation 0 failures.
+- (2) measured, not adopted (owner decisions): half rate 2x with the half-step trigger off
+  (`…_x2_rates_half_trigger_off.md`): accuracy as with it (HOT −22.6 dB, unseen −19.7 dB), engine 24 / 32 %; plus
+  Newton tolerance 1e-6 / 1e-5 / 1e-4 V (`…_half2x_off_tol*.md`): accuracy identical, failures 12 (2 unrescued),
+  engine 22.3 / 21.5 / 19.4 % (HOT 29.4 / 28.3 / 27.1 %). Profile (half 2x, HOT): LU solves 29 %, libm pow / exp / log
+  26 %, rest of the Newton loops 34 %, WDF 6 %.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_

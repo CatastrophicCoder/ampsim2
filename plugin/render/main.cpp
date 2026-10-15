@@ -4,6 +4,7 @@
 //       displayed values (knobs 0–10, levels in dB / dBu)
 //   amp2203_render up   --in x.wav --out x_os.wav [--factor 8] [--filter fir|iir]   oversampler up stage only
 //   amp2203_render down --in y_os.wav --out y.wav [--factor 8] [--filter fir|iir]   oversampler down stage only
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -89,16 +90,22 @@ int main(int argc, char** argv) {
             return fail("oversampling factor not applied");
         juce::AudioBuffer<double> buf(2, kBlock);
         juce::MidiBuffer midi;
+        double busy = 0.0;  // seconds inside processBlock (the plugin's cost: oversampler, engine, levels)
         for (size_t pos = 0; pos < in.samples.size(); pos += kBlock) {
             const int n = static_cast<int>(std::min<size_t>(kBlock, in.samples.size() - pos));
             buf.setSize(2, n, false, false, true);
             for (int c = 0; c < 2; ++c)
                 for (int i = 0; i < n; ++i)
                     buf.setSample(c, i, c == 0 ? in.samples[pos + static_cast<size_t>(i)] : 0.0);
+            const auto t0 = std::chrono::steady_clock::now();
             proc.processBlock(buf, midi);
+            busy += std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
             for (int i = 0; i < n; ++i)
                 out.push_back(buf.getSample(0, i));
         }
+        const double audio = static_cast<double>(in.samples.size()) / in.sampleRate;
+        std::fprintf(stderr, "amp2203_render: processBlock %.3f s for %.3f s of audio: %.1f %% of one core, real-time factor %.2f\n",
+                     busy, audio, 100.0 * busy / audio, audio / busy);
         const auto st = proc.engineStats();
         std::fprintf(stderr, "amp2203_render: latency %d samples, Newton failures %llu (rescued %llu), max iterations %.0f\n",
                      proc.getLatencySamples(), static_cast<unsigned long long>(st.newtonFailures),
