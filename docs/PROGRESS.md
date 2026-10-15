@@ -744,6 +744,11 @@ Notes:
   automation at every knob 1.0 up to 10.4 µs. Raised with the owner.
 - Owner 2026-10-15: half-steps back on at half rate (D-056). Plugin CPU 2x Half FIR: default 20.6 %, HOT 32.9 %, every
   knob 10 35.6 % (0 failures). Null test 26 / 26; automation 0 failures. Open: plugin CPU under knob automation.
+- Plugin CPU under knob automation (`python -m harness.plugin_cpu`, `amp2203_render --automate`, report
+  `harness/reports/M6/20261015_plugin_cpu.md`): static 18.9 % (every knob 10: 32.1 %); one knob moving 45.8 … 55.0 %
+  (from every knob 10: 54.4 … 67.7 %); all six moving 84.6 … 87.1 %; host block 64 as 512; 1 rescued failure in 31
+  runs. Profile with all knobs moving: 76 % in the double-double MNA solve of the matrix updates (D-026; every 32
+  samples while a knob is smoothed), Newton + LU 14 %, libm 5 %.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
