@@ -806,6 +806,16 @@ Notes:
   Re 13 Ω + (Le 1.0 mH ‖ 45 Ω) + (Res 37 Ω ‖ Lm ‖ Cm at 100 Hz, Q 2); engine B56 (`PowerAmp`) and B6 (`PowerStage`): two
   nodes, six elements (inductors as one-winding CoupledInductors, the capacitor a DcCapacitor; DC states, half-step
   rescaling); testbench_gen / blocks / CLEAN power label; C++ DC fixtures, CIRCUIT.md §5, README; re-verify as after D-058.
+- D-059 verification (new references): M4 full acceptance (768 kHz) 107 PASS (CRUNCH / DRIVE DI −60.3 … −62.1 dB); 384 kHz
+  exact J4 107 PASS; HOT 17 PASS / 4 FAIL: DI ESR −33.5 … −35.7 dB (was −42.2 … −43.3) and 37–56 first-solve Newton failures
+  per DI clip in the power amp, all rescued (newton_failures ≤ 0 FAIL); b5open 88 PASS; b56 and b6 not scored: their SPICE
+  references stop with "timestep too small" at RELTOL 1e-8 (long sweeps, t ≈ 1.5–1.8 s). Presence knob jump −62.9 dB;
+  null test 26 / 26; plugin CPU static 33.2 % (every knob 10), automation ≈ 23–24 %.
+  Plugin model check (half 2x, 1e-4 V): HOT −18.8 dB vs SPICE (FAIL ≤ −20; was −23.1), unseen −16.5 dB; half-steps off
+  −19.2 dB (FAIL); full-rate power amp at 2x −24.1 dB (PASS), unseen −20.8 dB, engine 26.8 / 40.8 % (default / HOT).
+  Power-amp Newton at HOT (DI L): failures 49 / 420 at 8x / 16x (43 unrescued at 16x); maxIter 64 or a looser tolerance
+  do not change them; half-steps off: 3 / 68; half-steps every sample: 64 / 466. Cause (half-step handling of the speaker
+  inductors vs a stiffer discretised load) not yet established.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
