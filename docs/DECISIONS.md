@@ -1016,3 +1016,15 @@ the capacitor a `DcCapacitor`. The plugin output stays the speaker voltage / 60 
 figure. The parameters are representative, not measured.
 Consequences: DC unchanged except v(out) 42.4 µV (was 42.6). Every SPICE reference that contains the power amp is
 re-rendered; reports before this entry describe the 16 Ω resistor.
+
+## D-060 Plugin default Power Amp Rate: Full (with the speaker load)
+Date: 2026-10-17 · Status: accepted (owner: "switch the power amp to full rate at 2x"; revises D-054's Half default)
+Context: with the speaker load (D-059) the plugin model check at half rate 2x fails at HOT (−18.8 dB vs SPICE; half-steps off
+−19.2 dB), the full-rate power amp at 2x passes (−24.1 dB, unseen settings −20.8 dB vs 16x; engine 26.8 / 40.8 % default /
+HOT). The owner's NAM comparison with a real 2203 (PROGRESS 2026-10-17) is at Master 10 / Presence 8, the HOT region.
+Decision: Power Amp Rate default Full; Half stays selectable. Oversampling stays 2x; exact J4, Newton 1e-4 V and half-steps
+as D-055 / D-056.
+Consequences: no rate-change delay (latency = the oversampler's: 49 samples FIR at 2x, IIR less); CPU as measured in
+`harness/reports/M6/20261017_plugin_cpu.md`: default knobs 26.4 % (Half 18.9 %), every knob 10 50.2 % (33.2 %), knob automation
+32–35 % (≈ 24 %); at the owner's NAM-matched settings 47.3 % (Half 31.5 %). Null test 26 / 26; automation (96 kHz, Full, exact J4,
+1e-4 V) 0 non-finite, 20 rescued first-solve failures. The null test and the CPU tool default to Full.

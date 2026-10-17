@@ -152,7 +152,7 @@ DECISIONS D-033), `PhaseInverter`, `PowerStage` (verified sub-blocks of `PowerAm
 ### 3.4 Sample rate and oversampling
 - The engine runs at whatever rate `prepare()` receives. The JUCE plugin layer wraps it with
   `juce::dsp::Oversampling` and passes the oversampled rate.
-- Plugin oversampling: a parameter with 2x / 4x / 8x / 16x, default 2x with the power amp at half rate and the
+- Plugin oversampling: a parameter with 2x / 4x / 8x / 16x, default 2x with the power amp at full rate (D-060) and the
   exact J4 coupling (DECISIONS D-054, owner listening result; was 8x, D-048), the same factor at every host rate.
   2x is 96 kHz inside at 48 kHz, verified against SPICE with the D-051 tolerances (M6 X2 / A1).
 - Verification runs the engine directly at 768 kHz (16 x 48 kHz) on signals generated at that rate, so
@@ -320,7 +320,7 @@ Must reproduce `reference/spice/tubes.lib` exactly (same equations and parameter
 Preamp Volume, Treble, Middle, Bass, Master, Presence (0–10 display, rotation internally),
 Interface Level (dBu at 0 dBFS, 0..+24 dBu, default +12.0 dBu; sets `inputVoltsPerFullScale`),
 Input Trim (−24..+24 dB, default 0 dB), Output Level (−48..+12 dB), Oversampling (2x/4x/8x/16x, default 2x), Power Amp Rate (Full / Half, default
-Half; D-049, D-054),
+Full; D-049, D-054, D-060),
 optional Cabinet IR on/off with file chooser (only if implemented in this repo; see 1.3).
 
 ---

@@ -1,5 +1,5 @@
 """M5 wrapper null test (SPEC §7 M5): an offline render through the plugin's processor (`amp2203_render plugin`,
-default 2x, Power Amp Rate Half, exact J4: the plugin defaults, D-054) against `ampwav --block full` at the same
+default 2x, Power Amp Rate Full, exact J4: the plugin defaults, D-054, D-060) against `ampwav --block full` at the same
 engine rate and options on the processor's own oversampled input,
 followed by the same resampling: down(ampwav(up(x))), with the oversampler's up and down stages run alone
 (`amp2203_render up / down`). Default levels (Interface Level +12 dBu, trim and output 0 dB), default knobs.
@@ -32,7 +32,7 @@ from .wavio import read_wav, write_wav
 
 HOST_RATE = 48000
 FACTOR = 2
-POWER_RATE = 'half'
+POWER_RATE = 'full'  # the plugin default (D-060)
 RENDER = config.ROOT / 'build' / 'plugin' / 'amp2203_render_artefacts' / 'Release' / 'amp2203_render'
 LIMIT_DB = -60.0
 NEWTON_TOL = 1e-4  # V, the plugin's (D-055)
