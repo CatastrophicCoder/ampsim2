@@ -61,4 +61,5 @@ No rectifier/ripple or mains-transformer dynamics, no OT core saturation or hyst
 representative (not measured) speaker impedance with no cone breakup or acoustic output (the cab IR follows the
 speaker voltage). The Koren pentode screen equation gives ~0 screen current at this
 bias, so `tubes.lib` computes screen current from the same E1 term as the plate current, plus diversion
-of plate current to the screen when the plate swings low.
+of plate current to the screen when the plate swings low. The plate voltage enters the plate and screen equations through a 5 V softplus (D-061): no
+plate current below the cathode, smooth through 0 V.

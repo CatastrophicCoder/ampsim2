@@ -826,6 +826,15 @@ Notes:
 - Owner listening 2026-10-17 (NAM-matched settings, same IR): Power Amp Rate Full vs Half, "can't hear any real audible
   difference". The earlier NAM comparison ("pretty accurate") was made at Half (the restored instance setting).
 - Owner 2026-10-17: keep Full as the default (D-060 confirmed after the listening test); Half stays selectable per instance.
+- Owner 2026-10-17: fix the HOT convergence with the speaker load. Plan: (1) check the half-step handling of the speaker
+  inductors (every-sample half-steps at fs must reproduce 2·fs without half-steps, D-043); (2) characterise the failing
+  power-amp solves (ports, residuals, iterations); (3) fix (Newton step control / fallback / discretisation) and re-verify
+  HOT, the plugin model check and the acceptance.
+- Diagnosis: every-sample half-steps at 8x reproduce 16x to −67.6 dB (half-step code correct); failures grow with the step
+  rate (384 kHz: 1, 768 kHz: 34–37) and are unchanged by maxIter 64, tolerances 1e-6 … 1e-8, double-double matrices or 4 / 8
+  halvings (8: stall). All at pair B's plate in flybacks below the cathode (−700 … −2600 V): Koren's unclamped
+  atan(Vpk/kvb) gives reverse plate current there. Hard clamp: mixed; 5 V softplus with a matching screen knee: 0 failures
+  at 8x and 16x. Owner approved the tubes.lib change (D-061).
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_

@@ -18,10 +18,11 @@ Dg gx k DGRID
 .subckt EL34 p s g k params: mu=14.77 ex=1.046 kg1=194.3 kg2=2243 kp=53.82 kvb=40.43 rgi=1000 ccg=15p cpg=1p ccp=8p
 Be1 e1 0 V = max(V(s,k),1m)/kp*ln(1+exp(kp*(1/mu+V(g,k)/max(V(s,k),1m))))
 Re1 e1 0 1G
-Bp p k I = 2*pwr(max(V(e1),0),ex)/kg1*atan(V(p,k)/kvb)
+* Plate voltage through a 5 V softplus (D-061): no plate current below the cathode, smooth at 0 V
+Bp p k I = 2*pwr(max(V(e1),0),ex)/kg1*atan((max(V(p,k),0)+5*ln(1+exp(-abs(V(p,k))/5)))/kvb)
 * Screen: same E1 term as plate (Koren form gives ~0 near bias), plus cathode-current
 * conservation: plate current lost to the atan knee is diverted to the screen (modification)
-Bs s k I = 2*pwr(max(V(e1),0),ex)*(1/kg2 + (1.5707963-atan(max(V(p,k),0)/kvb))/kg1)
+Bs s k I = 2*pwr(max(V(e1),0),ex)*(1/kg2 + (1.5707963-atan((max(V(p,k),0)+5*ln(1+exp(-abs(V(p,k))/5)))/kvb))/kg1)
 Rcp p k 1G
 Cg g k {ccg}
 Cgp g p {cpg}
