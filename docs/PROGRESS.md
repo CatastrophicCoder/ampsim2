@@ -756,6 +756,76 @@ Notes:
   automation, plugin CPU.
 - Done (D-057): plugin CPU under automation 18.7 … 24.6 % (default base), 22.8 … 33.5 % (every knob 10); static
   ≈ 19 % / 32.5 %. Accuracy: acceptance and HOT unchanged; knob jump PASS (B1234 −39.2 … −55.1 dB, B56 −63.2 dB).
+- 2026-10-15 (main after PR #1): plugin reinstalled to ~/Library/Audio/Plug-Ins (VST3, AU); pluginval strictness 5
+  SUCCESS for VST3 and AU, auval PASS (`harness/reports/M6/20261015_pluginval_*.log`, `…_auval.log`).
+- Owner listening in Logic (2026-10-15): "very dark", "lacks gain", Master "just adds volume"; cab IR after the plugin;
+  compared with a real 2203. Review of O3 / A5 (owner request), SPICE studies on copies, reference unchanged:
+  - O3: C5 1 nF top-to-wiper matches the drawing. New O8: C2 100 pF V1a plate–cathode is on the drawing but missing
+    from the netlist; adding it darkens V1a → V1b by 0.3 dB at 5 kHz, 0.7 … 0.9 dB at 10 kHz.
+  - A5 12AX7: Koren's set vs RCA datasheet: 250 V / −2 V 0.95 mA (1.2), gm 1.67 (1.6) mA/V, rp 53.7 (62.5) kΩ; 100 V /
+    −1 V 0.10 mA (0.5), gm 0.59 (1.25), rp 141 (80) kΩ. Sarti et al. DAFx-07 set (mu 100.8, ex 1.4979, kg1 1890, kp 828,
+    kvb 72, Vct 0.612) matches both points (1.22 mA / 1.62 / 61.4; 0.50 mA / 1.22 / 82.0). Full amp with it: DC −1.6 …
+    −6.6 V, CRUNCH / DRIVE 220 Hz 0.3 V: output −0.3 dB, harmonics H2–H9 within 0.0 … 3.8 dB, spectral centroid +2 %.
+  - A5 EL34 (Koren set) vs Philips class A (250 / 250 V, −12.2 V): Ia 113 (100) mA, Ig2 19.3 (14.9) mA, gm 13.1 (11)
+    mA/V, ra 34 (15) kΩ; effect on the sound not studied.
+  Neither O3 nor the 12AX7 set explains "dark / lacks gain"; open candidates: resistive 16 Ω load (README known
+  limitation), EL34 model, input level.
+- EL34 study (owner request; SPICE copies, reference unchanged): no published Koren EL34 fit found; JJ datasheet typical
+  point Ua 250 V, Ug2 265 V, Ia 100 mA, S 11 mA/V, Ri 15 kΩ, mu g2-g1 11. Current set there: gm 12.2 mA/V, ri 38.8 kΩ.
+  One-point fit (mu, ex, kg1, kg2 kept): kp 49.97, kvb 58.9 → gm 11.0, ri 15.0 kΩ; softer knee (Vg1 0 V, Va 50 V:
+  159 vs 254 mA), not validated against curves. Full amp, current / fit: clean power (CLEAN 25 mV) 101 / 82.5 W
+  (THD 3.2 / 1.9 %); clipped output at DRIVE Master 0.6–1.0 and HOT 182–194 / 132–137 W into 16 Ω; harmonics
+  H2–H9 mostly within 0–2 dB (H2 at Master 0.6: −38.6 / −53.2 dB); spectral centroid −1 … −7 % with the fit.
+  Closed-loop output impedance (16 Ω vs open load) 14.1 / 15.7 / 16.0 Ω at 100 Hz / 1 kHz / 5 kHz (fit: 14.6 / 16.2 /
+  16.5 Ω): about equal to the load, so a speaker's rising impedance would raise the real amp's output at resonance
+  and at high frequencies relative to the 16 Ω resistor (not yet simulated). Neither EL34 set explains "dark".
+- EL34 curve fit (owner request; poppler installed for the data sheet; `harness/reports/M6/20261015_el34_curve_fit.md`):
+  Koren parameters fitted to 81 digitised Ei-RC curve points: mu 14.77, ex 1.046, kg1 194.3, kp 53.82,
+  kvb 40.4, kg2 2243; error vs the curves median 3.7 / 2.7 % (current set 11.5 / 28.2 %). Full amp: output impedance
+  20–23 Ω (was 14–16), clean 87 W (101), clipped 156–163 W (182–194), harmonics mostly within 1 dB, centroid −1 … −2 %.
+  Not a cause of "dark"; the higher output impedance makes the resistive-load difference larger.
+- Owner 2026-10-15: adopt the fitted EL34 in the reference model (D-058). Plan: tubes.lib EL34 parameters (bias network A4
+  unchanged); engine `devices::Pentode` defaults; regenerate tests/data el34 sweeps (`harness.device_sweeps`), CIRCUIT.md §5,
+  README sanity figures; re-verify: b56 block-exact, M4 acceptance at 768 kHz and at 384 kHz exact J4 + HOT, X2 at half 2x
+  (plugin config), B56 knob jump; SPICE references re-rendered (netlist hash changes).
+- D-058 done: re-verified against the new references: M4 full acceptance (768 kHz) 107 PASS (CRUNCH / DRIVE DI −61.1 …
+  −63.0 dB), 384 kHz exact J4 107 PASS, HOT 21 PASS (DI −42.2 … −43.3 dB); b56 106 PASS, b5open 88 PASS, b6 95 PASS / 2 FAIL
+  (the known 5 kHz 20 V discretisation FAILs, D-043; SWP-lo reference rendered at RELTOL 1e-7 after "timestep too small"
+  at 1e-8, noted in the report); half 2x plugin config vs SPICE HOT −23.1 dB, unseen −19.6 dB; B56 knob jump −64.0 dB;
+  null test 26 / 26; plugin CPU static 31.6 % (every knob 10), automation 22.2 … 24.4 %. SPICE sanity: NFB 5.1 / 4.7 /
+  4.6 dB (was 6.6 / 6.2 / 6.0), clean 87 / 112 / 126 W at 25 / 30 / 40 mV (was 101 / 133 / 151 W).
+- Plugin with the fitted EL34 reinstalled (VST3, AU); pluginval strictness 5 SUCCESS for both, auval PASS.
+- Owner listening after D-058: decent with Preamp 10, Interface Level +24 dBu, Bass 0, Treble 7, Middle 1, Presence 7,
+  Master 3; "bass / mid heavy"; Master above 3 adds nothing to the driven sound. Audient iD4 MkII, DI gain ¼ up (DI lineup
+  12 dBu = 0 dBFS, 40 dB DI gain range: the correct Interface Level is below +12 dBu, so +24 drives the model ≈ 20 dB
+  above the real guitar). Engine at Preamp 10: 0.8 / 4.4 / 21.4 % THD at y for 10 / 20 / 100 mV, plateau 26–28 %.
+- Speaker-load study (`harness/reports/M6/20261015_speaker_load_study.md`): with three 4x12-style impedances instead of
+  16 Ω the speaker voltage gains +3 … +4.7 dB at 100 Hz and +1.8 … +4.7 dB at 5 kHz (+2.7 … +5.1 at 8 kHz), −0.3 … −0.9 dB
+  at 400 Hz – 1 kHz; driven tones at the owner's settings: centroid +11 … +21 %, 5–10 kHz energy +1.7 … +3.5 dB.
+- Owner 2026-10-15: put the "typical" speaker load into the reference and the engine (D-059). Plan: netlist Rload →
+  Re 13 Ω + (Le 1.0 mH ‖ 45 Ω) + (Res 37 Ω ‖ Lm ‖ Cm at 100 Hz, Q 2); engine B56 (`PowerAmp`) and B6 (`PowerStage`): two
+  nodes, six elements (inductors as one-winding CoupledInductors, the capacitor a DcCapacitor; DC states, half-step
+  rescaling); testbench_gen / blocks / CLEAN power label; C++ DC fixtures, CIRCUIT.md §5, README; re-verify as after D-058.
+- D-059 verification (new references): M4 full acceptance (768 kHz) 107 PASS (CRUNCH / DRIVE DI −60.3 … −62.1 dB); 384 kHz
+  exact J4 107 PASS; HOT 17 PASS / 4 FAIL: DI ESR −33.5 … −35.7 dB (was −42.2 … −43.3) and 37–56 first-solve Newton failures
+  per DI clip in the power amp, all rescued (newton_failures ≤ 0 FAIL); b5open 88 PASS; b56 and b6 not scored: their SPICE
+  references stop with "timestep too small" at RELTOL 1e-8 (long sweeps, t ≈ 1.5–1.8 s). Presence knob jump −62.9 dB;
+  null test 26 / 26; plugin CPU static 33.2 % (every knob 10), automation ≈ 23–24 %.
+  Plugin model check (half 2x, 1e-4 V): HOT −18.8 dB vs SPICE (FAIL ≤ −20; was −23.1), unseen −16.5 dB; half-steps off
+  −19.2 dB (FAIL); full-rate power amp at 2x −24.1 dB (PASS), unseen −20.8 dB, engine 26.8 / 40.8 % (default / HOT).
+  Power-amp Newton at HOT (DI L): failures 49 / 420 at 8x / 16x (43 unrescued at 16x); maxIter 64 or a looser tolerance
+  do not change them; half-steps off: 3 / 68; half-steps every sample: 64 / 466. Cause (half-step handling of the speaker
+  inductors vs a stiffer discretised load) not yet established.
+- Owner comparison 2026-10-17 against a NAM capture of a real 2203 (Tone3000, settings published with the capture), plugin
+  build with D-058 + D-059 at its defaults (2x, Half, Interface Level +12 dBu, trim and output 0 dB): with the capture's
+  settings (Preamp 10, Treble 8, Middle 7, Bass 4, Master 10, Presence 8) "the tone is pretty accurate"; the output at Master
+  10 is ≈ 12 dB too loud for the IR loader. The earlier "missing gain" was at Master 3: the capture's sound includes the
+  power stage at full Master. These settings are in the HOT region (plugin model check there: −18.8 dB vs SPICE at half 2x).
+- Owner: power amp at full rate by default (D-060). Plugin CPU: default 26.4 %, every knob 10 50.2 %, NAM-matched settings
+  47.3 %, knob automation 32–35 %; null test 26 / 26; automation 0 unrescued.
+- Owner listening 2026-10-17 (NAM-matched settings, same IR): Power Amp Rate Full vs Half, "can't hear any real audible
+  difference". The earlier NAM comparison ("pretty accurate") was made at Half (the restored instance setting).
+- Owner 2026-10-17: keep Full as the default (D-060 confirmed after the listening test); Half stays selectable per instance.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_

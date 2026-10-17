@@ -27,9 +27,11 @@ PowerStage::PowerStage() {
 }
 
 void PowerStage::prepare(double sampleRate) {
-    for (auto* c : {&c14_, &c16_, &c18_, &c19_, &cgkA_, &cgpA_, &cpkA_, &cgkB_, &cgpB_, &cpkB_})
+    for (auto* c : {&c14_, &c16_, &c18_, &c19_, &cgkA_, &cgpA_, &cpkA_, &cgkB_, &cgpB_, &cpkB_, &cspkM_})
         c->prepare(sampleRate);
     ot_.prepare(sampleRate);
+    lspkE_.prepare(sampleRate);
+    lspkM_.prepare(sampleRate);
     updateMatrices();
 }
 
@@ -72,7 +74,12 @@ PowerStage::Wave PowerStage::conductances(bool dc) const noexcept {
     G[eRwp1] = rwp1_.wdf.G;
     G[eRwp2] = rwp2_.wdf.G;
     G[eRws] = rws_.wdf.G;
-    G[eRload] = rload_.wdf.G;
+    G[eRspkE] = rspkE_.wdf.G;
+    G[eRspkLe] = rspkLe_.wdf.G;
+    G[eRspkM] = rspkM_.wdf.G;
+    G[eCspkM] = dc ? 0.0 : cspkM_.wdf.G;
+    G[eLspkE] = dc ? kWindingDcConductance : lspkE_.conductance(0, 0);  // speaker inductors: shorts at DC (D-059)
+    G[eLspkM] = dc ? kWindingDcConductance : lspkM_.conductance(0, 0);
     for (int w = 0; w < 3; ++w)
         G[kWindings[w]] = dc ? kWindingDcConductance : ot_.conductance(w, w);
     return G;
@@ -123,9 +130,13 @@ void PowerStage::reset(double vocA, double vocB) {
     cgkB_.setDcVoltage(across(eCgkB));
     cgpB_.setDcVoltage(across(eCgpB));
     cpkB_.setDcVoltage(across(eCpkB));
+    cspkM_.setDcVoltage(across(eCspkM));
     // winding currents into each + terminal from the series resistances (not from the 1 MS DC "short")
     const auto& v = root_.node;
     ot_.setDcCurrents({(v[pA] - v[pA1]) / Rwp1, (v[pB1] - v[pB]) / Rwp2, v[sl] / Rws});
+    const double iSpk = (v[out] - v[spk1]) / RspkE;  // speaker load at DC: Le and Lm short (D-059)
+    lspkE_.setDcCurrents({iSpk});
+    lspkM_.setDcCurrents({iSpk});
     updateOutputs(vocA, vocB);
 }
 

@@ -23,7 +23,7 @@ class Block:
     dc_nodes: tuple | None = None  # nodes in the DC tables; None = every testbench node that F has
     levels: dict = field(default_factory=dict)   # VERIFICATION §4, volts peak at the input source
     engine_block: str = ''        # ampwav --block id
-    output_load: float = 0.0      # ohms, for power metrics (0 = none)
+    output_load: float = 0.0      # ohms, for power metrics (0 = none); 16 = nominal V²/16 Ω with the speaker load (D-059)
     recorded: tuple = ()          # Vrec_<name> sources: need recordings from another run (M4)
     linear: bool = False          # scored with the linear-block tolerances (VERIFICATION §7)
     engine_supplies: tuple = ()   # nodes of the block's own SPICE run fed to the engine as --supply (b56)

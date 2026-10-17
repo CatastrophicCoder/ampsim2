@@ -109,7 +109,8 @@ verification. In the engine B5 and B6 form one block B56 with no junction at the
 | R35,R37 / R36,R38 | 1 kΩ 5 W each | screens – nScr | (pair equivalent 500 Ω) |
 | V4–V7 | EL34 | cathodes to gnd | Fixed bias; V4‖V5 plate pA, V6‖V7 plate pB |
 | OT | see §3 | pA – ct – pB, secondary out – gnd | |
-| Rload | 16 Ω | out – gnd | |
+| Rspk_e / Lspk_e ‖ Rspk_le | 13 Ω / 1.0 mH ‖ 45 Ω | out – spk1 – spk2 | Speaker load (D-059): voice coil R, inductance with eddy loss |
+| Rspk_m ‖ Lspk_m ‖ Cspk_m | 37 Ω ‖ 29.4437 mH ‖ 86.0297 µF | spk2 – gnd | Motional resonance 100 Hz, Q 2; \|Z\| 20 / 50 / 14 / 15 / 35 / 48 Ω at 50 / 100 / 400 / 1k / 5k / 10k Hz |
 
 Bias Thevenin check: Vth = −60 V · 51 kΩ / 66 kΩ = −46.364 V; Rth = 15 kΩ ‖ 51 kΩ = 11.59 kΩ.
 
@@ -206,32 +207,36 @@ three candidates differ by < 0.4 % and give the same result within 0.1 dB. Worst
 
 ## 5. Reference DC operating point (default parameters, from SPICE)
 
-Defaults: vol 0.6, treble/middle/bass/presence 0.5, master 0.3, rv1 4 kΩ, vnl 505 V, rsrc 100 Ω.
+Defaults: vol 0.6, treble/middle/bass/presence 0.5, master 0.3, rv1 4 kΩ, vnl 505 V, rsrc 100 Ω. EL34 parameters
+fitted to the Ei-RC data sheet curves (D-058; with Koren's set the EL34s idled at 34.08 mA plate / 4.57 mA screen).
 
 | Node | Voltage | Node | Voltage |
 |---|---|---|---|
-| ct (B+, OT CT) | 488.708 V | p2a | 231.130 V |
-| nScr | 485.649 V | k2a | 1.404 V |
-| bpX | 402.336 V | k2b | 231.686 V |
-| bpA | 389.350 V | p3a | 270.881 V |
-| nbias | −46.364 V | p3b | 262.271 V |
-| p1a | 296.402 V | k3 | 44.933 V |
-| k1a | 2.510 V | nF | 43.522 V |
-| p1b | 352.433 V | nG | 13.484 V |
-| k1b | 3.692 V | pA / pB (EL34 plates) | 487.662 / 487.580 V |
+| ct (B+, OT CT) | 491.347 V | p2a | 232.577 V |
+| nScr | 488.880 V | k2a | 1.414 V |
+| bpX | 404.998 V | k2b | 233.140 V |
+| bpA | 391.921 V | p3a | 272.611 V |
+| nbias | −46.364 V | p3b | 263.951 V |
+| p1a | 298.326 V | k3 | 45.250 V |
+| k1a | 2.527 V | nF | 43.828 V |
+| p1b | 354.750 V | nG | 13.579 V |
+| k1b | 3.717 V | pA / pB (EL34 plates) | 490.463 / 490.394 V |
 
 | Current | Value |
 |---|---|
-| V1a plate (R4) | 0.930 mA |
-| V1b plate (R7) | 0.369 mA |
-| V2a plate (R12) | 1.712 mA |
-| V2b cathode (R13) | 2.317 mA |
-| PI plates (R18 / R21) | 1.603 / 1.401 mA |
-| R29 (preamp + PI total from nScr) | 8.331 mA |
-| Choke (Lch) | 26.60 mA |
-| EL34 plate, per tube | 34.08 mA |
-| EL34 screen, per tube | 4.57 mA |
-| Total HT current (Vht) | 162.9 mA |
+| V1a plate (R4) | 0.936 mA |
+| V1b plate (R7) | 0.372 mA |
+| V2a plate (R12) | 1.724 mA |
+| V2b cathode (R13) | 2.331 mA |
+| PI plates (R18 / R21) | 1.614 / 1.410 mA |
+| R29 (preamp + PI total from nScr) | 8.388 mA |
+| Choke (Lch) | 21.45 mA |
+| EL34 plate, per tube | 28.77 mA |
+| EL34 screen, per tube | 3.26 mA |
+| Total HT current (Vht) | 136.5 mA |
+
+The speaker load (D-059) leaves these values unchanged to the digits shown (the speaker node carries 42.4 µV of NFB DC,
+was 42.6 µV with the 16 Ω resistor).
 
 Regenerate with `python3 reference/spice/spice_tools.py` after any netlist change.
 
@@ -245,13 +250,14 @@ Regenerate with `python3 reference/spice/spice_tools.py` after any netlist chang
 | O2 | Middle pot wiring | As drawn: C12 to wiper, Bass bottom to top lug | ≤ 1.4 dB, only at low Middle settings |
 | O3 | C5 1 nF | VR1 top to wiper | Brightness vs Preamp Volume setting |
 | O4 | "50+50 µF" filter cans | 50 µF per node | Sag and ripple time constants |
-| O5 | NFB tap | 16 Ω output with 16 Ω load | Feedback amount if taken from another tap |
+| O5 | NFB tap | 16 Ω output with the speaker load (D-059) | Feedback amount if taken from another tap |
 | O6 | Low input | Not modelled | Feature only |
 | O7 | OT half-primary orientation | Blue–White (15.36 Ω) on the pA side (V4/V5) | ±0.6 Ω winding asymmetry, about ±40 mV DC per side |
+| O8 | C2 100 pF V1a plate–cathode (drawing 2203 STD Preamp iss. 4) | Not in the netlist (found 2026-10-15) | −0.3 dB at 5 kHz, −0.7 … −0.9 dB at 10 kHz into V1b (SPICE study) |
 | A1 | HT source 505 V / 100 Ω | Assumed | B+ level and sag |
 | A2 | OT values | Hammond 1750U replacement datasheet, primary inductance fitted (§3, D-023) | Power, LF/HF response, feedback |
 | A3 | Choke 5 H / 115 Ω | Hammond 194F replacement datasheet; L specified at 120 mA DC, the amp runs it at ≈ 27 mA (D-024) | Screen node dynamics, supply DC |
 | A4 | Bias −60 V at C20, RV1 4 kΩ | Assumed | Idle current, crossover |
-| A5 | Koren generic tube parameters | Generic | Overall voltages and distortion |
+| A5 | Tube parameters | 12AX7: Koren generic; EL34: fitted to the Ei-RC data sheet curves (D-058) | Overall voltages and distortion |
 
 Any change to these must be made in the netlist first, re-verified, and logged in `DECISIONS.md`.

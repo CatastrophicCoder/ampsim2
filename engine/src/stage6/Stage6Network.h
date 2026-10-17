@@ -9,7 +9,7 @@ namespace amp2203::stage6 {
 /// transformer and the 16 Ω load. The OT centre tap ct and the screen supply nScr are ideal supplies:
 /// ports that end on ct are stored against ground with the supply offset (stage/RootNetwork.h); the
 /// screen resistors are resistive sources.
-enum Node : int { p3a, p3b, nGn, nOr, nbias, gA, gB, sA, sB, pA, pA1, pB1, pB, out, sl, kNumNodes };
+enum Node : int { p3a, p3b, nGn, nOr, nbias, gA, gB, sA, sB, pA, pA1, pB1, pB, out, sl, spk1, spk2, kNumNodes };
 
 enum Element : int {
     eJ5a, eJ5b,          // J5 sources v_oc(p3a), v_oc(p3b) behind R_thA / R_thB (p3x – gnd)
@@ -27,7 +27,12 @@ enum Element : int {
     eRwp2,               // pB1 – pB
     eLs,                 // OT secondary out – sl
     eRws,                // sl – gnd
-    eRload,              // out – gnd
+    eRspkE,              // speaker Re: out – spk1 (D-059)
+    eLspkE,              // voice-coil inductance: spk1 – spk2
+    eRspkLe,             // its eddy-loss resistance: spk1 – spk2
+    eRspkM,              // motional resonance R: spk2 – gnd
+    eLspkM,              // motional resonance L: spk2 – gnd
+    eCspkM,              // motional resonance C: spk2 – gnd
     kNumElements
 };
 
@@ -59,7 +64,12 @@ inline constexpr mna::PortNetwork<kNumElements, kNumNodes> kElements{{{
     {pB1, pB},
     {out, sl},
     {sl, mna::kGround},
-    {out, mna::kGround},
+    {out, spk1},
+    {spk1, spk2},
+    {spk1, spk2},
+    {spk2, mna::kGround},
+    {spk2, mna::kGround},
+    {spk2, mna::kGround},
 }}};
 
 inline constexpr mna::PortNetwork<kNumRootPorts, kNumNodes> kRoot{{{
@@ -72,7 +82,7 @@ inline constexpr mna::PortNetwork<kNumRootPorts, kNumNodes> kRoot{{{
 }}};
 
 /// Sign of v(ct) in each element port's offset: (supply at node+) − (supply at node−).
-inline constexpr int kElementCtSign[kNumElements] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                                     0, 0, 0, 0, 0, 0, 0, -1, +1, 0, 0, 0, 0};
+inline constexpr int kElementCtSign[kNumElements] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0,
+                                                     0, 0, 0, 0, -1, +1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 }  // namespace amp2203::stage6

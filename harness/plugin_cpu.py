@@ -57,7 +57,7 @@ def main():
                   f'rescued {resc})', flush=True)
     lines = ['# M6 plugin CPU under knob automation', '',
              f'- Date {datetime.date.today().isoformat()}, commit `{_git()}`; `amp2203_render plugin` at the plugin defaults '
-             f'({a.factor}x, Power Amp Rate Half, exact J4, Newton tol 1e-4 V, half-steps on; D-054 – D-056), FIR '
+             f'({a.factor}x, Power Amp Rate Full, exact J4, Newton tol 1e-4 V, half-steps on; D-054 – D-056, D-060), FIR '
              f'oversampling, {a.seconds:g} s of DI GTR L at {RATE} Hz; processBlock time only.',
              '- Automation between host blocks: lfo = 10 Hz triangle 0 → 10 → 0, jump = 0 ↔ 10 every 50 ms; "all" moves '
              'the six knobs together. One render at a time.', '',

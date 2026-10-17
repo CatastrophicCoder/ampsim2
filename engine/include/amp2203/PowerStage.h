@@ -28,7 +28,7 @@ public:
     static constexpr double kSupplyCt = 488.708422, kSupplyScreen = 485.649287;  // CIRCUIT.md §5
     /// J5 Thevenin resistances (harness/junctions.py j5a / j5b, provisional; CIRCUIT.md §4).
     static constexpr double kRthA = 58067.6, kRthB = 56937.4;
-    static constexpr int kNodes = 15, kElements = 26, kRootPorts = 6;
+    static constexpr int kNodes = 17, kElements = 31, kRootPorts = 6;
 
     // Component values, CIRCUIT.md §1 B6, §3 and tubes.lib (SI units).
     static constexpr double C14 = 0.022e-6, C16 = 0.022e-6, C18 = 47e-12, C19 = 10e-6, R24 = 220e3, R25 = 220e3;
@@ -38,7 +38,9 @@ public:
     static constexpr double kBiasResistance = R27 * (R26 + RV1) / (R27 + R26 + RV1);
     static constexpr double R31 = 5.6e3, R35 = 1e3;                           // one tube's stopper / screen R
     static constexpr double Cgk = 15e-12, Cgp = 1e-12, Cpk = 8e-12;            // one EL34 (tubes.lib)
-    static constexpr double Rwp1 = 15.36, Rwp2 = 16.56, Rws = 0.320, Rload = 16.0;
+    static constexpr double Rwp1 = 15.36, Rwp2 = 16.56, Rws = 0.320;
+    // speaker load (D-059): Re + (Le ‖ R_le) + (R_m ‖ L_m ‖ C_m), the netlist's Rspk_* / Lspk_* / Cspk_m
+    static constexpr double RspkE = 13.0, LspkE = 1.0e-3, RspkLe = 45.0, RspkM = 37.0, LspkM = 0.0294437, CspkM = 8.60297e-05;
     static constexpr double lpt = 25.61, kot = 0.9997925, Zpp = 1700.0, Zs = 16.0;  // OT (D-023)
 
     PowerStage();
@@ -86,12 +88,17 @@ private:
     chowdsp::wdft::ResistorT<double> rgA_{R31 / 2}, rgB_{R31 / 2};
     chowdsp::wdft::ResistiveVoltageSourceT<double> rsA_{R35 / 2}, rsB_{R35 / 2};
     detail::DcCapacitor cgkA_{2 * Cgk}, cgpA_{2 * Cgp}, cpkA_{2 * Cpk}, cgkB_{2 * Cgk}, cgpB_{2 * Cgp}, cpkB_{2 * Cpk};
-    chowdsp::wdft::ResistorT<double> rwp1_{Rwp1}, rwp2_{Rwp2}, rws_{Rws}, rload_{Rload};
+    chowdsp::wdft::ResistorT<double> rwp1_{Rwp1}, rwp2_{Rwp2}, rws_{Rws};
     detail::CoupledInductors<3> ot_{{lpt / 4, lpt / 4, lpt / (Zpp / Zs)}, kot};
+    // speaker load (D-059): the inductors as one-winding CoupledInductors (no coupling)
+    chowdsp::wdft::ResistorT<double> rspkE_{RspkE}, rspkLe_{RspkLe}, rspkM_{RspkM};
+    detail::DcCapacitor cspkM_{CspkM};
+    detail::CoupledInductors<1> lspkE_{{LspkE}, 0.0}, lspkM_{{LspkM}, 0.0};
 
     auto elements() noexcept {
         return std::tie(j5a_, j5b_, c14_, c16_, c18_, r24_, r25_, c19_, bias_, rgA_, rgB_, rsA_, rsB_, cgkA_, cgpA_, cpkA_,
-                        cgkB_, cgpB_, cpkB_, rwp1_, ot_.w[0], ot_.w[1], rwp2_, ot_.w[2], rws_, rload_);
+                        cgkB_, cgpB_, cpkB_, rwp1_, ot_.w[0], ot_.w[1], rwp2_, ot_.w[2], rws_, rspkE_, lspkE_.w[0],
+                        rspkLe_, rspkM_, lspkM_.w[0], cspkM_);
     }
 
     detail::RootNetworkState<kNodes, kElements, kRootPorts> root_;

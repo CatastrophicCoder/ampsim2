@@ -30,7 +30,7 @@ public:
     using PI = PhaseInverter;
     using PS = PowerStage;
     static constexpr int kParamUpdateInterval = 128;  // samples between matrix updates while a knob moves (D-057; was 32)
-    static constexpr int kNodes = 21, kElements = 42, kRootPorts = 11;  // 10 tube ports + the preamp at y
+    static constexpr int kNodes = 23, kElements = 47, kRootPorts = 11;  // 10 tube ports + the preamp at y
     static constexpr double kDefaultHalfStepTrigger = 100.0;  // V; D-043 (0 = off)
 
     PowerAmp();
@@ -97,9 +97,9 @@ private:
     void applyKnobs() noexcept;
     void halfStep(double vIn) noexcept;
     auto reactive() noexcept {
-        return std::array<detail::DcCapacitor*, 19>{&c9_,  &c15_, &c17_, &cgk3a_, &cgp3a_, &cpk3a_, &cgk3b_,
+        return std::array<detail::DcCapacitor*, 20>{&c9_,  &c15_, &c17_, &cgk3a_, &cgp3a_, &cpk3a_, &cgk3b_,
                                                      &cgp3b_, &cpk3b_, &c14_, &c16_, &c18_, &c19_, &cgkA_,
-                                                     &cgpA_, &cpkA_, &cgkB_, &cgpB_, &cpkB_};
+                                                     &cgpA_, &cpkA_, &cgkB_, &cgpB_, &cpkB_, &cspkM_};
     }
     void rescaleReactive(double ratio) noexcept;
     Wave conductances(bool dc) const noexcept;
@@ -128,14 +128,18 @@ private:
     chowdsp::wdft::ResistiveVoltageSourceT<double> rsA_{PS::R35 / 2}, rsB_{PS::R35 / 2};
     detail::DcCapacitor cgkA_{2 * PS::Cgk}, cgpA_{2 * PS::Cgp}, cpkA_{2 * PS::Cpk}, cgkB_{2 * PS::Cgk},
         cgpB_{2 * PS::Cgp}, cpkB_{2 * PS::Cpk};
-    chowdsp::wdft::ResistorT<double> rwp1_{PS::Rwp1}, rwp2_{PS::Rwp2}, rws_{PS::Rws}, rload_{PS::Rload};
+    chowdsp::wdft::ResistorT<double> rwp1_{PS::Rwp1}, rwp2_{PS::Rwp2}, rws_{PS::Rws};
     detail::CoupledInductors<3> ot_{{PS::lpt / 4, PS::lpt / 4, PS::lpt / (PS::Zpp / PS::Zs)}, PS::kot};
+    // speaker load (D-059): the inductors as one-winding CoupledInductors (no coupling)
+    chowdsp::wdft::ResistorT<double> rspkE_{PS::RspkE}, rspkLe_{PS::RspkLe}, rspkM_{PS::RspkM};
+    detail::DcCapacitor cspkM_{PS::CspkM};
+    detail::CoupledInductors<1> lspkE_{{PS::LspkE}, 0.0}, lspkM_{{PS::LspkM}, 0.0};
 
     auto elements() noexcept {
         return std::tie(j4_, c9_, r17_, r16_, r19_, c15_, r20_, r23_, c17vr6_, r22_, src18_, src21_, cgk3a_, cgp3a_,
                         cpk3a_, cgk3b_, cgp3b_, cpk3b_, c14_, c16_, c18_, r24_, r25_, c19_, bias_, rgA_, rgB_, rsA_, rsB_,
                         cgkA_, cgpA_, cpkA_, cgkB_, cgpB_, cpkB_, rwp1_, ot_.w[0], ot_.w[1], rwp2_, ot_.w[2], rws_,
-                        rload_);
+                        rspkE_, lspkE_.w[0], rspkLe_, rspkM_, lspkM_.w[0], cspkM_);
     }
 
     detail::RootNetworkState<kNodes, kElements, kRootPorts> root_;
@@ -145,7 +149,8 @@ private:
     double portVTh_ = 0.0, portG_ = 0.0, vThPrev_ = 0.0;  // preamp port at y (M6 X1)
     long halfSteps_ = 0;
     double xPrev_ = 0.0;  // the previous sample's J4 source voltage (half-step midpoint)
-    std::array<double, 22> bLast_{};  // reflected waves of the reactive elements before this sample's reflected()
+    std::array<double, 25> bLast_{};  // reflected waves of the reactive elements (capacitors, OT, speaker inductors)
+                                      // before this sample's reflected()
     detail::KnobSmoother presence_;
     int sinceUpdate_ = 0;
     long updates_ = 0;

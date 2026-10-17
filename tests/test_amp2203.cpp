@@ -25,24 +25,24 @@ double probe(const amp2203::Amp2203& a, const std::string& name) {
 TEST_CASE("Amp2203 starts at the full-netlist DC operating point", "[amp2203][m4]") {
     amp2203::Amp2203 amp;
     amp.prepare({});
-    // full-netlist op at default parameters (ngspice 47)
+    // full-netlist op at default parameters (ngspice 47, EL34 D-058)
     const std::pair<const char*, double> ref[] = {
-        {"ct", 488.70842163204327}, {"nscr", 485.64928691750646}, {"bpx", 402.33599940894806},
-        {"bpa", 389.3496033135904}, {"p1a", 296.402},             {"p1b", 352.433},
-        {"p2a", 231.130},           {"k2b", 231.686},             {"p3a", 270.8809249953309},
-        {"p3b", 262.2705821268219}, {"k3", 44.93336791716606},    {"pa", 487.6615211930245},
-        {"pb", 487.5797411890199},  {"nbias", -46.36358785048281}};
+        {"ct", 491.3466370439178}, {"nscr", 488.8804667528911}, {"bpx", 404.9981846270138},
+        {"bpa", 391.9215063373393}, {"p1a", 298.3259948720179},             {"p1b", 354.7502349059159},
+        {"p2a", 232.5771020001565},           {"k2b", 233.1404038063239},             {"p3a", 272.6112625407083},
+        {"p3b", 263.9511987003812}, {"k3", 45.25019514420279},    {"pa", 490.4627514780715},
+        {"pb", 490.3937077859763},  {"nbias", -46.36358785048281}};
     for (const auto& [n, v] : ref) {
         INFO(n << ": " << probe(amp, n) << " (SPICE " << v << ")");
         REQUIRE(std::fabs(probe(amp, n) / v - 1.0) < 5e-3);
     }
-    REQUIRE(std::fabs(probe(amp, "ip_tube_a") - 0.03407830267111851) < 1e-3);  // ±1 mA per tube
-    REQUIRE(std::fabs(probe(amp, "is_tube_a") - 0.0045673744924156524) < 0.3e-3);
+    REQUIRE(std::fabs(probe(amp, "ip_tube_a") - 0.0287723165965592) < 1e-3);  // ±1 mA per tube
+    REQUIRE(std::fabs(probe(amp, "is_tube_a") - 0.0032641827099544754) < 0.3e-3);
 
-    // silence in, silence out (SPEC §3.6: within 1 µV of the DC output; F's speaker node carries 42.3 µV
+    // silence in, silence out (SPEC §3.6: within 1 µV of the DC output; F's speaker node carries 42.4 µV
     // of NFB DC current through R22, and so does the engine)
     const double outDc = probe(amp, "out");
-    REQUIRE(std::fabs(outDc - 4.2302458725838655e-05) < 1e-7);
+    REQUIRE(std::fabs(outDc - 4.240884065521802e-05) < 1e-7);
     std::vector<double> x(8192, 0.0);
     amp.process(x.data(), static_cast<int>(x.size()));
     for (double y : x)

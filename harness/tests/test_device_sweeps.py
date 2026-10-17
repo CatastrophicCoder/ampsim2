@@ -32,7 +32,7 @@ def triode(vgk, vpk, mu=100, ex=1.4, kg1=1060, kp=600, kvb=300):
     return 2 * np.maximum(e1, 0) ** ex / kg1, grid_current(vgk, 2001.0)
 
 
-def pentode(vsk, vgk, vpk, mu=11, ex=1.35, kg1=650, kg2=4200, kp=60, kvb=24):
+def pentode(vsk, vgk, vpk, mu=14.77, ex=1.046, kg1=194.3, kg2=2243, kp=53.82, kvb=40.43):  # tubes.lib EL34 (D-058)
     vs = np.maximum(vsk, 1e-3)
     f = 2 * np.maximum(vs * softplus(kp * (1 / mu + vgk / vs)) / kp, 0) ** ex
     ip = f / kg1 * np.arctan(vpk / kvb)

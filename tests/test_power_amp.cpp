@@ -26,7 +26,7 @@ void setup(PowerAmp& s) {
     using amp2203::detail::atap;
     const double vr2b = 1e6 * atap(0.3) + 1.0, chain = (1e6 * (1.0 - atap(0.3)) + 1.0) + 110e3 + (1e6 * atap(0.5) + 1.0) + 22e3;
     s.setSourceResistance(1.0 / (1.0 / vr2b + 1.0 / chain));
-    s.setSupplyVoltages(402.33599940894806, 485.64928691750646, 488.70842163204327);
+    s.setSupplyVoltages(404.9981846270138, 488.8804667528911, 491.3466370439178);
     s.reset(0.0);
 }
 }  // namespace
@@ -35,19 +35,19 @@ TEST_CASE("PowerAmp starts at the full-netlist DC operating point", "[stage56][m
     PowerAmp s;
     setup(s);
     const std::pair<const char*, double> ref[] = {
-        {"g3a", 43.52260078966601},  {"k3", 44.93336791716606},   {"ng", 13.483951021319733},
-        {"p3a", 270.8809249953309},  {"p3b", 262.2705821268219},  {"ngn", -46.36312745114321},
-        {"nbias", -46.36358785048281}, {"s4", 481.0819124250908}, {"pa", 487.6615211930245},
-        {"pb", 487.5797411890199}};
+        {"g3a", 43.82947357414837},  {"k3", 45.25019514420279},   {"ng", 13.57902697311721},
+        {"p3a", 272.6112625407083},  {"p3b", 263.9511987003812},  {"ngn", -46.3631274511432},
+        {"nbias", -46.36358785048281}, {"s4", 485.6163911912913}, {"pa", 490.4627514780715},
+        {"pb", 490.3937077859763}};
     for (const auto& [n, v] : ref) {
         INFO(n << ": " << probe(s, n) << " (SPICE " << v << ")");
         REQUIRE(std::fabs(probe(s, n) / v - 1.0) < 5e-3);
     }
-    // F's speaker node carries the NFB DC current through R22 (CIRCUIT.md §5: 42.3 µV)
+    // F's speaker node carries the NFB DC current through R22 (CIRCUIT.md §5: 42.4 µV)
     INFO("out " << s.output());
-    REQUIRE(std::fabs(s.output() - 4.2302458725838655e-05) < 1e-7);
-    REQUIRE(std::fabs(probe(s, "ip_tube_a") - 0.03407830267111851) < 1e-3);
-    REQUIRE(std::fabs(probe(s, "is_tube_b") - 0.00456754684753321) < 0.3e-3);
+    REQUIRE(std::fabs(s.output() - 4.240884065521802e-05) < 1e-7);
+    REQUIRE(std::fabs(probe(s, "ip_tube_a") - 0.0287723165965592) < 1e-3);
+    REQUIRE(std::fabs(probe(s, "is_tube_b") - 0.0032641827099544754) < 0.3e-3);
 
     const double out = s.output();
     for (int n = 0; n < 8192; ++n)

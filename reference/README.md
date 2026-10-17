@@ -6,7 +6,7 @@ Transcribed from the Marshall drawings "2203 STD Preamp" (issue 4) and "2203 STD
 ## Files
 - `spice/jcm800_2203.cir` — full amp: preamp, tone stack, master, long-tail-pair PI with NFB and
   presence, 4x EL34, output transformer, HT supply chain, bias network.
-- `spice/tubes.lib` — Koren 12AX7 and EL34 models. The EL34 screen current is a modification (see below).
+- `spice/tubes.lib` — Koren 12AX7 and EL34 models (EL34 parameters fitted to the data sheet, D-058). The EL34 screen current is a modification (see below).
 - `spice/spice_tools.py` — helpers: `op`, `ac`, `tran`, `thd_power`. Run it directly to print the DC
   operating point.
 - `plots/tonestack_sweeps.png` — tone stack response (V2b cathode → Treble wiper) for each control.
@@ -30,8 +30,8 @@ C5 1 nF across Preamp Volume top-to-wiper; "50+50 µF" cans modelled as 50 µF p
 16 Ω tap; Low input not modelled.
 
 ## Assumed values (not on the schematic)
-HT source 505 V behind 100 Ω; bias −60 V at the C20 node with RV1 = 4 kΩ; generic Koren tube parameters; resistive
-16 Ω load; ideal guitar source.
+HT source 505 V behind 100 Ω; bias −60 V at the C20 node with RV1 = 4 kΩ; Koren 12AX7 parameters (generic); EL34 parameters fitted to the Ei-RC data sheet curves (D-058); resistive
+ideal guitar source. The load is a representative nominal 16 Ω 4x12 speaker impedance (D-059; was a 16 Ω resistor).
 
 ## Output transformer (Hammond 1750U datasheet)
 OT 1.7 kΩ : 16 Ω (nominal ratio), DCR 15.36 / 16.56 Ω per half-primary (Blue–White on the pA side) and
@@ -45,17 +45,20 @@ D-023.
 runs it at ≈ 27 mA; the inductance at that current is not specified and stays 5 H.
 
 ## Sanity results
-- DC: B+ 489 V, screens 486 V, PI supply 402 V, preamp supply 389 V; EL34 34.1 mA plate + 4.57 mA screen
-  per tube (≈ 16.6 W plate dissipation, ≈ 66 % of 25 W).
-- Global NFB ≈ 6 dB: 6.6 / 6.2 / 6.0 dB at 100 Hz / 1 kHz / 5 kHz (verified negative by removing R22).
-- Clean power (Preamp 2, Master 10, 1 kHz; input 25 / 30 / 40 mV peak): ≈ 101 W at 3.2 % THD,
-  ≈ 133 W at 3.5 %, ≈ 151 W at 9.6 % (assumed OT and choke before D-023/D-024: 101 W / 130 W / 145 W at
-  2.8 / 3.8 / 9.6 %).
-- Overdrive (Preamp 8, Master 3, 300 mV @ 220 Hz): V2a is the main clipping stage; B+ sags ≈ 20 V.
+(EL34 parameters fitted to the data sheet, D-058; Koren's EL34 set gave B+ 489 V, 34.1 + 4.57 mA per tube, NFB 6.6 /
+6.2 / 6.0 dB and 101 / 133 / 151 W.)
+- DC: B+ 491 V, screens 489 V, PI supply 405 V, preamp supply 392 V; EL34 28.8 mA plate + 3.26 mA screen per tube
+  (≈ 14.1 W plate dissipation, ≈ 56 % of 25 W) with the assumed bias network (A4).
+- Global NFB ≈ 4.8 dB: 5.1 / 4.7 / 4.6 dB at 100 Hz / 1 kHz / 5 kHz (R22 → 1 TΩ).
+- Clean power (Preamp 2, Master 10, 1 kHz; input 25 / 30 / 40 mV peak): ≈ 87 W at 4.5 % THD, ≈ 112 W at 5.0 %,
+  ≈ 126 W at 10.3 %.
+- Closed-loop output impedance ≈ 20–23 Ω (100 Hz – 5 kHz; 16 Ω vs open load).
+- Overdrive (Preamp 8, Master 3, 300 mV @ 220 Hz): V2a is the main clipping stage.
 - Speed: ≈ 27x slower than real time for the full amp.
 
 ## Known limitations
-No rectifier/ripple or mains-transformer dynamics, no OT core saturation or hysteresis, no reactive
-speaker load, generic tube models. The Koren pentode screen equation gives ~0 screen current at this
+No rectifier/ripple or mains-transformer dynamics, no OT core saturation or hysteresis, generic 12AX7 model, a
+representative (not measured) speaker impedance with no cone breakup or acoustic output (the cab IR follows the
+speaker voltage). The Koren pentode screen equation gives ~0 screen current at this
 bias, so `tubes.lib` computes screen current from the same E1 term as the plate current, plus diversion
 of plate current to the screen when the plate swings low.

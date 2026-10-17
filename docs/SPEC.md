@@ -22,7 +22,7 @@ is verified against SPICE before it is considered done.
 - High input, V1a, Preamp Volume network (incl. bright caps), V1b, V2a, V2b cathode follower.
 - Tone stack (Treble, Middle, Bass) and Master Volume.
 - Long-tail-pair phase inverter with global negative feedback and Presence.
-- 4x EL34 push-pull output stage, output transformer (linear model), 16 Ω resistive load.
+- 4x EL34 push-pull output stage, output transformer (linear model), nominal 16 Ω speaker load (representative 4x12 impedance, D-059; was a 16 Ω resistor).
 - HT supply sag (reservoir, choke, RC dropper chain) and the bias network.
 - JUCE plugin (AU, VST3, Standalone) with parameters, smoothing, oversampling and latency reporting.
 - Offline CLI tool and verification harness against SPICE.
@@ -145,14 +145,14 @@ DECISIONS D-033), `PhaseInverter`, `PowerStage` (verified sub-blocks of `PowerAm
   Default interface level +12 dBu at 0 dBFS (4.361 V peak), the de facto amp-sim convention (NAM expects
   12 dBu; Neural DSP calibrates at 12.2 dBu; common interfaces' instrument inputs at minimum gain sit
   around +12 to +12.5 dBu). Users with a different interface enter their own value (see 6.3).
-- Output mapping: `sample = v_speaker / outputVoltsPerFullScale` (16 Ω load). Default 60 V peak
+- Output mapping: `sample = v_speaker / outputVoltsPerFullScale` (voltage across the speaker load, D-059). Default 60 V peak
   (about 112 W sine) = 0 dBFS. The plugin applies an additional output level control.
 - Use `double` throughout the WDF and solvers. Convert to `float` only at the API boundary.
 
 ### 3.4 Sample rate and oversampling
 - The engine runs at whatever rate `prepare()` receives. The JUCE plugin layer wraps it with
   `juce::dsp::Oversampling` and passes the oversampled rate.
-- Plugin oversampling: a parameter with 2x / 4x / 8x / 16x, default 2x with the power amp at half rate and the
+- Plugin oversampling: a parameter with 2x / 4x / 8x / 16x, default 2x with the power amp at full rate (D-060) and the
   exact J4 coupling (DECISIONS D-054, owner listening result; was 8x, D-048), the same factor at every host rate.
   2x is 96 kHz inside at 48 kHz, verified against SPICE with the D-051 tolerances (M6 X2 / A1).
 - Verification runs the engine directly at 768 kHz (16 x 48 kHz) on signals generated at that rate, so
@@ -212,7 +212,7 @@ exceeds tolerance, upgrade it in this order: (a) add the reactive part of the so
 | (B4) | `ToneStackMaster` | B4 alone behind J3 (R_th3), output `v_oc(y)` (verification of the tone stack, M1) | none (R-type) | `v_oc(y)`, `R_th4` |
 | B56 | `PowerAmp` | B5 and B6 in one tree (no J5; R22 inside the tree, NFB without delay; D-041) | Joint 10-port (two triodes, two pentode pairs × 3 ports) | `v(out)` speaker voltage, supply currents |
 | (B5) | `PhaseInverter` | J4 source, C9, R17, R16, R19, C15, R20, R23, C17, VR6 Presence, R22 (NFB, delayed), V3a, V3b, R18, R21 | Joint 4-port (two triodes) | `v_oc(p3a)`, `v_oc(p3b)`, `R_thA`, `R_thB` |
-| (B6) | `PowerStage` | J5 sources, C14, C16, C18, R24, R25, bias network (Thevenin + C19), grid stoppers, 2 EL34 equivalents, screen resistors, output transformer, 16 Ω load | Joint 6-port (two pentodes x 3 ports) | `v(out)` speaker voltage, supply currents |
+| (B6) | `PowerStage` | J5 sources, C14, C16, C18, R24, R25, bias network (Thevenin + C19), grid stoppers, 2 EL34 equivalents, screen resistors, output transformer, speaker load (D-059) | Joint 6-port (two pentodes x 3 ports) | `v(out)` speaker voltage, supply currents |
 | B7 | `Supply` | Source resistance, C23, choke, C22, R29, C21b, R8, C21a | none (small linear state-space) | `v(ct)`, `v(nScr)`, `v(bpX)`, `v(bpA)` |
 
 Notes per block (details in `CIRCUIT.md` / `WDF_DESIGN.md`):
@@ -320,7 +320,7 @@ Must reproduce `reference/spice/tubes.lib` exactly (same equations and parameter
 Preamp Volume, Treble, Middle, Bass, Master, Presence (0–10 display, rotation internally),
 Interface Level (dBu at 0 dBFS, 0..+24 dBu, default +12.0 dBu; sets `inputVoltsPerFullScale`),
 Input Trim (−24..+24 dB, default 0 dB), Output Level (−48..+12 dB), Oversampling (2x/4x/8x/16x, default 2x), Power Amp Rate (Full / Half, default
-Half; D-049, D-054),
+Full; D-049, D-054, D-060),
 optional Cabinet IR on/off with file chooser (only if implemented in this repo; see 1.3).
 
 ---

@@ -11,6 +11,7 @@ namespace amp2203::stage56 {
 enum Node : int {
     y, g3a, nF, k3, g3b, nG, p3a, p3b,                    // phase inverter
     nGn, nOr, nbias, gA, gB, sA, sB, pA, pA1, pB1, pB, out, sl,  // power stage
+    spk1, spk2,                                           // speaker load (D-059)
     kNumNodes
 };
 
@@ -41,7 +42,12 @@ enum Element : int {
     eRwp2,               // pB1 – pB
     eLs,                 // out – sl
     eRws,                // sl – gnd
-    eRload,              // out – gnd
+    eRspkE,              // speaker Re: out – spk1 (D-059)
+    eLspkE,              // voice-coil inductance: spk1 – spk2
+    eRspkLe,             // its eddy-loss resistance: spk1 – spk2
+    eRspkM,              // motional resonance R: spk2 – gnd
+    eLspkM,              // motional resonance L: spk2 – gnd
+    eCspkM,              // motional resonance C: spk2 – gnd
     kNumElements
 };
 
@@ -90,7 +96,12 @@ inline constexpr mna::PortNetwork<kNumElements, kNumNodes> kElements{{{
     {pB1, pB},
     {out, sl},
     {sl, mna::kGround},
-    {out, mna::kGround},
+    {out, spk1},
+    {spk1, spk2},
+    {spk1, spk2},
+    {spk2, mna::kGround},
+    {spk2, mna::kGround},
+    {spk2, mna::kGround},
 }}};
 
 inline constexpr mna::PortNetwork<kNumRootPorts, kNumNodes> kRoot{{{

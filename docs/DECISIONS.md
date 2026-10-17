@@ -989,3 +989,42 @@ Consequences: plugin CPU (2x Half, plugin_cpu): automation of any knob or all si
 settings −18.9 dB; null test 26 / 26 at Half and Full (−138.5 dB); automation 0 failures. Knob jump vs SPICE (768 kHz)
 still PASS with less margin: B1234 −39.2 … −55.1 dB (was −50.0 … −59.4), B56 Presence −63.2 dB (was −77.0); which of
 the two changes accounts for it is not separated.
+
+## D-058 EL34 model parameters fitted to the Ei-RC data sheet curves (reference model change)
+Date: 2026-10-15 · Status: accepted (owner: "Adopt the fitted EL34 in the reference model"; changes `tubes.lib`, A5)
+Context: owner listening ("dark", "lacks gain"); M6 EL34 study (`harness/reports/M6/20261015_el34_curve_fit.md`): Koren's
+EL34 set deviated from the data sheet by a median 11.5 % on the plate curves and 28.2 % on the transfer curves.
+Decision: `tubes.lib` EL34 mu 14.77, ex 1.046, kg1 194.3, kg2 2243, kp 53.82, kvb 40.43 (was 11 / 1.35 / 650 / 4200 / 60 /
+24), fitted to 81 digitised curve points (median error 3.7 / 2.7 %) and the sheet's screen currents; the engine's
+`devices::Pentode` / `kEL34Pair` take the same values. The bias network (A4) is unchanged.
+Consequences: DC (CIRCUIT.md §5): EL34 idle 28.77 mA plate / 3.26 mA screen per tube (was 34.08 / 4.57), B+ 491.3 V (was
+488.7), total HT 136.5 mA (162.9). tests/data EL34 sweeps, the block testbenches and the C++ DC fixtures regenerated; J3
+re-measured (359.535 Ω). Every SPICE reference that contains the power amp is re-rendered (netlist hash); the
+verification reports from before this entry describe the Koren EL34. Expected from the study: output impedance ≈ 20–23 Ω
+(was 14–16), less power (clean 87 vs 101 W at 25 mV, clipped ≈ 156–163 vs 182–194 W).
+
+## D-059 Speaker load: representative nominal 16 Ω 4x12 impedance instead of the 16 Ω resistor (reference model change)
+Date: 2026-10-15 · Status: accepted (owner: "put the typical speaker load into the reference and engine")
+Context: owner listening ("dark", needs Treble / Presence 7); speaker-load study (`harness/reports/M6/20261015_speaker_load_study.md`):
+with the D-058 EL34 the closed-loop output impedance is ≈ 20–23 Ω, so a speaker's rising impedance raises the speaker
+voltage +3 … +4.7 dB at 100 Hz and +1.8 … +4.7 dB at 5 kHz relative to a resistor. No published Thiele–Small data for the
+Celestion G12T-75 was found.
+Decision: `Rload out 0 16` → Rspk_e 13 Ω + (Lspk_e 1.0 mH ‖ Rspk_le 45 Ω) + (Rspk_m 37 Ω ‖ Lspk_m 29.4437 mH ‖ Cspk_m
+86.0297 µF; 100 Hz, Q 2), the study's "typical" variant. Engine: B56 (`PowerAmp`) and B6 (`PowerStage`) get nodes spk1 / spk2
+and six elements; the inductors are one-winding `CoupledInductors` (shorts at DC, trapezoidal, half-step rescaling in B56),
+the capacitor a `DcCapacitor`. The plugin output stays the speaker voltage / 60 V. Power metrics keep V²/16 Ω as a nominal
+figure. The parameters are representative, not measured.
+Consequences: DC unchanged except v(out) 42.4 µV (was 42.6). Every SPICE reference that contains the power amp is
+re-rendered; reports before this entry describe the 16 Ω resistor.
+
+## D-060 Plugin default Power Amp Rate: Full (with the speaker load)
+Date: 2026-10-17 · Status: accepted (owner: "switch the power amp to full rate at 2x"; revises D-054's Half default)
+Context: with the speaker load (D-059) the plugin model check at half rate 2x fails at HOT (−18.8 dB vs SPICE; half-steps off
+−19.2 dB), the full-rate power amp at 2x passes (−24.1 dB, unseen settings −20.8 dB vs 16x; engine 26.8 / 40.8 % default /
+HOT). The owner's NAM comparison with a real 2203 (PROGRESS 2026-10-17) is at Master 10 / Presence 8, the HOT region.
+Decision: Power Amp Rate default Full; Half stays selectable. Oversampling stays 2x; exact J4, Newton 1e-4 V and half-steps
+as D-055 / D-056.
+Consequences: no rate-change delay (latency = the oversampler's: 49 samples FIR at 2x, IIR less); CPU as measured in
+`harness/reports/M6/20261017_plugin_cpu.md`: default knobs 26.4 % (Half 18.9 %), every knob 10 50.2 % (33.2 %), knob automation
+32–35 % (≈ 24 %); at the owner's NAM-matched settings 47.3 % (Half 31.5 %). Null test 26 / 26; automation (96 kHz, Full, exact J4,
+1e-4 V) 0 non-finite, 20 rescued first-solve failures. The null test and the CPU tool default to Full.

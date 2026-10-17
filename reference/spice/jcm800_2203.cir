@@ -110,7 +110,14 @@ Rws sl 0 0.320
 K1 Lp1 Lp2 {kot}
 K2 Lp1 Ls {kot}
 K3 Lp2 Ls {kot}
-Rload out 0 16
+* Speaker load (D-059): nominal 16 ohm 4x12, representative electrical equivalent (no published G12T-75 T/S data):
+* Re 13 ohm, voice coil Le 1.0 mH || 45 ohm (eddy loss), motional resonance 100 Hz (37 ohm || Lm || Cm, Q 2)
+Rspk_e out spk1 13
+Lspk_e spk1 spk2 1.0m
+Rspk_le spk1 spk2 45
+Rspk_m spk2 0 37
+Lspk_m spk2 0 0.0294437
+Cspk_m spk2 0 8.60297e-05
 
 *** HT supply (rectifier + mains TX approximated as DC source behind rsrc)
 Vht raw 0 DC {vnl}
