@@ -816,6 +816,11 @@ Notes:
   Power-amp Newton at HOT (DI L): failures 49 / 420 at 8x / 16x (43 unrescued at 16x); maxIter 64 or a looser tolerance
   do not change them; half-steps off: 3 / 68; half-steps every sample: 64 / 466. Cause (half-step handling of the speaker
   inductors vs a stiffer discretised load) not yet established.
+- Owner comparison 2026-10-17 against a NAM capture of a real 2203 (Tone3000, settings published with the capture), plugin
+  build with D-058 + D-059 at its defaults (2x, Half, Interface Level +12 dBu, trim and output 0 dB): with the capture's
+  settings (Preamp 10, Treble 8, Middle 7, Bass 4, Master 10, Presence 8) "the tone is pretty accurate"; the output at Master
+  10 is ≈ 12 dB too loud for the IR loader. The earlier "missing gain" was at Master 3: the capture's sound includes the
+  power stage at full Master. These settings are in the HOT region (plugin model check there: −18.8 dB vs SPICE at half 2x).
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
