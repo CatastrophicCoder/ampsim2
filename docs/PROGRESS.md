@@ -823,6 +823,8 @@ Notes:
   power stage at full Master. These settings are in the HOT region (plugin model check there: −18.8 dB vs SPICE at half 2x).
 - Owner: power amp at full rate by default (D-060). Plugin CPU: default 26.4 %, every knob 10 50.2 %, NAM-matched settings
   47.3 %, knob automation 32–35 %; null test 26 / 26; automation 0 unrescued.
+- Owner listening 2026-10-17 (NAM-matched settings, same IR): Power Amp Rate Full vs Half, "can't hear any real audible
+  difference". The earlier NAM comparison ("pretty accurate") was made at Half (the restored instance setting).
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
