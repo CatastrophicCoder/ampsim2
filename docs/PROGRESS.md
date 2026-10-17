@@ -825,6 +825,7 @@ Notes:
   47.3 %, knob automation 32–35 %; null test 26 / 26; automation 0 unrescued.
 - Owner listening 2026-10-17 (NAM-matched settings, same IR): Power Amp Rate Full vs Half, "can't hear any real audible
   difference". The earlier NAM comparison ("pretty accurate") was made at Half (the restored instance setting).
+- Owner 2026-10-17: keep Full as the default (D-060 confirmed after the listening test); Half stays selectable per instance.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
