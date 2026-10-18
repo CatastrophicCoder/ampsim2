@@ -15,12 +15,12 @@ Component Version: 0.0.1 (0x1)
 --------------------------------------------------
 TESTING OPEN TIMES:
 COLD:
-Time to open AudioUnit:         10.250 ms
+Time to open AudioUnit:         10.234 ms
 WARM:
-Time to open AudioUnit:         5.935  ms
+Time to open AudioUnit:         6.247  ms
 This AudioUnit is a version 2 implementation.
 FIRST TIME:
-Time for initialization:        9.994 ms
+Time for initialization:        10.030 ms
 
 * * PASS
 --------------------------------------------------
@@ -65,7 +65,7 @@ VERIFYING SPECIAL PROPERTIES:
 
 VERIFYING CUSTOM UI
 Cocoa Views Available: 1
-  JUCE_AUCocoaViewClass_387eba94ef07be2a
+  JUCE_AUCocoaViewClass_a0ff1c23697f1de4
     PASS
 
 HAS FACTORY PRESETS
