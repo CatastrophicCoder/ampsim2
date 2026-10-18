@@ -26,7 +26,7 @@ namespace amp2203 {
 /// (g3b−k3, p3b−k3). Presence is smoothed (SPEC §6.2); R_th4 follows the preamp's knobs.
 class PhaseInverter {
 public:
-    static constexpr double kSupplyBpX = 402.335999;  // CIRCUIT.md §5
+    static constexpr double kSupplyBpX = 404.998185;  // CIRCUIT.md §5
     static constexpr int kParamUpdateInterval = 32;
     static constexpr int kNodes = 8, kElements = 18, kRootPorts = 4;
 

@@ -28,7 +28,7 @@ namespace amp2203 {
 class StageV1aV1b {
 public:
     /// Supply node bpA at the F operating point (CIRCUIT.md §5, as the B12 testbench); B7 sets it in M4.
-    static constexpr double kSupplyBpA = 389.349603;
+    static constexpr double kSupplyBpA = 391.921506;
     static constexpr int kParamUpdateInterval = 32;
     static constexpr int kNodes = 8, kElements = 15, kRootPorts = 4;
 

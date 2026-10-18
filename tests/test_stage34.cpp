@@ -31,9 +31,9 @@ TEST_CASE("StageV2aV2bToneStack starts at the DC operating point", "[stage34][m3
     StageV2aV2bToneStack s;
     s.prepare(kFs, 20.0);
     s.reset(kVp1b);
-    REQUIRE(std::fabs(probe(s, "p2a") / 231.130 - 1.0) < 5e-3);  // CIRCUIT.md §5
-    REQUIRE(std::fabs(probe(s, "k2b") / 231.686 - 1.0) < 5e-3);
-    REQUIRE(std::fabs(probe(s, "nd") / 231.686 - 1.0) < 5e-3);   // R15 carries no DC current
+    REQUIRE(std::fabs(probe(s, "p2a") / 232.577102 - 1.0) < 5e-3);  // CIRCUIT.md §5
+    REQUIRE(std::fabs(probe(s, "k2b") / 233.140404 - 1.0) < 5e-3);
+    REQUIRE(std::fabs(probe(s, "nd") / 233.140404 - 1.0) < 5e-3);   // R15 carries no DC current
     REQUIRE(std::fabs(probe(s, "y")) < 1e-9);                    // the tone stack is AC-coupled
     for (int n = 0; n < 4096; ++n)
         REQUIRE(std::fabs(s.process(kVp1b)) < 1e-9);  // silence in, silence out (SPEC §3.6)

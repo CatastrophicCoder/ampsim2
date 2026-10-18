@@ -25,7 +25,7 @@ namespace amp2203 {
 /// resistances as one coupled element, the load); root ports (g, s, p) of each pair against ground.
 class PowerStage {
 public:
-    static constexpr double kSupplyCt = 488.708422, kSupplyScreen = 485.649287;  // CIRCUIT.md §5
+    static constexpr double kSupplyCt = 491.346637, kSupplyScreen = 488.880467;  // CIRCUIT.md §5
     /// J5 Thevenin resistances (harness/junctions.py j5a / j5b, provisional; CIRCUIT.md §4).
     static constexpr double kRthA = 58067.6, kRthB = 56937.4;
     static constexpr int kNodes = 17, kElements = 31, kRootPorts = 6;

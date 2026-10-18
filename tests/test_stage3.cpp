@@ -30,9 +30,9 @@ TEST_CASE("StageV2aV2b starts at the DC operating point", "[stage3][m3]") {
     s.prepare(kFs);
     s.reset(kVp1b);
     // CIRCUIT.md §5 (F operating point); the harness checks every node against the testbench op
-    REQUIRE(std::fabs(probe(s, "p2a") / 231.130 - 1.0) < 5e-3);
-    REQUIRE(std::fabs(probe(s, "k2a") / 1.404 - 1.0) < 5e-3);
-    REQUIRE(std::fabs(probe(s, "k2b") / 231.686 - 1.0) < 5e-3);
+    REQUIRE(std::fabs(probe(s, "p2a") / 232.577102 - 1.0) < 5e-3);
+    REQUIRE(std::fabs(probe(s, "k2a") / 1.413853 - 1.0) < 5e-3);
+    REQUIRE(std::fabs(probe(s, "k2b") / 233.140404 - 1.0) < 5e-3);
 
     const double k2b = probe(s, "k2b");
     for (int n = 0; n < 4096; ++n)
@@ -43,7 +43,7 @@ TEST_CASE("StageV2aV2b starts at the DC operating point", "[stage3][m3]") {
 
 TEST_CASE("StageV2aV2b DC satisfies KCL with the supply on V2b's plate", "[stage3][m3]") {
     // checks the exact supply offsets: V2b's plate port ends on bpX, which is not a network node
-    for (double vbpX : {402.335999, 350.0, 450.0}) {
+    for (double vbpX : {404.998185, 350.0, 450.0}) {
         StageV2aV2b s;
         s.prepare(kFs);
         s.setSupplyVoltage(vbpX);

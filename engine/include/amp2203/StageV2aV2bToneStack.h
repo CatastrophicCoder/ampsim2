@@ -26,7 +26,7 @@ namespace amp2203 {
 class StageV2aV2bToneStack {
 public:
     static constexpr double kRth2 = 89732.8;          // harness/junctions.py j2 (D-018)
-    static constexpr double kSupplyBpX = 402.335999;  // CIRCUIT.md §5; B7 sets it in M4
+    static constexpr double kSupplyBpX = 404.998185;  // CIRCUIT.md §5; B7 sets it in M4
     static constexpr int kParamUpdateInterval = 32;
     static constexpr int kNodes = 13, kElements = 24, kRootPorts = 4;
 

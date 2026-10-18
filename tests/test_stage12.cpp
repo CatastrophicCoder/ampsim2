@@ -29,9 +29,9 @@ TEST_CASE("StageV1aV1b starts at the DC operating point", "[stage12][m2]") {
     s.prepare(kFs, 20.0);
     s.reset(0.0);
     // CIRCUIT.md §5 (F operating point); the harness checks every node against the testbench op
-    REQUIRE(std::fabs(probe(s, "p1a") / 296.402 - 1.0) < 5e-3);
-    REQUIRE(std::fabs(probe(s, "k1a") / 2.510 - 1.0) < 5e-3);
-    REQUIRE(std::fabs(probe(s, "p1b") / 352.433 - 1.0) < 5e-3);
+    REQUIRE(std::fabs(probe(s, "p1a") / 298.325995 - 1.0) < 5e-3);
+    REQUIRE(std::fabs(probe(s, "k1a") / 2.527076 - 1.0) < 5e-3);
+    REQUIRE(std::fabs(probe(s, "p1b") / 354.750235 - 1.0) < 5e-3);
 
     const double p1b = probe(s, "p1b");
     for (int n = 0; n < 4096; ++n) {
@@ -40,8 +40,8 @@ TEST_CASE("StageV1aV1b starts at the DC operating point", "[stage12][m2]") {
     }
     REQUIRE(s.newtonStats().failures == 0);
     REQUIRE(s.newtonStats().maxIterations == 0);  // the warm start is the solution
-    REQUIRE(std::fabs(s.supplyCurrent() - ((389.349603 - probe(s, "p1a")) / 100e3 +
-                                           (389.349603 - p1b) / 100e3)) < 1e-15);
+    REQUIRE(std::fabs(s.supplyCurrent() - ((391.921506 - probe(s, "p1a")) / 100e3 +
+                                           (391.921506 - p1b) / 100e3)) < 1e-15);
 }
 
 TEST_CASE("StageV1aV1b Preamp Volume jump stays finite and rate-limits matrix updates", "[stage12][m2]") {

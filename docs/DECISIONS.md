@@ -1051,3 +1051,6 @@ transcription (open item O8, found 2026-10-15). SPICE study: −0.3 dB at 5 kHz,
 Decision: `C2 p1a k1a 100p` in the netlist (B12 partition). The engine adds it to V1a's plate–cathode capacitance port
 (`cpk1a_` = Cpk + C2 in `Preamp` and `StageV1aV1b`): the same two nodes, so the parallel combination is exact.
 Consequences: DC unchanged. Every SPICE reference containing V1a is re-rendered; earlier reports are without C2.
+Also found: the standalone blocks' default supply voltages (Preamp, StageV1aV1b, StageV2aV2b, StageV2aV2bToneStack,
+PhaseInverter, PowerStage) were still the pre-D-058 values (bpA 389.35, bpX 402.34, ct 488.71, nScr 485.65 V); updated to
+CIRCUIT.md §5 (391.92, 405.00, 491.35, 488.88 V) with the block DC fixtures (the full amp sets its supplies itself).
