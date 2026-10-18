@@ -562,7 +562,7 @@ Notes:
 - [~] Step 2: device equations
 - [~] Step 3: dense linear algebra / SIMD
 - [ ] Step 4: linear parts at a lower rate (analysis first)
-- [ ] Step 5: re-verification, M6 report
+- [x] Step 5: re-verification, M6 report (`harness/reports/M6/20261018_M6_report.md`, 2026-10-18; for owner review)
 Plan (2026-10-14; SPEC §7 M6 "performance work", WDF_DESIGN §4; goal: real-time headroom at the 8x default
 without loosening any tolerance):
 
