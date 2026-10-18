@@ -41,10 +41,10 @@ TEST_CASE("PhaseInverter starts at the DC operating point", "[stage5][m4]") {
     setup(s);
     // full-netlist op (ngspice 47), DC tolerance 0.5 % (VERIFICATION §7); the engine is ≈ 1 mV off at
     // the tail because tubes.lib's 1 GΩ plate–cathode resistors are omitted (WDF_DESIGN §3.1)
-    const std::pair<const char*, double> ref[] = {{"g3a", 43.52260078966601}, {"nf", 43.521599385375474},
-                                                  {"k3", 44.93336791716606},  {"g3b", 43.522600789666015},
-                                                  {"ng", 13.483951021319733}, {"p3a", 270.8809249953309},
-                                                  {"p3b", 262.2705821268219}};
+    const std::pair<const char*, double> ref[] = {{"g3a", 43.8294735664613}, {"nf", 43.82847215398154},
+                                                  {"k3", 45.25019513654581},  {"g3b", 43.82947356646135},
+                                                  {"ng", 13.57902696479027}, {"p3a", 272.6112625373205},
+                                                  {"p3b", 263.9511986968434}};
     for (const auto& [n, v] : ref) {
         INFO(n << ": " << probe(s, n) << " (SPICE " << v << ")");
         REQUIRE(std::fabs(probe(s, n) / v - 1.0) < 5e-3);

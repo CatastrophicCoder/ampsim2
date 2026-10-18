@@ -25,7 +25,7 @@ public:
     /// J2 Thevenin resistance (harness/junctions.py j2, |Z(1 kHz)| of B12 at p1b; DECISIONS D-018).
     static constexpr double kRth2 = 89732.8;
     /// Supply node bpX at the F operating point (CIRCUIT.md §5, as the B3 testbench); B7 sets it in M4.
-    static constexpr double kSupplyBpX = 402.335999;
+    static constexpr double kSupplyBpX = 404.998185;
     static constexpr int kNodes = 6, kElements = 13, kRootPorts = 4;
 
     // Component values, CIRCUIT.md §1 B3 and tubes.lib (SI units).

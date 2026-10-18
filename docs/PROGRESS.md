@@ -842,6 +842,13 @@ Notes:
   model) and are now rendered once more at RELTOL 1e-7 by `render_spice` (as the M3 cascade), noted in the reports. Plugin
   model check: Full 2x HOT −24.2 dB (PASS), unseen −20.8 dB, 94 first-solve failures (2 unrescued) over 28 runs, nearly all in
   the extreme validation settings (presets: 0 / 0 / 2); Half 2x HOT −18.9 dB. Presence knob jump −62.9 dB; null test 26 / 26.
+- Owner 2026-10-18: add C2 to the netlist (D-062). Plan: `C2 p1a k1a 100p`; the engine folds it into V1a's Cpk port (Cpk + C2,
+  B1234 and B12: the same nodes, exact); B12 partition; re-verify b12 (DEFAULT, VOL0.2, VOL1.0), b1234, knob jumps b12 / b1234,
+  M4 acceptance at 768 kHz and 384 kHz exact J4 + HOT, plugin model check (Full 2x), null test, CPU.
+- D-062 done. b12 / b1234 first failed on DC (≈ 0.65 %): the standalone blocks' default supplies were pre-D-058; fixed
+  (engine headers + block DC fixtures). Then: b12 DEFAULT / VOL0.2 / VOL1.0 105 / 106 / 106 PASS, b1234 119 PASS, b3 87 PASS,
+  b34 94 PASS (0 FAIL each); knob jumps b12 −55.9 dB, b1234 −39.1 … −55.1 dB, b34 −53.1 … −67.6 dB; M4 full acceptance 107
+  PASS (768 kHz and 384 kHz exact J4); HOT 20 PASS / 1 FAIL (2 rescued first-solves, as after D-061); null test 26 / 26.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_

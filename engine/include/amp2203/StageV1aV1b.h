@@ -28,13 +28,13 @@ namespace amp2203 {
 class StageV1aV1b {
 public:
     /// Supply node bpA at the F operating point (CIRCUIT.md §5, as the B12 testbench); B7 sets it in M4.
-    static constexpr double kSupplyBpA = 389.349603;
+    static constexpr double kSupplyBpA = 391.921506;
     static constexpr int kParamUpdateInterval = 32;
     static constexpr int kNodes = 8, kElements = 15, kRootPorts = 4;
 
     // Component values, CIRCUIT.md §1 B12 and tubes.lib (SI units).
     static constexpr double R1 = 2.7e3, R3 = 68e3, R4 = 100e3, R5 = 470e3, R6 = 10e3, R7 = 100e3;
-    static constexpr double C1 = 0.68e-6, C3 = 0.022e-6, C4 = 470e-12, C5 = 1e-9, VR1 = 1e6;
+    static constexpr double C1 = 0.68e-6, C2 = 100e-12, C3 = 0.022e-6, C4 = 470e-12, C5 = 1e-9, VR1 = 1e6;
     static constexpr double Cgk = 2.3e-12, Cgp = 2.4e-12, Cpk = 0.9e-12;
 
     StageV1aV1b();
@@ -90,7 +90,8 @@ private:
     chowdsp::wdft::ResistorT<double> vr1b_{1.0};
     chowdsp::wdft::ResistorT<double> r6_{R6};
     chowdsp::wdft::ResistiveVoltageSourceT<double> src7_{R7};
-    detail::DcCapacitor cgk1a_{Cgk}, cgp1a_{Cgp}, cpk1a_{Cpk}, cgk1b_{Cgk}, cgp1b_{Cgp}, cpk1b_{Cpk};
+    // cpk1a_: V1a's Cpk in parallel with C2 (100 pF plate–cathode, D-062): one p1a – k1a port
+    detail::DcCapacitor cgk1a_{Cgk}, cgp1a_{Cgp}, cpk1a_{Cpk + C2}, cgk1b_{Cgk}, cgp1b_{Cgp}, cpk1b_{Cpk};
 
     auto elements() noexcept {
         return std::tie(vin_, k1a_, src4_, c3_, r5c4_, c5vr1a_, vr1b_, r6_, src7_, cgk1a_, cgp1a_, cpk1a_, cgk1b_,

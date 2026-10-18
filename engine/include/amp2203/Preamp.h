@@ -25,14 +25,14 @@ namespace amp2203 {
 /// while one moves, the matrices are recomputed every kParamUpdateInterval samples.
 class Preamp {
 public:
-    static constexpr double kSupplyBpA = 389.349603;  // CIRCUIT.md §5; B7 sets them in M4
-    static constexpr double kSupplyBpX = 402.335999;
+    static constexpr double kSupplyBpA = 391.921506;  // CIRCUIT.md §5 (after D-058); B7 sets them in M4
+    static constexpr double kSupplyBpX = 404.998185;
     static constexpr int kParamUpdateInterval = 128;  // samples between matrix updates while a knob moves (D-057; was 32)
     static constexpr int kNodes = 20, kElements = 38, kRootPorts = 9;  // 8 triode ports + the load at y
 
     // Component values, CIRCUIT.md §1 and tubes.lib (SI units).
     static constexpr double R1 = 2.7e3, R3 = 68e3, R4 = 100e3, R5 = 470e3, R6 = 10e3, R7 = 100e3;
-    static constexpr double C1 = 0.68e-6, C3 = 0.022e-6, C4 = 470e-12, C5 = 1e-9, VR1 = 1e6;
+    static constexpr double C1 = 0.68e-6, C2 = 100e-12, C3 = 0.022e-6, C4 = 470e-12, C5 = 1e-9, VR1 = 1e6;
     static constexpr double R9 = 820.0, R10 = 470e3, R11 = 470e3, R12 = 100e3, R13 = 100e3, R15 = 33e3;
     static constexpr double C7 = 0.022e-6, C8 = 470e-12, C10 = 470e-12, C11 = 0.022e-6, C12 = 0.022e-6;
     static constexpr double VR3 = 220e3, VR4 = 22e3, VR5 = 1e6, VR2 = 1e6;
@@ -114,7 +114,8 @@ private:
     chowdsp::wdft::ResistorT<double> vr1b_{1.0};
     chowdsp::wdft::ResistorT<double> r6_{R6};
     chowdsp::wdft::ResistiveVoltageSourceT<double> src7_{R7};
-    detail::DcCapacitor cgk1a_{Cgk}, cgp1a_{Cgp}, cpk1a_{Cpk}, cgk1b_{Cgk}, cgp1b_{Cgp}, cpk1b_{Cpk};
+    // cpk1a_: V1a's Cpk in parallel with C2 (100 pF plate–cathode, D-062): one p1a – k1a port
+    detail::DcCapacitor cgk1a_{Cgk}, cgp1a_{Cgp}, cpk1a_{Cpk + C2}, cgk1b_{Cgk}, cgp1b_{Cgp}, cpk1b_{Cpk};
     // B3 elements
     detail::DcCapacitor c7_{C7};
     chowdsp::wdft::ResistorT<double> r10_{R10};

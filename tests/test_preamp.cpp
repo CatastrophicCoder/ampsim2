@@ -31,8 +31,8 @@ TEST_CASE("Preamp starts at the DC operating point", "[preamp][m3]") {
     s.prepare(kFs, 20.0);
     s.reset(0.0);
     // CIRCUIT.md §5 (F operating point); the harness checks every node against the testbench op
-    for (const auto& [node, v] : {std::pair{"p1a", 296.402}, {"k1a", 2.510}, {"p1b", 352.433}, {"p2a", 231.130},
-                                  {"k2a", 1.404}, {"k2b", 231.686}}) {
+    for (const auto& [node, v] : {std::pair{"p1a", 298.325995}, {"k1a", 2.527076}, {"p1b", 354.750235}, {"p2a", 232.577102},
+                                  {"k2a", 1.413853}, {"k2b", 233.140404}}) {
         INFO(node);
         REQUIRE(std::fabs(probe(s, node) / v - 1.0) < 5e-3);
     }
@@ -102,7 +102,7 @@ TEST_CASE("Preamp follows its supply inputs and stays finite far beyond the sign
     s.setSupplyVoltages(380.0, 395.0);
     s.reset(0.0);
     REQUIRE(probe(s, "bpa") == 380.0);
-    REQUIRE(probe(s, "p1b") < 352.433);  // lower supply, lower plate voltage
+    REQUIRE(probe(s, "p1b") < 354.750235);  // lower supply, lower plate voltage
     for (long k = 0; k < static_cast<long>(0.05 * kFs); ++k)
         REQUIRE(std::isfinite(s.process(sine(k, 220.0, 20.0))));  // 10× the overdrive level
     REQUIRE(s.sanitizeEvents() == 0);

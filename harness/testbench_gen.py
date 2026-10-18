@@ -28,7 +28,7 @@ from .spice import PENDING_MARK
 
 # Partition of the reference netlist (SPEC §4.2). Every element belongs to exactly one block.
 PARTITION = {
-    'B12': 'Vin R2 R3 X1a R1 C1 R4 C3 R5 C4 C5 RVR1a RVR1b X1b R6 R7',   # V1a + V1b, joint root (D-017)
+    'B12': 'Vin R2 R3 X1a R1 C1 C2 R4 C3 R5 C4 C5 RVR1a RVR1b X1b R6 R7',   # V1a + V1b, joint root (D-017); C2 D-062
     'B3': 'C7 R10 C8 R11 X2a R9 R12 X2b R13',
     'B4': 'C10 R15 C11 C12 RVR3a RVR3b RVR5 RVR4a RVR4b RVR2a RVR2b',
     'B5': 'C9 R17 R16 R19 C15 R20 R23 C17 RVR6 R22 X3a X3b R18 R21',
