@@ -1054,3 +1054,16 @@ Consequences: DC unchanged. Every SPICE reference containing V1a is re-rendered;
 Also found: the standalone blocks' default supply voltages (Preamp, StageV1aV1b, StageV2aV2b, StageV2aV2bToneStack,
 PhaseInverter, PowerStage) were still the pre-D-058 values (bpA 389.35, bpX 402.34, ct 488.71, nScr 485.65 V); updated to
 CIRCUIT.md §5 (391.92, 405.00, 491.35, 488.88 V) with the block DC fixtures (the full amp sets its supplies itself).
+
+## D-063 Speaker load: D-059 kept after comparison with measured 4x12 impedance curves
+Date: 2026-10-18 · Status: accepted (owner: "keep D-059 and record the comparison")
+Context: the owner supplied a third-party plot of measured in-cabinet 4x12 impedance curves (local only,
+`reference/speaker/impedance-curves-412.jpg`, git-ignored as D-021): Celestion T1511 (G12M "Blackback" 55 Hz, early 1970s),
+T1281 (G12M family, 1960s–70s) and G12K-85; none is the JCM800-era G12-65 / G12M-70 / G12T-75. Read from the plot (by eye):
+resonance ≈ 44 Ω at ≈ 108 Hz (T1511), ≈ 76 Ω at ≈ 104 Hz (T1281), ≈ 101 Ω at ≈ 118 Hz (G12K-85); minimum ≈ 13–15 Ω at
+300–500 Hz; ≈ 34–35 Ω at 5 kHz and ≈ 45–50 Ω at 10 kHz for all three. D-059: 50 Ω at 100 Hz, 14 Ω at 400 Hz, 35 Ω at 5 kHz,
+48 Ω at 10 kHz.
+Decision: keep the D-059 load. Above ≈ 200 Hz it matches all three measured curves; its resonance lies inside their range
+(the curves differ mainly in resonance height and frequency).
+Consequences: none for the model; the D-059 parameters are now backed by measured curves of comparable cabinets, though not of
+the 2203's era. An era-matched curve (G12-65, G12M-70, G12T-75) would still be the better reference if one becomes available.

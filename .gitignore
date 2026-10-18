@@ -20,3 +20,5 @@ reference/di/*.wav
 !reference/di/README.md
 # Marshall drawings: kept locally, not redistributed (DECISIONS D-021)
 reference/schematics/
+reference/speaker/*.jpg
+reference/speaker/*.png   # third-party impedance plots: local only (as the drawings, D-021)
