@@ -1043,3 +1043,11 @@ at 0 V. Above +20 V, P = Vpk within 0.1 V (DC operating point unchanged).
 Consequences: engine diagnostic: HOT DI 0 power-amp failures at 8x and 16x; CRUNCH / DRIVE unchanged (−218 … −224 dB vs
 the previous engine), HOT differs by −35 … −37 dB. tests/data EL34 sweeps regenerated; the pentode test asserts the new
 below-cathode behaviour. SPICE references with the power amp are re-rendered.
+
+## D-062 C2 100 pF (V1a plate–cathode) added to the netlist (reference model change)
+Date: 2026-10-18 · Status: accepted (owner: "add C2 to the netlist")
+Context: the drawing (2203 STD Preamp iss. 4) shows C2 100 pF from V1a's plate to its cathode; it was missing from the
+transcription (open item O8, found 2026-10-15). SPICE study: −0.3 dB at 5 kHz, −0.7 … −0.9 dB at 10 kHz into V1b.
+Decision: `C2 p1a k1a 100p` in the netlist (B12 partition). The engine adds it to V1a's plate–cathode capacitance port
+(`cpk1a_` = Cpk + C2 in `Preamp` and `StageV1aV1b`): the same two nodes, so the parallel combination is exact.
+Consequences: DC unchanged. Every SPICE reference containing V1a is re-rendered; earlier reports are without C2.

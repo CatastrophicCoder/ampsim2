@@ -22,6 +22,7 @@ V1a part:
 | V1a | 12AX7 | p1a, g1a, k1a | |
 | R1 | 2.7 kΩ | k1a – gnd | |
 | C1 | 0.68 µF | k1a – gnd | Full cathode bypass |
+| C2 | 100 pF | p1a – k1a | V1a plate–cathode (drawing iss. 4; added D-062, was open item O8) |
 | R4 | 100 kΩ | bpA – p1a | Plate load; bpA from supply B7 |
 
 There is no junction between V1a and V1b: p1a is an internal node of B12 (the J1 junction was
@@ -253,7 +254,7 @@ Regenerate with `python3 reference/spice/spice_tools.py` after any netlist chang
 | O5 | NFB tap | 16 Ω output with the speaker load (D-059) | Feedback amount if taken from another tap |
 | O6 | Low input | Not modelled | Feature only |
 | O7 | OT half-primary orientation | Blue–White (15.36 Ω) on the pA side (V4/V5) | ±0.6 Ω winding asymmetry, about ±40 mV DC per side |
-| O8 | C2 100 pF V1a plate–cathode (drawing 2203 STD Preamp iss. 4) | Not in the netlist (found 2026-10-15) | −0.3 dB at 5 kHz, −0.7 … −0.9 dB at 10 kHz into V1b (SPICE study) |
+| O8 | C2 100 pF V1a plate–cathode | Resolved: in the netlist since D-062 | −0.3 dB at 5 kHz, −0.7 … −0.9 dB at 10 kHz into V1b (SPICE study) |
 | A1 | HT source 505 V / 100 Ω | Assumed | B+ level and sag |
 | A2 | OT values | Hammond 1750U replacement datasheet, primary inductance fitted (§3, D-023) | Power, LF/HF response, feedback |
 | A3 | Choke 5 H / 115 Ω | Hammond 194F replacement datasheet; L specified at 120 mA DC, the amp runs it at ≈ 27 mA (D-024) | Screen node dynamics, supply DC |

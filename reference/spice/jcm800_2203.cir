@@ -15,6 +15,7 @@ R3 in g1a 68k
 X1a p1a g1a k1a 12AX7
 R1 k1a 0 2.7k
 C1 k1a 0 0.68u
+C2 p1a k1a 100p
 R4 bpA p1a 100k
 C3 p1a nA 0.022u
 
