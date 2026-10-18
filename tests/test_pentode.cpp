@@ -135,6 +135,17 @@ TEST_CASE("EL34 below the screen clamp and the matched-pair equivalent", "[devic
             REQUIRE(two.dis_dvgk == 2.0 * one.dis_dvgk);
             REQUIRE(two.dig_dvgk == 2.0 * one.dig_dvgk);
         }
-    // as in SPICE, the plate current turns negative below the cathode
-    REQUIRE(kEL34.eval(-20.0, 470.0, -5.0).ip < 0.0);
+    // no plate current below the cathode (5 V softplus, D-061): positive and small just below, vanishing far
+    // below, continuous and increasing through Vpk = 0; the screen takes what the plate does not
+    const auto below = kEL34.eval(-20.0, 470.0, -5.0), far = kEL34.eval(-20.0, 470.0, -500.0);
+    REQUIRE(below.ip > 0.0);
+    REQUIRE(far.ip >= 0.0);
+    REQUIRE(far.ip < 1e-12);
+    REQUIRE(far.is > below.is);
+    double last = -1.0;
+    for (double vpk = -50.0; vpk <= 50.0; vpk += 0.5) {
+        const double ip = kEL34.eval(-20.0, 470.0, vpk).ip;
+        REQUIRE(ip >= last);
+        last = ip;
+    }
 }

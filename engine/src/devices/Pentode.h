@@ -19,12 +19,14 @@ struct PentodeCurrents {
 /// Koren pentode with this repository's screen-current modification, as in reference/spice/tubes.lib
 /// (subckt EL34, WDF_DESIGN §3.2):
 ///   Vs' = max(Vsk, 1 mV), u = kp·(1/mu + Vgk/Vs'), E1 = Vs'·softplus(u)/kp, F = 2·E1^ex,
-///   Ip = (F/kg1)·atan(Vpk/kvb),  Is = F·(1/kg2 + (1.5707963 − atan(max(Vpk, 0)/kvb))/kg1),
+///   P = s(Vpk) = max(Vpk, 0) + 5·ln(1 + exp(−|Vpk|/5)) (5 V softplus, D-061),
+///   Ip = (F/kg1)·atan(P/kvb),  Is = F·(1/kg2 + (1.5707963 − atan(P/kvb))/kg1),
 ///   Ig = grid diode (Rs = rgi + 1 Ω).
-/// As in SPICE, atan(Vpk/kvb) in Ip is not clamped (Ip < 0 below the cathode). The 1 GΩ Re1 / Rcp
+/// No plate current below the cathode (it goes to the screen), smooth at Vpk = 0 (D-061). The 1 GΩ Re1 / Rcp
 /// helpers, the diode's CJO / TT and the inter-electrode capacitances are not part of the device.
 /// `count` scales every current and derivative: 2 = a matched pair with identical drive (SPEC §4.2 B6).
 struct Pentode {
+    static constexpr double kPlateSoft = 5.0;  // V, plate softplus scale (D-061)
     double mu = 14.77, ex = 1.046, kg1 = 194.3, kg2 = 2243.0, kp = 53.82, kvb = 40.43;  // D-058 (was Koren 11 / 1.35 / 650 / 4200 / 60 / 24)
     GridDiode grid{1e-9, 1.0, 1000.0 + 1.0};
     double count = 1.0;
@@ -45,20 +47,23 @@ struct Pentode {
             const double df_dvgk = df_de1 * sg;
             const double df_dvsk = clamped ? 0.0 : df_de1 * (sp / kp - sg * vgk / vs);
 
-            const double x = vpk / kvb;
+            // P = 5 V softplus of Vpk (overflow-free form), dP/dVpk = logistic(Vpk/5) (D-061)
+            const double e = std::exp(-std::fabs(vpk) / kPlateSoft);
+            const double pv = std::fmax(vpk, 0.0) + kPlateSoft * std::log1p(e);
+            const double dpv = vpk >= 0.0 ? 1.0 / (1.0 + e) : e / (1.0 + e);
+            const double x = pv / kvb;
             const double a = std::atan(x);
-            const double da = 1.0 / (kvb * (1.0 + x * x));
+            const double da = dpv / (kvb * (1.0 + x * x));
             c.ip = f / kg1 * a;
             c.dip_dvgk = df_dvgk / kg1 * a;
             c.dip_dvsk = df_dvsk / kg1 * a;
             c.dip_dvpk = f / kg1 * da;
 
-            const double knee = vpk > 0.0 ? a : 0.0;
-            const double sfac = 1.0 / kg2 + (1.5707963 - knee) / kg1;
+            const double sfac = 1.0 / kg2 + (1.5707963 - a) / kg1;
             c.is = f * sfac;
             c.dis_dvgk = df_dvgk * sfac;
             c.dis_dvsk = df_dvsk * sfac;
-            c.dis_dvpk = vpk > 0.0 ? -f * da / kg1 : 0.0;
+            c.dis_dvpk = -f * da / kg1;
         }
         if (count != 1.0) {
             for (double* p : {&c.ig, &c.is, &c.ip, &c.dig_dvgk, &c.dis_dvgk, &c.dis_dvsk, &c.dis_dvpk, &c.dip_dvgk,

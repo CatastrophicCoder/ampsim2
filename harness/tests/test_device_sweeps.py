@@ -35,8 +35,9 @@ def triode(vgk, vpk, mu=100, ex=1.4, kg1=1060, kp=600, kvb=300):
 def pentode(vsk, vgk, vpk, mu=14.77, ex=1.046, kg1=194.3, kg2=2243, kp=53.82, kvb=40.43):  # tubes.lib EL34 (D-058)
     vs = np.maximum(vsk, 1e-3)
     f = 2 * np.maximum(vs * softplus(kp * (1 / mu + vgk / vs)) / kp, 0) ** ex
-    ip = f / kg1 * np.arctan(vpk / kvb)
-    is_ = f * (1 / kg2 + (1.5707963 - np.arctan(np.maximum(vpk, 0) / kvb)) / kg1)   # tubes.lib's π/2
+    p = np.maximum(vpk, 0) + 5 * np.log1p(np.exp(-np.abs(vpk) / 5))   # 5 V softplus of the plate voltage (D-061)
+    ip = f / kg1 * np.arctan(p / kvb)
+    is_ = f * (1 / kg2 + (1.5707963 - np.arctan(p / kvb)) / kg1)   # tubes.lib's π/2
     return ip, is_, grid_current(vgk, 1001.0)
 
 

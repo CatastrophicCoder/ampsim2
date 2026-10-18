@@ -1028,3 +1028,18 @@ Consequences: no rate-change delay (latency = the oversampler's: 49 samples FIR 
 `harness/reports/M6/20261017_plugin_cpu.md`: default knobs 26.4 % (Half 18.9 %), every knob 10 50.2 % (33.2 %), knob automation
 32–35 % (≈ 24 %); at the owner's NAM-matched settings 47.3 % (Half 31.5 %). Null test 26 / 26; automation (96 kHz, Full, exact J4,
 1e-4 V) 0 non-finite, 20 rescued first-solve failures. The null test and the CPU tool default to Full.
+
+## D-061 EL34: no plate current below the cathode (5 V softplus of the plate voltage; reference model change)
+Date: 2026-10-17 · Status: accepted (owner: "approve the tubes.lib change")
+Context: with the speaker load (D-059) the power amp at HOT had 37–56 first-solve Newton failures per DI clip at 384 kHz
+(more at 768 kHz, 43 unrescued) and the b56 / b6 SPICE references stopped with "timestep too small". Diagnosis
+(PROGRESS 2026-10-17): every failure at pair B's plate port during a flyback (pair A +1100 … +3400 V, pair B −700 …
+−2600 V), where Koren's unclamped atan(Vpk/kvb) gives a reverse plate current and the screen knee switches at Vpk = 0;
+not the iteration budget, tolerance, matrix precision, halvings or the half-step code (every-sample half-steps at fs
+reproduce 2·fs to −67.6 dB).
+Decision: in `tubes.lib` (EL34 Bp, Bs) and `devices::Pentode`, Vpk enters atan through P = max(Vpk, 0) + 5·ln(1 +
+exp(−|Vpk|/5)): the plate current vanishes below the cathode, the cut-off current goes to the screen, and both are smooth
+at 0 V. Above +20 V, P = Vpk within 0.1 V (DC operating point unchanged).
+Consequences: engine diagnostic: HOT DI 0 power-amp failures at 8x and 16x; CRUNCH / DRIVE unchanged (−218 … −224 dB vs
+the previous engine), HOT differs by −35 … −37 dB. tests/data EL34 sweeps regenerated; the pentode test asserts the new
+below-cathode behaviour. SPICE references with the power amp are re-rendered.

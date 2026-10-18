@@ -80,17 +80,21 @@ Vs'  = max(Vsk, 1e−3)
 u    = kp · (1/mu + Vgk / Vs')
 E1   = Vs' · softplus(u) / kp
 F    = E1 > 0 ? 2 · E1^ex : 0
-Ip   = (F / kg1) · atan(Vpk / kvb)
-Is   = F · ( 1/kg2 + (1.5707963 − atan(max(Vpk, 0) / kvb)) / kg1 )    (tubes.lib's literal for π/2)
+P    = max(Vpk, 0) + 5 · ln(1 + exp(−|Vpk| / 5))                      (5 V softplus of Vpk, D-061)
+Ip   = (F / kg1) · atan(P / kvb)
+Is   = F · ( 1/kg2 + (1.5707963 − atan(P / kvb)) / kg1 )              (tubes.lib's literal for π/2)
 Ig   = diode as in 3.1 with Rs = 1000 Ω + 1 Ω
 
 ∂E1/∂Vgk = sigmoid(u)
 ∂E1/∂Vsk = softplus(u)/kp − sigmoid(u) · Vgk / Vs'          (0 when Vsk < 1e−3)
 ∂F/∂x    = 2 · ex · E1^(ex−1) · ∂E1/∂x
-∂atan(Vpk/kvb)/∂Vpk = (1/kvb) / (1 + (Vpk/kvb)²)
+∂P/∂Vpk = logistic(Vpk / 5)
+∂atan(P/kvb)/∂Vpk = (∂P/∂Vpk / kvb) / (1 + (P/kvb)²)
 ```
-Note: as in SPICE, `atan(Vpk/kvb)` is not clamped in the plate equation, so Ip would go negative if the
-plate fell below the cathode. Replicate SPICE exactly; log it if it ever happens in the harness.
+Note (D-061): Koren's form used atan(Vpk/kvb) unclamped, so Ip went negative below the cathode, and the screen knee
+switched at Vpk = 0. With the speaker load (D-059) the plates fly far below the cathode at high Master and the power-amp
+Newton failed there; the 5 V softplus gives no plate current below the cathode, smooth through 0 V, and is equal to
+Vpk within 0.1 V above +20 V. SPICE (tubes.lib) uses the same expression.
 
 Matched-pair equivalent (B6): multiply Ip, Is, Ig and all their derivatives by 2.
 
