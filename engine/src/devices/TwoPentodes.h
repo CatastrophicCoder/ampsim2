@@ -34,12 +34,12 @@ struct TwoPentodes {
 
     /// Newton solver (DECISIONS D-042): grid ports +50 V / −1000 V per iteration as the triode blocks
     /// (D-037); screen and plate ports unlimited (the OT flyback moves a plate by hundreds of volts in one
-    /// sample); at most 2 step halvings (with 4, the 1/16 steps stall at the flyback).
+    /// sample); at most 3 step halvings (D-064; was 2, D-042: with 4, the 1/16 steps stall at the flyback).
     static solver::MultiportNewton<6> solver(int maxIter) noexcept {
         constexpr double kFree = 1e12;
         solver::MultiportNewton<6> r;
         r.config.maxIter = maxIter;
-        r.config.maxHalvings = 2;
+        r.config.maxHalvings = 3;
         r.maxStep = {50.0, kFree, kFree, 50.0, kFree, kFree};
         r.maxStepDown = {1000.0, kFree, kFree, 1000.0, kFree, kFree};
         return r;

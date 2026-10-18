@@ -73,7 +73,8 @@ SCORED = {
 
 # per-block overrides of a tolerance: the Newton maximum is "the configured limit", which is 32 for the two roots
 # of the full amp, the preamp B1234 and the power amp B56 (D-052; was 12 / 16, D-045); every other root has 12
-OVERRIDES = {(b, 'newton_max_iterations'): (32, 'max') for b in ('b56', 'full', 'b1234', 'preamp')}
+OVERRIDES = {(b, 'newton_max_iterations'): (32, 'max') for b in ('b56',)}
+OVERRIDES.update({(b, 'newton_max_iterations'): (64, 'max') for b in ('full', 'b1234', 'preamp')})  # preamp 64 (D-064)
 
 
 def status(milestone, block_id, check, value):

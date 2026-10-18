@@ -1067,3 +1067,17 @@ Decision: keep the D-059 load. Above ≈ 200 Hz it matches all three measured cu
 (the curves differ mainly in resonance height and frequency).
 Consequences: none for the model; the D-059 parameters are now backed by measured curves of comparable cabinets, though not of
 the 2203's era. An era-matched curve (G12-65, G12M-70, G12T-75) would still be the better reference if one becomes available.
+
+## D-064 Newton budget: preamp root 64 iterations, EL34 pair 3 step halvings
+Date: 2026-10-18 · Status: accepted (owner: "start on #2 and #3", the open Newton first-solve items of the M6 report)
+Context: after D-062 two first-solve failures remained: HOT DI RR at 384 kHz (2, rescued; the only HOT acceptance FAIL) and
+the 2x plugin model check (102 over 28 runs, 3 unrescued, mostly extreme unseen settings). A temporary failure dump in
+`MultiportNewton` showed two causes. Preamp root: port 6 (V2b grid) during the cathode-follower's grid-conduction
+transitions; Newton converges, but needs 33 … 56 iterations. Power-amp root: an EL34 plate at about 0 V with the grid
+positive (screen current up to 0.6 A); with 2 halvings the damped steps oscillate.
+Tried: half-step trigger 50 / 20 / 1e-9 V (D-043): no change. 4 halvings: 8 failures (the 1/16 steps stall, as in D-042).
+Decision: preamp root `maxIter` 64 (was 32, D-052; the power-amp root stays at 32); EL34 pair (`TwoPentodes`) at most 3
+step halvings (was 2, D-042). The "max iterations ≤ configured limit" check follows (64 for b1234, preamp, full).
+Consequences: 0 first-solve failures (0 unrescued) at HOT, every knob 1.0 and CRUNCH at 2x, 8x and 16x, and in the 2x plugin
+model check (28 runs, max 56 iterations); accuracy and CPU unchanged (27.1 / 42.2 % in the check's timing). The budget is a
+cap; ordinary samples still converge in a few iterations.
