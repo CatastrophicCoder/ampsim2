@@ -13,7 +13,7 @@ using devices::FourTriodes;
 using devices::FourTriodesLoad;
 
 constexpr stage::RootNetwork<kNumNodes, kNumElements, kNumRootPorts> kNet{kElements, kRoot};
-const solver::MultiportNewton<kNumRootPorts> kRootSolver = FourTriodes::solverK<kNumRootPorts>(32);
+const solver::MultiportNewton<kNumRootPorts> kRootSolver = FourTriodes::solverK<kNumRootPorts>(64);  // D-064 (was 32, D-052)
 const solver::MultiportNewton<kNumRootPorts> kDcSolver = FourTriodes::solverK<kNumRootPorts>(500);  // reset() only
 
 }  // namespace

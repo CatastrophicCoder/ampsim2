@@ -565,6 +565,12 @@ Notes:
 - [x] Step 5: re-verification, M6 report (`harness/reports/M6/20261018_M6_report.md`, 2026-10-18; for owner review)
 - 2026-10-18: owner-supplied measured 4x12 impedance curves (T1511, T1281, G12K-85) compared with D-059: match above ≈ 200 Hz,
   resonance within their range; D-059 kept (D-063).
+- Owner 2026-10-18: handle the remaining Newton first-solve failures (HOT DI RR at 384 kHz: 2; plugin model check at 2x:
+  102 over 28 runs, 3 unrescued, mostly extreme unseen settings). Plan: per-root / per-setting counts, temporary failure
+  dump (ports, residuals, states), cause, fix, re-verify HOT and the plugin model check.
+  Done (D-064): causes V2b grid conduction (preamp, 33 … 56 iterations) and an EL34 plate near 0 V with a positive grid
+  (power amp, oscillating damped steps); preamp maxIter 64, EL34 pair 3 halvings. 0 failures at HOT / every knob 1.0 /
+  CRUNCH (2x, 8x, 16x) and in the 2x plugin model check (`M6/20261018_x2_rates_newton_fix_full2x.md`). Re-verification below.
 Plan (2026-10-14; SPEC §7 M6 "performance work", WDF_DESIGN §4; goal: real-time headroom at the 8x default
 without loosening any tolerance):
 

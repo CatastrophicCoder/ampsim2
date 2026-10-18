@@ -138,13 +138,14 @@ Algorithm (per sample):
 1. Initial guess: linear extrapolation from the two previous solutions, v = v[n−1] + (v[n−1] − v[n−2]),
    with each port's extrapolated step clamped to its step limit; after a sample whose solve failed, the
    trend restarts at zero (v[n−2] := v[n−1]) (DECISIONS D-029, D-034).
-2. Up to `maxIter` (default 12; 32 in the full amp's two roots, DECISIONS D-052) iterations; per-port step limits, upward and downward separately
+2. Up to `maxIter` (default 12; in the full amp 64 for the preamp root and 32 for the power-amp root, DECISIONS D-052, D-064) iterations; per-port step limits, upward and downward separately
    (triode blocks: grid ports +50 V / −1000 V, plate ports ±50 V, D-034, D-037). Steps into cutoff are harmless
    and the device equations cannot overflow (closed-form ω, stable softplus), so the limits only shape
    convergence. The step is scaled uniformly so that no port exceeds its limit (this keeps the Newton
    direction).
 3. Convergence when ‖Δv‖∞ < 1e−9 · max(1, ‖v‖∞) or ‖f‖∞ < 1e−9 V.
-4. If an iteration increases ‖f‖, halve the step (up to 4 times) before accepting it.
+4. If an iteration increases ‖f‖, halve the step (up to 4 times; 3 in the EL34 pair roots, DECISIONS D-042, D-064)
+   before accepting it.
 5. If not converged after `maxIter`: keep the best iterate (lowest ‖f‖), increment the failure counter.
 6. Linear solve: fixed-size Gaussian elimination with partial pivoting (template on N; no heap, no
    Eigen in the audio path).

@@ -1,0 +1,48 @@
+# M6 A1: full engine (exact J4) at lower internal rates, plugin model check
+
+- Date 2026-10-18; options: tol 0.0001; rates 48 kHz × [2].
+- Plugin model check (D-051): ESR ≤ -20 dB vs SPICE (cached 384000 Hz references, 48 kHz band, first 5 s of every DI track, first 0.1 s excluded). Unseen settings: the 16 X4 validation settings, 10 s, vs the engine at 16x (first 1 s excluded). Cost: ampwav --stats on 10 s of DI GTR L, one run at a time; oversampling filters not included.
+
+## Summary
+
+| Rate | vs SPICE worst (CRUNCH / DRIVE / HOT) | Check | Unseen settings vs 16x (worst / median) | Newton failures (not rescued) / runs, max iterations | Cost default / HOT (% of one core) |
+|---|---|---|---|---|---|
+| 2x (96 kHz) | -45.3 / -48.5 / -24.0 dB | PASS | -20.8 / -39.0 dB | 0 (0) / 28, 56 | 27.1 / 42.2 |
+
+## vs SPICE per clip
+
+| Clip | 2x |
+|---|---|
+| CRUNCH GTR L | -45.8 dB |
+| CRUNCH GTR LL | -45.3 dB |
+| CRUNCH GTR R | -46.1 dB |
+| CRUNCH GTR RR | -45.7 dB |
+| DRIVE GTR L | -48.5 dB |
+| DRIVE GTR LL | -49.7 dB |
+| DRIVE GTR R | -49.5 dB |
+| DRIVE GTR RR | -48.9 dB |
+| HOT GTR L | -24.3 dB |
+| HOT GTR LL | -25.2 dB |
+| HOT GTR R | -25.2 dB |
+| HOT GTR RR | -24.0 dB |
+
+## Aliasing (power outside the harmonics of f0, relative to the total; 16x for reference)
+
+Each cell: non-harmonic power, then Newton failures (not rescued) in that 2 s run. Non-converged samples add non-harmonic power, so a cell with many failures measures solver error as well as aliasing.
+
+| Preset | f0 | amplitude (FS) | 16x | 2x |
+|---|---|---|---|---|
+| CRUNCH | 5000 Hz | 0.1 | -25.3 dB, 0 (0) | -20.5 dB, 0 (0) |
+| CRUNCH | 5000 Hz | 0.4 | -24.4 dB, 0 (0) | -17.3 dB, 0 (0) |
+| CRUNCH | 9000 Hz | 0.1 | -40.9 dB, 0 (0) | -18.2 dB, 0 (0) |
+| CRUNCH | 9000 Hz | 0.4 | -40.0 dB, 0 (0) | -14.9 dB, 0 (0) |
+| HOT | 5000 Hz | 0.1 | -25.1 dB, 0 (0) | -16.5 dB, 0 (0) |
+| HOT | 5000 Hz | 0.4 | -25.0 dB, 0 (0) | -15.2 dB, 0 (0) |
+| HOT | 9000 Hz | 0.1 | -38.8 dB, 0 (0) | -16.4 dB, 0 (0) |
+| HOT | 9000 Hz | 0.4 | -33.3 dB, 0 (0) | -14.9 dB, 0 (0) |
+
+## Cost
+
+| Rate | ns per engine sample (default / HOT) | % of one core at 48 kHz |
+|---|---|---|
+| 2x | 2820 / 4393 | 27.1 / 42.2 |
