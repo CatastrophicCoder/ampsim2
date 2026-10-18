@@ -29,6 +29,9 @@ def select_signals(block, preset, pattern=None):
     return [s for s in sigs if pattern is None or pattern in s.id]
 
 
+RETRY_RELTOL = 1e-7  # one retry after "timestep too small" (the M3 cascade's P56_RETRY_RELTOL)
+
+
 def render(block, preset, signals, jobs=None, log=print):
     """Returns {'op': {...}, 'ac': (f, h) or None, 'tran': {signal id: {node: array}}, 'recorded': {signal id:
     {name: array}}, 'notes': [...]}. Blocks driven by recordings (b5open, b6) get them from their source runs
@@ -46,7 +49,13 @@ def render(block, preset, signals, jobs=None, log=print):
         t0 = time.time()
         rec, notes = recordings.recordings(block, knobs, sig)
         x = block_input(block, sig) if block.input_node else None
-        res = spice.tran(text, knobs, x, nodes, recorded=rec or None)
+        try:
+            res = spice.tran(text, knobs, x, nodes, recorded=rec or None)
+        except spice.SpiceError as e:  # as the M3 cascade (render_p56): one retry at RELTOL 1e-7, noted in the report
+            if 'Timestep too small' not in str(e):
+                raise
+            res = spice.tran(text, knobs, x, nodes, recorded=rec or None, reltol=RETRY_RELTOL)
+            notes = list(notes) + [f'rendered at RELTOL {RETRY_RELTOL:g} (ngspice: timestep too small at {config.SPICE_RELTOL:g})']
         if block.engine_supplies:  # the engine block runs on this run's own supply waveforms (b56)
             rec = {n: res[n] for n in block.engine_supplies}
         log(f'  spice {block.id}/{preset.id}/{sig.id}: {len(sig.x) / config.FS:.3f} s signal, {time.time() - t0:.1f} s')

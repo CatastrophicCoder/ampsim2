@@ -835,6 +835,13 @@ Notes:
   halvings (8: stall). All at pair B's plate in flybacks below the cathode (−700 … −2600 V): Koren's unclamped
   atan(Vpk/kvb) gives reverse plate current there. Hard clamp: mixed; 5 V softplus with a matching screen knee: 0 failures
   at 8x and 16x. Owner approved the tubes.lib change (D-061).
+- D-061 verification (new references): M4 full acceptance (768 kHz) 107 PASS; 384 kHz exact J4 107 PASS; HOT 20 PASS / 1 FAIL:
+  DI ESR −40.3 … −41.3 dB (D-059 alone −33.5 … −35.7), Newton failures 0 / 0 / 0 / 2 (rescued; the FAIL); b56 106 PASS; b6
+  96 PASS / 1 FAIL (the known 5 kHz 20 V Newton median, D-043); b5open 88 PASS. The b56 / b6 SWP-lo-0.1V references still stop
+  with "timestep too small" at RELTOL 1e-8 (node y / the recorded nScr source, same times as before D-061: not the tube
+  model) and are now rendered once more at RELTOL 1e-7 by `render_spice` (as the M3 cascade), noted in the reports. Plugin
+  model check: Full 2x HOT −24.2 dB (PASS), unseen −20.8 dB, 94 first-solve failures (2 unrescued) over 28 runs, nearly all in
+  the extreme validation settings (presets: 0 / 0 / 2); Half 2x HOT −18.9 dB. Presence knob jump −62.9 dB; null test 26 / 26.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_
