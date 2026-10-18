@@ -563,6 +563,8 @@ Notes:
 - [~] Step 3: dense linear algebra / SIMD
 - [ ] Step 4: linear parts at a lower rate (analysis first)
 - [x] Step 5: re-verification, M6 report (`harness/reports/M6/20261018_M6_report.md`, 2026-10-18; for owner review)
+- 2026-10-18: owner-supplied measured 4x12 impedance curves (T1511, T1281, G12K-85) compared with D-059: match above ≈ 200 Hz,
+  resonance within their range; D-059 kept (D-063).
 Plan (2026-10-14; SPEC §7 M6 "performance work", WDF_DESIGN §4; goal: real-time headroom at the 8x default
 without loosening any tolerance):
 
