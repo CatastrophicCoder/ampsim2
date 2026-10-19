@@ -1104,3 +1104,18 @@ same order as a Newton tolerance change 1e-4 → 1e-6 V, −53 dB). Plugin model
 Found on the way: at every knob 1.0 the engine is sensitive to any perturbation after ≈ 11 s of the 20 s clip (tolerance
 1e-8 vs 1e-10 V: −180 dB, then −16 … −18 dB per second, spread around the 100 Hz harmonics, no discrete tone): sample-wise
 comparisons are meaningless at that setting; it is compared by Newton failures and spectra.
+
+## D-066 Device maths: fast Wright omega, E1^ex via exp / log; no outputs for the preamp's trial J4 solve
+Date: 2026-10-19 · Status: accepted (M7 step 3a; results unchanged to rounding)
+Context: after D-065 the device maths was ≈ 37 % of the engine at the NAM settings; the grid diode's Wright omega took an
+exp / log1p start and 2 – 3 Fritsch–Shafer–Crowley steps (one log each) plus a confirming step whenever z ≥ −40 (one in
+three calls at NAM), and pow was 10 %.
+Decision: `wrightOmega` = the series e^z·(1 − y + 3/2·y² − 8/3·y³), y = e^z, below z = −10; on [−10, 40) a cubic Hermite
+start from a 401-point table of the reference (`wrightOmegaReference`, kept) and one step; from 40 the asymptotic start and
+one step. ≤ 1e-14 relative to the reference everywhere (the series is more accurate than the reference's iteration below
+z ≈ −30), residual ≤ 8e-16·max(1, |z|) from z = −10; 5.4 vs 23 ns per call. Triode / pentode E1^ex as exp(ex·ln E1)
+(≤ 1.2e-15 relative to pow, 26 % faster in a loop). The preamp's first J4 solve (re-solved after the power amp) skips its
+node voltages and waves (`RootNetwork::solve(..., outputs = false)`).
+Consequences: engine at 96 kHz, NAM 3464 → 3175 ns, default 2221 → 2139 ns; output unchanged at the comparison's
+resolution; unit tests (device curves vs SPICE, finite-difference Jacobians) unchanged. A float LU for the Newton direction
+was tried (no gain: 3163 ns) and not adopted.

@@ -892,6 +892,16 @@ Tools: `ampwav --stats` now writes the per-root iteration histograms; `harness.p
   (`M6/20261019_x2_rates_m7_step1_full2x.md`). Tried without gain: step-halving rule, EL34 step limits, chord iterations.
 - Profile after step 1 (NAM, inclusive): half-steps 21 % (15 % of samples at 2x cross the 100 V trigger), LU 17 %,
   triode maths 17 %, pentode maths 14 %, open-circuit products 6 %.
+- Half-step trigger at 2x Full (plugin model check): off: HOT −22.7 dB, unseen worst −19.8 dB, HOT cost 31.7 → 29.6 %;
+  300 V: HOT −23.4 dB, unseen −20.2 dB, 30.3 % (`M6/20261019_x2_rates_m7_hst0_full2x.md`, `…_hst300_…`). Kept at 100 V
+  (2 points of CPU for 1.3 dB of HOT margin and the unseen check).
+- [x] Step 3a (D-066): fast Wright omega (series below z = −10, cubic Hermite table start + one Fritsch–Shafer–Crowley step,
+  ≤ 1e-14 relative to the reference, 4.3× faster), E1^ex as exp(ex·ln E1) (≤ 1.2e-15 relative), no node voltages / waves
+  for the preamp's trial J4 solve. Engine NAM 3464 → 3175 ns. Tried without gain: float LU for the Newton direction
+  (3175 → 3163 ns: K = 9 / 11 is latency-bound; the double rule stays).
+- After steps 1 + 3a: plugin (20 s DI, 2x Full) default 26.6 → 20.4 %, NAM 42.7 → 31.0 %, every knob 10 49.7 → 34.4 %
+  (60 s DI: every knob 10 54.0 → 42.1 %); plugin model check unchanged (CRUNCH / DRIVE / HOT −45.3 / −48.5 / −24.0 dB,
+  unseen −20.8 / −39.0 dB, 0 failures, `M6/20261019_x2_rates_m7_step3a_full2x.md`).
 Risks: changes to the Newton path move the output within the tolerance (verified end to end); gains unknown until
 measured; any tolerance failure is reported with options, not loosened. No new dependencies without asking.
 
