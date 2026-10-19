@@ -157,13 +157,27 @@ struct RootNetwork {
     bool solve(State& s, const solver::MultiportNewton<K>& newton, const Device& device, const std::array<double, N>& u,
                const RVec& vOc, EVec& wave, const EVec& eOffset) const noexcept {
         // predictor: linear extrapolation from the two previous solutions (D-029), each port's step
-        // clamped to its Newton step limit; after a failed sample the trend restarts at zero (D-034)
+        // clamped to its Newton step limit; after a failed sample the trend restarts at zero (D-034).
+        // Jacobian predictor (M7): one Newton step from the last solution with the last factored Jacobian,
+        // the residual taken with the last currents (the device's linear source ports updated)
         RVec v = s.v;
-        for (int r = 0; r < K; ++r)
-            v[r] += std::clamp(s.v[r] - s.vPrev[r], -newton.limitDown(r), newton.maxStep[r]);
+        if (s.jacobianPredictor && s.lu.valid) {
+            RVec iNow = s.i;
+            if constexpr (requires { device.sourceCurrents(s.v, iNow); })
+                device.sourceCurrents(s.v, iNow);
+            RVec dv;
+            for (int r = 0; r < K; ++r)
+                dv[r] = vOc[r] - s.v[r] - dot<K>(s.Z[r].data(), iNow.data());
+            solver::solveFactored<K>(s.lu, dv);
+            for (int r = 0; r < K; ++r)
+                v[r] += std::clamp(dv[r], -newton.limitDown(r), newton.maxStep[r]);
+        } else {
+            for (int r = 0; r < K; ++r)
+                v[r] += std::clamp(s.v[r] - s.vPrev[r], -newton.limitDown(r), newton.maxStep[r]);
+        }
         RVec i = s.i;
         const auto failures = s.stats.failures;
-        int iterations = newton.solve(device, vOc, s.Z, v, i, s.stats);
+        int iterations = newton.solve(device, vOc, s.Z, v, i, s.stats, &s.lu);
         bool failed = s.stats.failures != failures;
         if (failed)
             iterations += rescue(s, newton, device, vOc, v, i, failed);
@@ -207,7 +221,7 @@ struct RootNetwork {
                 for (int r = 0; r < K; ++r)
                     vk[r] = s.vOcPrev[r] + (vOc[r] - s.vOcPrev[r]) * (static_cast<double>(k) / m);
                 detail::NewtonStats sub;
-                iterations += newton.solve(device, vk, s.Z, vs, is, sub);
+                iterations += newton.solve(device, vk, s.Z, vs, is, sub, &s.lu);
                 ok = sub.failures == 0;
             }
             if (ok) {
@@ -241,6 +255,7 @@ struct RootNetwork {
         std::array<std::array<double, K>, K> Z{};
         resistanceMatrix(Xr, Z);
         s.v = guess;
+        s.lu.valid = false;
         detail::NewtonStats dcStats;
         newton.solve(device, vOc, Z, s.v, s.i, dcStats);
         for (int n = 0; n < N; ++n) {

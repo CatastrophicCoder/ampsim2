@@ -237,6 +237,19 @@ void Preamp::theveninAtY(double iY, double& vTh, double& rTh) const noexcept {
     // linearised at the solution: v = vOc − Z·i, i_p = i_p(v_p), i_y given. A change of i_y moves the triode
     // ports by dv_p = −(I + Z_pp·D)⁻¹·Z_py·di_y, so v_y = vTh − rTh·i_y with
     // rTh = Z_yy − Z_yp·D·(I + Z_pp·D)⁻¹·Z_py
+    //
+    // With a Jacobian factored by this sample's solve (M7): J = I + Z·D has column rY = e_y, so the triode
+    // block of J⁻¹·Z[:, y] is (I + Z_pp·D)⁻¹·Z_py and its y entry is rTh (the factors are those of the last
+    // Newton iteration, not of the converged point). Otherwise from the devices at the solution.
+    if (root_.lu.valid && root_.iterations > 0) {
+        solver::Vec<kNumRootPorts> w;
+        for (int r = 0; r < kNumRootPorts; ++r)
+            w[r] = root_.Z[r][rY];
+        solver::solveFactored<kNumRootPorts>(root_.lu, w);
+        rTh = w[rY];
+        vTh = root_.v[rY] + rTh * iY;
+        return;
+    }
     constexpr int P = 8;
     solver::Vec<kNumRootPorts> i;
     solver::Mat<kNumRootPorts> d9;

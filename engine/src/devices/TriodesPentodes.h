@@ -92,6 +92,9 @@ struct TriodesPentodesLoad {
         i[10] = g * (v[10] - vTh);
         d[10][10] = g;
     }
+
+    /// The linear source port's current at v (Jacobian predictor, M7).
+    void sourceCurrents(const solver::Vec<11>& v, solver::Vec<11>& i) const noexcept { i[10] = g * (v[10] - vTh); }
 };
 
 }  // namespace amp2203::devices

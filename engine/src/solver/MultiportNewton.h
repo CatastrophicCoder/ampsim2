@@ -5,6 +5,7 @@
 #include <concepts>
 #include <utility>
 
+#include "amp2203/detail/LuFactors.h"
 #include "amp2203/detail/NewtonStats.h"
 
 namespace amp2203::solver {
@@ -13,12 +14,15 @@ template <int K>
 using Vec = std::array<double, K>;
 template <int K>
 using Mat = std::array<std::array<double, K>, K>;
+template <int K>
+using Pivots = std::array<int, K>;
 
 namespace lu {
 /// Elimination step k of solveLinear, then the steps after it: every loop bound is a compile-time constant
-/// (unrolled by the compiler; the same operations in the same order as the loop form; M6).
+/// (unrolled by the compiler; the same operations in the same order as the loop form; M6). The multipliers
+/// are kept below the diagonal and the pivot rows in `piv`, so that J holds its LU factors afterwards (M7).
 template <int K, int k>
-inline bool eliminate(Mat<K>& J, Vec<K>& r) noexcept {
+inline bool eliminate(Mat<K>& J, Vec<K>& r, Pivots<K>& piv) noexcept {
     if constexpr (k == K) {
         return true;
     } else {
@@ -31,6 +35,7 @@ inline bool eliminate(Mat<K>& J, Vec<K>& r) noexcept {
             }
         if (!(best > 0.0) || !std::isfinite(best))
             return false;
+        piv[k] = p;
         if (p != k) {
             std::swap(J[p], J[k]);
             std::swap(r[p], r[k]);
@@ -38,28 +43,54 @@ inline bool eliminate(Mat<K>& J, Vec<K>& r) noexcept {
         const double inv = 1.0 / J[k][k];  // one division per pivot (D-046)
         for (int i = k + 1; i < K; ++i) {
             const double f = J[i][k] * inv;
-            for (int j = k + 1; j < K; ++j)  // column k below the pivot is not used again
+            for (int j = k + 1; j < K; ++j)
                 J[i][j] -= f * J[k][j];
             r[i] -= f * r[k];
+            J[i][k] = f;  // the multiplier (L), not read by the elimination itself
         }
-        return eliminate<K, k + 1>(J, r);
+        return eliminate<K, k + 1>(J, r, piv);
+    }
+}
+
+template <int K>
+inline void backSubstitute(const Mat<K>& U, Vec<K>& r) noexcept {
+    for (int i = K - 1; i >= 0; --i) {
+        double s = r[i];
+        for (int j = i + 1; j < K; ++j)
+            s -= U[i][j] * r[j];
+        r[i] = s / U[i][i];
     }
 }
 }  // namespace lu
 
-/// Solves J·x = r in place (x returned in r) by Gaussian elimination with partial pivoting.
+/// Solves J·x = r in place (x returned in r) by Gaussian elimination with partial pivoting; J is left
+/// holding its LU factors with the pivot rows in `piv` (for solveFactored).
 /// Returns false if a pivot is zero or not finite.
 template <int K>
-bool solveLinear(Mat<K>& J, Vec<K>& r) noexcept {
-    if (!lu::eliminate<K, 0>(J, r))
+bool solveLinear(Mat<K>& J, Vec<K>& r, Pivots<K>& piv) noexcept {
+    if (!lu::eliminate<K, 0>(J, r, piv))
         return false;
-    for (int i = K - 1; i >= 0; --i) {
-        double s = r[i];
-        for (int j = i + 1; j < K; ++j)
-            s -= J[i][j] * r[j];
-        r[i] = s / J[i][i];
-    }
+    lu::backSubstitute<K>(J, r);
     return true;
+}
+
+template <int K>
+bool solveLinear(Mat<K>& J, Vec<K>& r) noexcept {
+    Pivots<K> piv;
+    return solveLinear<K>(J, r, piv);
+}
+
+/// Solves J·x = r in place with the factors solveLinear left in `lu` (M7).
+template <int K>
+void solveFactored(const detail::LuFactors<K>& lu, Vec<K>& r) noexcept {
+    // the elimination swapped whole rows, multipliers included: all swaps first, then L
+    for (int k = 0; k < K; ++k)
+        if (const int p = lu.piv[static_cast<size_t>(k)]; p != k)
+            std::swap(r[static_cast<size_t>(p)], r[static_cast<size_t>(k)]);
+    for (int k = 0; k < K; ++k)
+        for (int i = k + 1; i < K; ++i)
+            r[i] -= lu.m[i][k] * r[k];
+    lu::backSubstitute<K>(lu.m, r);
 }
 
 struct NewtonConfig {
@@ -79,7 +110,8 @@ struct NewtonConfig {
 /// Warm start from `v` (in/out). Each step is scaled uniformly so that no port moves by more than its
 /// `maxStep` (keeps the Newton direction); if ‖f‖∞ grows, the step is halved up to maxHalvings times.
 /// Converged when ‖f‖∞ < residualTol or ‖Δv‖∞ < stepTol·max(1, ‖v‖∞). Otherwise the iterate with the
-/// lowest ‖f‖∞ is kept and the failure is counted. On return `i` holds the currents at `v`.
+/// lowest ‖f‖∞ is kept and the failure is counted. On return `i` holds the currents at `v`. With `lu`, the
+/// Jacobian of the last iteration is factored there (lu->valid; left unchanged when no iteration ran, M7).
 /// A device whose ∂i/∂v is block-diagonal declares, per column c, the row range [kBlockBegin[c], kBlockEnd[c])
 /// that can be nonzero; the Jacobian J = I + Z·∂i/∂v is then built from those entries only (D-046). Entries
 /// outside the blocks are never read, so such a device need not clear them.
@@ -100,7 +132,12 @@ public:
 
     template <class Device>
     int solve(const Device& device, const Vec<K>& vOc, const Mat<K>& Z, Vec<K>& v, Vec<K>& i,
-              detail::NewtonStats& stats) const noexcept {
+              detail::NewtonStats& stats, detail::LuFactors<K>* lu = nullptr) const noexcept {
+        if (!lu) {
+            detail::LuFactors<K> local;
+            return solve(device, vOc, Z, v, i, stats, &local);
+        }
+        detail::LuFactors<K>& fac = *lu;
         Mat<K> didv;
         Vec<K> f;
         double fn = residual(device, vOc, Z, v, i, didv, f);
@@ -111,7 +148,7 @@ public:
         int it = 0;
         while (!(converged = fn < config.residualTol) && it < config.maxIter) {
             ++it;
-            Mat<K> J;
+            Mat<K>& J = fac.m;
             for (int r = 0; r < K; ++r)
                 for (int c = 0; c < K; ++c) {
                     double s = r == c ? 1.0 : 0.0;
@@ -128,7 +165,8 @@ public:
             Vec<K> dv;
             for (int r = 0; r < K; ++r)
                 dv[r] = -f[r];
-            if (!solveLinear<K>(J, dv))
+            fac.valid = solveLinear<K>(J, dv, fac.piv);
+            if (!fac.valid)
                 break;
             double scale = 1.0;
             for (int r = 0; r < K; ++r)

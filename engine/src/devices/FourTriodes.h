@@ -67,6 +67,9 @@ struct FourTriodesLoad {
         i[8] = iY;
         d[8][8] = 0.0;
     }
+
+    /// The linear source port's current at v (Jacobian predictor, M7).
+    void sourceCurrents(const solver::Vec<9>&, solver::Vec<9>& i) const noexcept { i[8] = iY; }
 };
 
 }  // namespace amp2203::devices

@@ -2,6 +2,7 @@
 
 #include <array>
 
+#include "amp2203/detail/LuFactors.h"
 #include "amp2203/detail/NewtonStats.h"
 
 namespace amp2203::detail {
@@ -24,6 +25,8 @@ struct RootNetworkState {
     std::array<double, K> i{};      // root port currents
     std::array<double, K> vOcPrev{};  // root Thevenin voltages of the last sample (source-stepping fallback)
     std::array<double, N> node{};   // node voltages
+    LuFactors<K> lu;                // the last Newton Jacobian, factored (M7)
+    bool jacobianPredictor = true;  // predictor: a Newton step from v with lu instead of extrapolation (M7)
     double iterations = 0.0;        // Newton iterations of the last sample (probe)
     long sanitized = 0;             // samples with a non-finite solution (state kept)
     long rescued = 0;               // failed solves recovered by the source-stepping fallback (D-042)
