@@ -141,8 +141,8 @@ double Amp2203::processSample(double x) noexcept {
         // the samples where it runs (the Thevenin source taken directly, no decimation filter in the loop),
         // the preamp alone with the held load current in between; the output through the interpolator.
         preamp_->beginSample(vIn_);
-        preamp_->solveLoaded(iY_);
         const bool runPower = cfg_.powerAmpRateDivisor == 1 || powerPhase_;
+        preamp_->solveLoaded(iY_, !runPower);  // a trial solve when the power amp runs: re-solved below
         double u = 0.0;
         if (runPower) {
             double vTh = 0.0, rTh = 0.0;

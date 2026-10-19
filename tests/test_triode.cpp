@@ -66,7 +66,7 @@ bool jacobianMatches(double analytic, double fd) {
 
 TEST_CASE("Wright omega solves w + ln w = z", "[devices][m2]") {
     for (double z = -60.0; z <= 1e4; z = z < 10.0 ? z + 0.01 : z * 1.01) {
-        const double w = wrightOmega(z);
+        const double w = amp2203::devices::wrightOmegaReference(z);
         REQUIRE(w > 0.0);
         if (z < -40.0)
             REQUIRE(std::fabs(w - std::exp(z)) <= 1e-15 * w);
@@ -75,6 +75,19 @@ TEST_CASE("Wright omega solves w + ln w = z", "[devices][m2]") {
     }
     REQUIRE(std::fabs(wrightOmega(1.0) - 1.0) < 1e-16);
     REQUIRE(std::fabs(wrightOmega(0.0) - 0.56714329040978387) < 1e-16);  // Omega constant W(1)
+}
+
+TEST_CASE("Fast Wright omega matches the reference", "[devices][m7]") {
+    // D-066: series below z = −10, table start + one step above; the residual allows 2 ulp of rounding in w + ln w
+    double worst = 0.0;
+    for (double z = -60.0; z <= 1e4; z = z < 50.0 ? z + 1e-3 : z * 1.001) {
+        const double ref = amp2203::devices::wrightOmegaReference(z);
+        const double w = wrightOmega(z);
+        worst = std::max(worst, std::fabs(w - ref) / ref);
+        if (z >= -10.0)
+            REQUIRE(std::fabs(w + std::log(w) - z) <= 8e-16 * std::max(1.0, std::fabs(z)));
+    }
+    REQUIRE(worst <= 1e-14);
 }
 
 TEST_CASE("12AX7 plate curves match SPICE", "[devices][m2]") {

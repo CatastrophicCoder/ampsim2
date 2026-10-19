@@ -74,7 +74,7 @@ struct Triode {
         softplusSigmoid(u, sp, sg);
         const double e1 = vpk * sp / kp;
         if (e1 > 0.0) {
-            c.ip = 2.0 * std::pow(e1, ex) / kg1;
+            c.ip = 2.0 * std::exp(ex * std::log(e1)) / kg1;
             const double dip_de1 = ex * c.ip / e1;  // 2·ex·E1^(ex−1)/kg1
             c.dip_dvgk = dip_de1 * vpk * sg / s;
             c.dip_dvpk = dip_de1 * (sp / kp - sg * vgk * vpk * vpk / (s * s * s));

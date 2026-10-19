@@ -152,10 +152,10 @@ struct RootNetwork {
     }
 
     /// The rest of process() for open-circuit voltages from openCircuit(): Newton, node voltages, incident
-    /// waves.
+    /// waves. `outputs` = false: the root ports only (v, i), for a trial solve that another call replaces (M7).
     template <class Device>
     bool solve(State& s, const solver::MultiportNewton<K>& newton, const Device& device, const std::array<double, N>& u,
-               const RVec& vOc, EVec& wave, const EVec& eOffset) const noexcept {
+               const RVec& vOc, EVec& wave, const EVec& eOffset, bool outputs = true) const noexcept {
         // predictor: linear extrapolation from the two previous solutions (D-029), each port's step
         // clamped to its Newton step limit; after a failed sample the trend restarts at zero (D-034).
         // Jacobian predictor (M7): one Newton step from the last solution with the last factored Jacobian,
@@ -184,6 +184,19 @@ struct RootNetwork {
         s.iterations = iterations;
         s.vOcPrev = vOc;
 
+        if (!outputs) {
+            bool finiteV = true;
+            for (int r = 0; r < K; ++r)
+                finiteV = finiteV && std::isfinite(v[r]) && std::isfinite(i[r]);
+            if (!finiteV) {
+                ++s.sanitized;
+                return false;
+            }
+            s.vPrev = failed ? v : s.v;
+            s.v = v;
+            s.i = i;
+            return true;
+        }
         std::array<double, N> node;
         bool finite = true;
         for (int n = 0; n < N; ++n) {

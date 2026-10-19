@@ -57,7 +57,8 @@ public:
     /// The same sample in steps, with a load current drawn at y (M6 X1, exact J4 coupling): beginSample, then
     /// solveLoaded (repeatable: each call restarts from the state before the sample), then finishSample.
     void beginSample(double vIn) noexcept;
-    bool solveLoaded(double iY) noexcept;
+    /// `final` = false: a trial solve whose node voltages and waves another call replaces (M7: not computed).
+    bool solveLoaded(double iY, bool final = true) noexcept;
     /// Linearised Thevenin source at y around the last solveLoaded(iY): v_y = vTh − rTh·i_y.
     void theveninAtY(double iY, double& vTh, double& rTh) const noexcept;
     void finishSample() noexcept;

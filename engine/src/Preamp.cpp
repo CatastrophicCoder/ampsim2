@@ -207,7 +207,7 @@ void Preamp::beginSample(double vIn) noexcept {
     savedNode_ = root_.node;
 }
 
-bool Preamp::solveLoaded(double iY) noexcept {
+bool Preamp::solveLoaded(double iY, bool final) noexcept {
     // the first call of a sample predicts from the last samples; a repeated call (corrected load current)
     // starts at the first call's solution with no trend, and the trend is then restored to the last sample's
     const bool repeat = solvedOnce_ && ok_;
@@ -226,7 +226,7 @@ bool Preamp::solveLoaded(double iY) noexcept {
     const auto& newton = residualTol_ == kRootSolver.config.residualTol ? kRootSolver : tuned;
     root_.i[rY] = iY;
     incident_ = reflected_;
-    ok_ = kNet.solve(root_, newton, FourTriodesLoad{iY}, u_, vOc_, incident_, eOff_);
+    ok_ = kNet.solve(root_, newton, FourTriodesLoad{iY}, u_, vOc_, incident_, eOff_, final);
     if (repeat && root_.stats.failures == failures)
         root_.vPrev = saved_[0];  // the trend for the next sample: this sample's solution vs the last one
     solvedOnce_ = true;
