@@ -917,6 +917,8 @@ Tools: `ampwav --stats` now writes the per-root iteration histograms; `harness.p
   CRUNCH / DRIVE / HOT −37.7 / −37.2 / −18.9 dB (FAIL: HOT ≤ −20), unseen worst / median −16.6 / −28.0 dB, 0 failures
   (before M7: 12, 1 unrescued); non-harmonic power on 5 / 9 kHz sines −7.0 … −12.6 dB (Full −14.9 … −20.5 dB). Accuracy as
   before M7 (−18.9 / −16.7 dB).
+- Owner 2026-10-19: Half becomes the plugin default, Full selectable (D-069; HOT −18.9 dB accepted). Latency 49 → 58 samples
+  at 48 kHz.
 Risks: changes to the Newton path move the output within the tolerance (verified end to end); gains unknown until
 measured; any tolerance failure is reported with options, not loosened. No new dependencies without asking.
 

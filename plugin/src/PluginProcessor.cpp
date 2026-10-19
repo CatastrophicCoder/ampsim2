@@ -47,9 +47,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout Amp2203Processor::layout() {
                                                        juce::StringArray{"2x", "4x", "8x", "16x"}, 0));  // 2x (D-054)
     l.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"oversamplingFilter", 1}, "Oversampling Filter",
                                                        juce::StringArray{"Linear phase (FIR)", "Low latency (IIR)"}, 0));
-    // power amp at the oversampled rate or at half of it (M6, D-049, D-053; default Full, D-060)
+    // power amp at the oversampled rate or at half of it (M6, D-049, D-053; default Half, D-069, was Full, D-060)
     l.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{"powerAmpRate", 1}, "Power Amp Rate",
-                                                       juce::StringArray{"Full", "Half"}, 0));
+                                                       juce::StringArray{"Full", "Half"}, 1));
     return l;
 }
 

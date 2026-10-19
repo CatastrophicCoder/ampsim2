@@ -32,7 +32,7 @@ from .wavio import read_wav, write_wav
 
 HOST_RATE = 48000
 FACTOR = 2
-POWER_RATE = 'full'  # the plugin default (D-060)
+POWER_RATE = 'half'  # the plugin default (D-069; Full before, D-060)
 RENDER = config.ROOT / 'build' / 'plugin' / 'amp2203_render_artefacts' / 'Release' / 'amp2203_render'
 LIMIT_DB = -60.0
 NEWTON_TOL = 1e-4  # V, the plugin's (D-055)

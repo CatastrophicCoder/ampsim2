@@ -1144,3 +1144,16 @@ resistance uses (rTh = Z_yy − Z_yp·D·(I + Z_pp·D)⁻¹·Z_py). Using the la
 iterate's factors instead was tried by mistake first and moved the NAM output by −31.5 dB.
 Consequences: output vs before −128 dB (default knobs) / −56.9 dB (NAM: the convergence test no longer includes the
 linear port's residual, a Newton-tolerance-level change). Engine 2–3 % faster.
+
+## D-069 Plugin default Power Amp Rate Half (Full selectable)
+Date: 2026-10-19 · Status: accepted (owner: "Make half the default while keeping full selectable"; revises D-060)
+Context: after M7 steps 1, 3a, A and B (D-065 – D-068) the plugin at 2x Full needs 18.5 / 31.1 / 34.5 % of one core (default
+knobs / NAM settings / every knob 10, 20 s DI); at Half 12.8 / 21.6 / 23.7 %. The Half plugin model check after M7
+(`M6/20261019_x2_rates_m7_AB_half2x.md`): CRUNCH / DRIVE / HOT −37.7 / −37.2 / −18.9 dB, unseen settings worst −16.6 dB
+(median −28.0), 0 Newton failures, non-harmonic power on 5 / 9 kHz sines −7.0 … −12.6 dB (Full: −45.3 / −48.5 / −24.0 dB,
+−20.8 dB, −14.9 … −20.5 dB). The owner heard no Full / Half difference in M6 (before D-058 / D-059).
+Decision: the Power Amp Rate parameter defaults to Half; Full stays selectable and remains the verified configuration.
+Consequences: the default fails the plugin model check's −20 dB at HOT (−18.9 dB) and at the worst unseen setting
+(−16.6 dB); deviation accepted by the owner, tolerances unchanged (VERIFICATION). Saved projects keep their stored
+setting. `harness.plugin_null` and `harness.plugin_cpu` measure the new default. Reported latency at 48 kHz (FIR
+oversampling) 49 → 58 samples (1.02 → 1.21 ms; the half-rate interpolator, D-053).
