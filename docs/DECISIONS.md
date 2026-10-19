@@ -1157,3 +1157,17 @@ Consequences: the default fails the plugin model check's −20 dB at HOT (−18.
 (−16.6 dB); deviation accepted by the owner, tolerances unchanged (VERIFICATION). Saved projects keep their stored
 setting. `harness.plugin_null` and `harness.plugin_cpu` measure the new default. Reported latency at 48 kHz (FIR
 oversampling) 49 → 58 samples (1.02 → 1.21 ms; the half-rate interpolator, D-053).
+
+## D-070 Power-amp root: maxIter 48
+Date: 2026-10-19 · Status: accepted (M7 verification; the owner's "do A and B" and D-069)
+Context: the M7 automation check at Half (96 kHz, exact J4, 1e-4 V) showed 3 first-solve failures (all rescued) at every
+knob 1.0 with Middle or Presence moving; Full: 0. Bisection over the M7 commits: 0 failures up to D-067 (max 24 – 26
+iterations, pre-M7 23 – 24), 3 from D-068 (the reduced Newton takes another path through the same hard samples). The Jacobian
+predictor contributes (with it off: 0 failures, max 31 – 32); guards that fall back to the trend when the prediction is far
+from it remove the failures but cost 8 – 18 % at the NAM settings (trend difference 100 / 30 / 10 V); falling back only when
+the prediction hits a step limit costs nothing but leaves 2 of 3 (both fail from the trend as well and converge from the
+last solution in 21 iterations).
+Decision: the power-amp root (`PowerAmp`, b56 and the full amp) allows 48 iterations (was 32, D-052); the check's limit
+follows (b56 48; full amp 64 from D-064).
+Consequences: the three samples converge in 33 – 34 iterations; automation 56 runs at Half and at Full: 0 non-finite, 0
+failures; HOT acceptance (384 kHz exact J4) 0 FAIL; b56 0 FAIL. No effect on samples that converged within 32.

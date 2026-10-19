@@ -142,7 +142,7 @@ Algorithm (per sample):
    the last Newton iteration left (no new device evaluation, no new factorisation), the residual taken with the
    last currents and the device's linear source ports (J4 load ports) updated; extrapolation remains when no
    factors exist (first sample, after a DC solve).
-2. Up to `maxIter` (default 12; in the full amp 64 for the preamp root and 32 for the power-amp root, DECISIONS D-052, D-064) iterations; per-port step limits, upward and downward separately
+2. Up to `maxIter` (default 12; in the full amp 64 for the preamp root and 48 for the power-amp root, DECISIONS D-052, D-064, D-070) iterations; per-port step limits, upward and downward separately
    (triode blocks: grid ports +50 V / −1000 V, plate ports ±50 V, D-034, D-037). Steps into cutoff are harmless
    and the device equations cannot overflow (closed-form ω, stable softplus), so the limits only shape
    convergence. The step is scaled uniformly so that no port exceeds its limit (this keeps the Newton
