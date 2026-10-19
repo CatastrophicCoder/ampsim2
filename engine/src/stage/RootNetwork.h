@@ -177,7 +177,7 @@ struct RootNetwork {
         }
         RVec i = s.i;
         const auto failures = s.stats.failures;
-        int iterations = newton.solve(device, vOc, s.Z, v, i, s.stats, &s.lu);
+        int iterations = newton.solve(device, vOc, s.Z, v, i, s.stats, &s.lu, &s.didv);
         bool failed = s.stats.failures != failures;
         if (failed)
             iterations += rescue(s, newton, device, vOc, v, i, failed);
@@ -197,6 +197,14 @@ struct RootNetwork {
             s.i = i;
             return true;
         }
+        return commit(s, v, i, failed, u, wave, eOffset);
+    }
+
+    /// Takes root port voltages v and currents i as this sample's solution: node voltages, incident waves
+    /// (`wave` holds the reflected waves on entry). Used by solve() and for a solution corrected without Newton
+    /// (the preamp's J4 load correction, M7). Returns false (state unchanged) if a node voltage is not finite.
+    bool commit(State& s, const RVec& v, const RVec& i, bool failed, const std::array<double, N>& u, EVec& wave,
+                const EVec& eOffset) const noexcept {
         std::array<double, N> node;
         bool finite = true;
         for (int n = 0; n < N; ++n) {
@@ -234,7 +242,7 @@ struct RootNetwork {
                 for (int r = 0; r < K; ++r)
                     vk[r] = s.vOcPrev[r] + (vOc[r] - s.vOcPrev[r]) * (static_cast<double>(k) / m);
                 detail::NewtonStats sub;
-                iterations += newton.solve(device, vk, s.Z, vs, is, sub, &s.lu);
+                iterations += newton.solve(device, vk, s.Z, vs, is, sub, &s.lu, &s.didv);
                 ok = sub.failures == 0;
             }
             if (ok) {

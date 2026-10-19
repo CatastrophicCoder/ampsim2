@@ -111,7 +111,8 @@ struct NewtonConfig {
 /// `maxStep` (keeps the Newton direction); if ‖f‖∞ grows, the step is halved up to maxHalvings times.
 /// Converged when ‖f‖∞ < residualTol or ‖Δv‖∞ < stepTol·max(1, ‖v‖∞). Otherwise the iterate with the
 /// lowest ‖f‖∞ is kept and the failure is counted. On return `i` holds the currents at `v`. With `lu`, the
-/// Jacobian of the last iteration is factored there (lu->valid; left unchanged when no iteration ran, M7).
+/// Jacobian of the last iteration is factored there (lu->valid; left unchanged when no iteration ran, M7); with
+/// `didvOut`, the device ∂i/∂v of the last evaluation (the returned v when converged) is left there.
 /// A device whose ∂i/∂v is block-diagonal declares, per column c, the row range [kBlockBegin[c], kBlockEnd[c])
 /// that can be nonzero; the Jacobian J = I + Z·∂i/∂v is then built from those entries only (D-046). Entries
 /// outside the blocks are never read, so such a device need not clear them.
@@ -132,13 +133,15 @@ public:
 
     template <class Device>
     int solve(const Device& device, const Vec<K>& vOc, const Mat<K>& Z, Vec<K>& v, Vec<K>& i,
-              detail::NewtonStats& stats, detail::LuFactors<K>* lu = nullptr) const noexcept {
-        if (!lu) {
-            detail::LuFactors<K> local;
-            return solve(device, vOc, Z, v, i, stats, &local);
+              detail::NewtonStats& stats, detail::LuFactors<K>* lu = nullptr,
+              Mat<K>* didvOut = nullptr) const noexcept {
+        if (!lu || !didvOut) {
+            detail::LuFactors<K> localLu;
+            Mat<K> localD;
+            return solve(device, vOc, Z, v, i, stats, lu ? lu : &localLu, didvOut ? didvOut : &localD);
         }
         detail::LuFactors<K>& fac = *lu;
-        Mat<K> didv;
+        Mat<K>& didv = *didvOut;
         Vec<K> f;
         double fn = residual(device, vOc, Z, v, i, didv, f);
         Vec<K> best = v;

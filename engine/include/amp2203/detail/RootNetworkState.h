@@ -26,6 +26,7 @@ struct RootNetworkState {
     std::array<double, K> vOcPrev{};  // root Thevenin voltages of the last sample (source-stepping fallback)
     std::array<double, N> node{};   // node voltages
     LuFactors<K> lu;                // the last Newton Jacobian, factored (M7)
+    std::array<std::array<double, K>, K> didv{};  // device ∂i/∂v at the last Newton iterate (M7; device blocks only)
     bool jacobianPredictor = true;  // predictor: a Newton step from v with lu instead of extrapolation (M7)
     double iterations = 0.0;        // Newton iterations of the last sample (probe)
     long sanitized = 0;             // samples with a non-finite solution (state kept)

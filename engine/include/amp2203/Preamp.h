@@ -60,7 +60,11 @@ public:
     /// `final` = false: a trial solve whose node voltages and waves another call replaces (M7: not computed).
     bool solveLoaded(double iY, bool final = true) noexcept;
     /// Linearised Thevenin source at y around the last solveLoaded(iY): v_y = vTh − rTh·i_y.
-    void theveninAtY(double iY, double& vTh, double& rTh) const noexcept;
+    void theveninAtY(double iY, double& vTh, double& rTh) noexcept;
+    /// After theveninAtY: the solution for a new load current from the linearisation, dv = −J⁻¹·Z[:, y]·Δi_y
+    /// with the triode currents moved by their conductances (M7, D-067); a full solveLoaded when any port would
+    /// move by more than `maxCorrection` volts or no linearisation is at hand. Returns as solveLoaded.
+    bool correctLoad(double iY, double maxCorrection) noexcept;
     void finishSample() noexcept;
 
     double output() const noexcept { return out_; }
@@ -89,6 +93,8 @@ private:
     std::array<double, kRootPorts> vOc_{};
     std::array<std::array<double, kRootPorts>, 4> saved_{};  // v, vPrev, i, vOcPrev before the sample
     std::array<double, kNodes> savedNode_{};
+    std::array<double, kRootPorts> loadSens_{};  // J⁻¹·Z[:, y] from theveninAtY (M7)
+    bool loadSensValid_ = false;
     double vInNow_ = 0.0;
     bool ok_ = true;
     bool solvedOnce_ = false;  // solveLoaded() ran in this sample

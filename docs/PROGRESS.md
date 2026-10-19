@@ -902,6 +902,11 @@ Tools: `ampwav --stats` now writes the per-root iteration histograms; `harness.p
 - After steps 1 + 3a: plugin (20 s DI, 2x Full) default 26.6 → 20.4 %, NAM 42.7 → 31.0 %, every knob 10 49.7 → 34.4 %
   (60 s DI: every knob 10 54.0 → 42.1 %); plugin model check unchanged (CRUNCH / DRIVE / HOT −45.3 / −48.5 / −24.0 dB,
   unseen −20.8 / −39.0 dB, 0 failures, `M6/20261019_x2_rates_m7_step3a_full2x.md`).
+- Owner 2026-10-19: "do A and B". Plan: (B) the preamp's second J4 solve replaced by a linear correction from the first
+  (dv = −J⁻¹·Z[:, y]·Δi_y, currents moved by the device conductances at the first solution), with a full re-solve when the
+  correction is large; measured for time, output vs the current engine and the plugin model check. (A) the linear J4 port
+  out of both Newton systems: the preamp's given-current port solved after the 8 triode ports, the power amp's source port
+  folded into its Thevenin matrix per sample (results unchanged to rounding); null test vs the current engine.
 Risks: changes to the Newton path move the output within the tolerance (verified end to end); gains unknown until
 measured; any tolerance failure is reported with options, not loosened. No new dependencies without asking.
 
