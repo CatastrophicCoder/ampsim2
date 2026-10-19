@@ -911,6 +911,12 @@ Tools: `ampwav --stats` now writes the per-root iteration histograms; `harness.p
   output: 30 mV −51.6 dB, unlimited −31 dB). [x] A (D-068): the linear port out of both Newton systems (−128 / −56.9 dB vs
   before). Plugin (20 s DI, 2x Full): default 20.4 → 18.5 %, NAM 31.0 → 31.1 %, every knob 10 34.4 → 34.5 %: the gain is
   at default knobs; at high Master the load steps exceed 10 mV.
+- Options C / D measured (owner: "how much ... could affect CPU", then "re-run the Half model check"). C (half-step trigger
+  300 V, engine): NAM −5 %, every knob 1.0 −8 %, default 0 %. D (Power Amp Rate Half, plugin 20 s): default 18.5 → 12.8 %,
+  NAM 31.1 → 21.6 %, every knob 10 34.5 → 23.7 %. Half model check after M7 (`M6/20261019_x2_rates_m7_AB_half2x.md`):
+  CRUNCH / DRIVE / HOT −37.7 / −37.2 / −18.9 dB (FAIL: HOT ≤ −20), unseen worst / median −16.6 / −28.0 dB, 0 failures
+  (before M7: 12, 1 unrescued); non-harmonic power on 5 / 9 kHz sines −7.0 … −12.6 dB (Full −14.9 … −20.5 dB). Accuracy as
+  before M7 (−18.9 / −16.7 dB).
 Risks: changes to the Newton path move the output within the tolerance (verified end to end); gains unknown until
 measured; any tolerance failure is reported with options, not loosened. No new dependencies without asking.
 
