@@ -557,12 +557,13 @@ Notes:
   first-solve Newton failures at 768 kHz, all rescued (D-042, D-045). 2x / 4x have no SPICE pass (D-047).
 
 ## M6 — Performance (owner scope 2026-10-14: performance work only; the other SPEC §7 M6 items stay open)
+Closed by the owner on 2026-10-19 (report accepted). Steps 2–4 were not finished; the CPU work continues in M7.
 - [x] Step 0: baseline at the 8x default (384 kHz)
 - [x] Step 1: build settings (no change adopted)
-- [~] Step 2: device equations
-- [~] Step 3: dense linear algebra / SIMD
-- [ ] Step 4: linear parts at a lower rate (analysis first)
-- [x] Step 5: re-verification, M6 report (`harness/reports/M6/20261018_M6_report.md`, 2026-10-18; for owner review)
+- [x] Step 2: device equations (studied; inline polynomials slower than libm, not adopted; rest moved to M7)
+- [x] Step 3: dense linear algebra / SIMD (unrolled elimination adopted; rest moved to M7)
+- [x] Step 4: linear parts at a lower rate (moved to M7)
+- [x] Step 5: re-verification, M6 report (`harness/reports/M6/20261018_M6_report.md`, accepted 2026-10-19)
 - 2026-10-18: owner-supplied measured 4x12 impedance curves (T1511, T1281, G12K-85) compared with D-059: match above ≈ 200 Hz,
   resonance within their range; D-059 kept (D-063).
 - Owner 2026-10-18: handle the remaining Newton first-solve failures (HOT DI RR at 384 kHz: 2; plugin model check at 2x:
@@ -857,6 +858,36 @@ Notes:
   (engine headers + block DC fixtures). Then: b12 DEFAULT / VOL0.2 / VOL1.0 105 / 106 / 106 PASS, b1234 119 PASS, b3 87 PASS,
   b34 94 PASS (0 FAIL each); knob jumps b12 −55.9 dB, b1234 −39.1 … −55.1 dB, b34 −53.1 … −67.6 dB; M4 full acceptance 107
   PASS (768 kHz and 384 kHz exact J4); HOT 20 PASS / 1 FAIL (2 rescued first-solves, as after D-061); null test 26 / 26.
+
+## M7 — CPU optimisation (owner 2026-10-19: "close M6 and start on the CPU optimisation")
+Goal: lower the plugin's CPU at its defaults (2x, Power Amp Rate Full, exact J4, Newton tol 1e-4 V, half-steps on;
+D-054 – D-060, D-064), above all at high Master, toward the 20 % working budget, without loosening any tolerance and
+without audible change. Owner criteria: no added latency, authentic at all knobs, CPU headroom.
+
+Baseline (2026-10-19, main 0e70f81; `amp2203_render plugin --factor 2`, DI GTR L, FIR oversampling):
+- CPU: default knobs 26.6 % (60 s), NAM settings (Preamp 10, Treble 8, Middle 7, Bass 4, Master 10, Presence 8)
+  42.7 % (20 s), every knob 10 54.0 % (60 s). Master 10 alone 33.6 %, Presence 10 alone 26.4 %.
+- Engine at 96 kHz (ampwav, plugin settings, 20 s): default 2491 ns / sample, NAM 4236 ns.
+- Profile at NAM (macOS `sample`, audio thread): power amp ≈ 62 %, preamp (two solves per sample) ≈ 30 %. By kind:
+  libm (pow, log1p, exp, log, atan) + Wright omega ≈ 29 %, LU elimination ≈ 23 %, Newton loop (J build, residual,
+  inlined devices) ≈ 26 %, open-circuit products ≈ 7 %.
+- Newton at NAM (temporary counters): power amp 1.15 solves per sample (half-steps), 3.46 iterations per solve
+  (default knobs 1.36), 1.03 M step halvings on 7.65 M iterations, step limits rarely active (0.6 %); preamp 2 solves
+  per sample, 1.41 iterations per solve. The power amp's iteration count is what grows with Master.
+
+Plan (each step measured alone; adopted only if it pays):
+1. Newton iterations in the power amp: initial guess (a predictor from the last Jacobian instead of linear
+   extrapolation), the step-halving rule, Jacobian reuse within a solve. Gate: 0 Newton failures (HOT, every knob 1.0,
+   plugin model check), output within the Newton tolerance of the current engine.
+2. Fewer solves per sample: the half-step trigger at 2x Full; the preamp's second solve (exact J4) replaced by a
+   linear correction from its last Jacobian. Gate: plugin model check vs SPICE and 16x, HOT acceptance.
+3. Code level, results unchanged to rounding: memory layout / padding for NEON, the linear rY port folded out of
+   the LU, derivatives only where used, vectorised device maths across tubes. Gate: null test vs the previous build.
+4. Re-verification as M6 (full acceptance 768 / 384 kHz, HOT, block tests, knob jumps, automation, plugin model
+   check, null test, pluginval / auval), plugin CPU, M7 report.
+Tools: `ampwav --stats` now writes the per-root iteration histograms; `harness.plugin_cpu`; `amp2203_render`.
+Risks: changes to the Newton path move the output within the tolerance (verified end to end); gains unknown until
+measured; any tolerance failure is reported with options, not loosened. No new dependencies without asking.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_

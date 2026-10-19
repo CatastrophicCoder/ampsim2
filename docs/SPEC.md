@@ -442,6 +442,10 @@ work (lookup tables for device equations, XSIMD for R-type matrix multiplies, li
 rate); tube parameter fitting; unmatched power tube pairs; integration into the existing amp-sim
 plugin project.
 
+### M7 — CPU optimisation (owner 2026-10-19)
+Lower the plugin's CPU at its defaults (M6 configuration), above all at high Master, toward a 20 % working budget of
+one core at 48 kHz; no tolerance loosened, no added latency. Plan and results in `docs/PROGRESS.md` (M7).
+
 ---
 
 ## 8. Coding conventions
