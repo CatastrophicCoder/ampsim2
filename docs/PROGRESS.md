@@ -922,6 +922,8 @@ Tools: `ampwav --stats` now writes the per-root iteration histograms; `harness.p
 - M7 verification (2026-10-19): M4 full acceptance 768 kHz 0 FAIL; 384 kHz exact J4 0 FAIL; HOT 0 FAIL; b1234, b56, b6, b5open
   0 FAIL (b6's 5 kHz 20 V Newton median now 3, D-043 item passes); knob jumps b1234 −39.1 … −55.1 dB, b56 −62.9 dB;
   automation Full 0 failures, Half 3 rescued first-solve failures → D-070 (power-amp maxIter 48), then Half and Full 0.
+- Null tests 2x Half / Full 0 FAIL; pluginval (VST3, AU) SUCCESS, auval SUCCEEDED; plugin CPU at the Half default: default 13.1 %,
+  every knob 10 24.0 %, worst automation 24.6 %. M7 report: `harness/reports/M7/20261019_M7_report.md` (for owner review).
 Risks: changes to the Newton path move the output within the tolerance (verified end to end); gains unknown until
 measured; any tolerance failure is reported with options, not loosened. No new dependencies without asking.
 
