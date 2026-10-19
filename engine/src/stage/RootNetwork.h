@@ -159,17 +159,17 @@ struct RootNetwork {
         // predictor: linear extrapolation from the two previous solutions (D-029), each port's step
         // clamped to its Newton step limit; after a failed sample the trend restarts at zero (D-034).
         // Jacobian predictor (M7): one Newton step from the last solution with the last factored Jacobian,
-        // the residual taken with the last currents (the device's linear source ports updated)
+        // the residual taken with the last currents (the device's linear last port solved for this sample, D-068)
         RVec v = s.v;
         if (s.jacobianPredictor && s.lu.valid) {
-            RVec iNow = s.i;
-            if constexpr (requires { device.sourceCurrents(s.v, iNow); })
-                device.sourceCurrents(s.v, iNow);
+            constexpr int M = solver::kNewtonPorts<Device, K>;
+            RVec iNow = s.i, vNow = s.v;
+            solver::solveLinearPort<Device, K>(device, vOc, s.Z, vNow, iNow);
             RVec dv;
-            for (int r = 0; r < K; ++r)
-                dv[r] = vOc[r] - s.v[r] - dot<K>(s.Z[r].data(), iNow.data());
-            solver::solveFactored<K>(s.lu, dv);
-            for (int r = 0; r < K; ++r)
+            for (int r = 0; r < M; ++r)
+                dv[r] = vOc[r] - vNow[r] - dot<K>(s.Z[r].data(), iNow.data());
+            solver::solveFactored<K, M>(s.lu, dv);
+            for (int r = 0; r < M; ++r)
                 v[r] += std::clamp(dv[r], -newton.limitDown(r), newton.maxStep[r]);
         } else {
             for (int r = 0; r < K; ++r)

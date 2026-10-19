@@ -153,7 +153,10 @@ Algorithm (per sample):
 5. If not converged after `maxIter`: keep the best iterate (lowest ‖f‖), increment the failure counter.
 6. Linear solve: fixed-size Gaussian elimination with partial pivoting (template on N; no heap, no
    Eigen in the audio path). The factors of the last iteration are kept (`detail::LuFactors`, D-065) for the
-   predictor and, in the preamp, for the J4 Thevenin resistance.
+   predictor and, in the preamp, for the J4 Thevenin resistance. A linear last port (the J4 load ports, i = g·v + c)
+   is not a Newton port: the Newton solves the others with Z' = Z_pp − Z_py·g·Z_yp / (1 + g·Z_yy) and the linear
+   port follows exactly at every evaluation (D-068). The preamp's second J4 solve is a linear correction when
+   it moves no port by more than 10 mV (D-067).
 
 Statistics (median/max iterations, failure count) are exposed for the harness.
 

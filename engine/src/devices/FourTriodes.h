@@ -68,8 +68,11 @@ struct FourTriodesLoad {
         d[8][8] = 0.0;
     }
 
-    /// The linear source port's current at v (Jacobian predictor, M7).
-    void sourceCurrents(const solver::Vec<9>&, solver::Vec<9>& i) const noexcept { i[8] = iY; }
+    /// Port 8 is linear, i = g·v + c with g = 0, c = iY: solved outside the Newton (solver::LinearLastPort, D-068).
+    void linearPort(double& g, double& c) const noexcept {
+        g = 0.0;
+        c = iY;
+    }
 };
 
 }  // namespace amp2203::devices

@@ -11,6 +11,7 @@ template <int K>
 struct LuFactors {
     std::array<std::array<double, K>, K> m{};
     std::array<int, K> piv{};
+    std::array<std::array<double, K>, K> d{};  // the device ∂i/∂v the Jacobian was built from (device blocks only)
     bool valid = false;
 };
 

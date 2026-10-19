@@ -1119,3 +1119,28 @@ node voltages and waves (`RootNetwork::solve(..., outputs = false)`).
 Consequences: engine at 96 kHz, NAM 3464 → 3175 ns, default 2221 → 2139 ns; output unchanged at the comparison's
 resolution; unit tests (device curves vs SPICE, finite-difference Jacobians) unchanged. A float LU for the Newton direction
 was tried (no gain: 3163 ns) and not adopted.
+
+## D-067 Preamp J4: the second solve replaced by a linear load correction when small
+Date: 2026-10-19 · Status: accepted (M7, owner: "do A and B", option B)
+Context: with exact J4 the preamp is solved, the power amp solved against its linearised Thevenin source, and the preamp
+solved again with the power amp's load current. That second solve costs at least one evaluation of the four triodes.
+Decision: `Preamp::correctLoad`: from the first solution, dv = −J⁻¹·Z[:, y]·Δi_y (the direction theveninAtY already has),
+triode currents moved by their conductances at the solution, committed without Newton (`RootNetwork::commit`); a full
+re-solve when any port would move by more than 10 mV (`kMaxLoadCorrection`).
+Consequences: measured against the full re-solve (96 kHz, 20 s DI): 10 mV −115 dB (default knobs) / −126 dB (NAM), 30 mV
+−51.6 dB at NAM, 0.1 V −36 dB, unlimited −31 dB with the error present from the first second (the grid diodes:
+0.1 V ≈ 4 n·Vt). At 10 mV the engine is 11 % faster at default knobs and unchanged at NAM, where the load steps are
+larger. Not a model change at the chosen limit.
+
+## D-068 The linear J4 port out of both Newton systems
+Date: 2026-10-19 · Status: accepted (M7, owner: "do A and B", option A)
+Context: the preamp root's load port (given current) and the power amp's J4 source port (i = g·(v − vTh)) are linear but
+were Newton ports: 9 and 11 ports instead of 8 and 10.
+Decision: a device with a linear last port declares `linearPort(g, c)` (i = g·v + c; `solver::LinearLastPort`). The Newton
+solves the other ports with Z' = Z_pp − Z_py·g·Z_yp / (1 + g·Z_yy) and computes the linear port exactly from them at every
+evaluation (`solver::solveLinearPort`); its residual is zero by construction. The predictor and the kept factors use the
+reduced system; the factors keep the conductances they were built from (`LuFactors::d`), which the preamp's Thevenin
+resistance uses (rTh = Z_yy − Z_yp·D·(I + Z_pp·D)⁻¹·Z_py). Using the last iterate's conductances with the previous
+iterate's factors instead was tried by mistake first and moved the NAM output by −31.5 dB.
+Consequences: output vs before −128 dB (default knobs) / −56.9 dB (NAM: the convergence test no longer includes the
+linear port's residual, a Newton-tolerance-level change). Engine 2–3 % faster.

@@ -238,15 +238,23 @@ void Preamp::theveninAtY(double iY, double& vTh, double& rTh) noexcept {
     // ports by dv_p = −(I + Z_pp·D)⁻¹·Z_py·di_y, so v_y = vTh − rTh·i_y with
     // rTh = Z_yy − Z_yp·D·(I + Z_pp·D)⁻¹·Z_py
     //
-    // With a Jacobian factored by this sample's solve (M7): J = I + Z·D has column rY = e_y, so the triode
-    // block of J⁻¹·Z[:, y] is (I + Z_pp·D)⁻¹·Z_py and its y entry is rTh (the factors are those of the last
-    // Newton iteration, not of the converged point). Otherwise from the devices at the solution.
+    // With a Jacobian factored by this sample's solve (M7): the Newton factors I + Z_pp·D over the 8 triode
+    // ports (D-068), so x = (I + Z_pp·D)⁻¹·Z_py from them, with the D they were built from (the last Newton
+    // iteration's, not the converged point's). Otherwise from the devices at the solution.
     if (root_.lu.valid && root_.iterations > 0) {
+        constexpr int P = kNumRootPorts - 1;
         solver::Vec<kNumRootPorts> w;
         for (int r = 0; r < kNumRootPorts; ++r)
             w[r] = root_.Z[r][rY];
-        solver::solveFactored<kNumRootPorts>(root_.lu, w);
-        rTh = w[rY];
+        solver::solveFactored<kNumRootPorts, P>(root_.lu, w);
+        rTh = root_.Z[rY][rY];
+        for (int r = 0; r < P; ++r) {
+            double dx = 0.0;
+            for (int m = FourTriodes::kBlockBegin[r]; m < FourTriodes::kBlockEnd[r]; ++m)
+                dx += root_.lu.d[r][m] * w[m];
+            rTh -= root_.Z[rY][r] * dx;
+        }
+        w[rY] = rTh;
         vTh = root_.v[rY] + rTh * iY;
         loadSens_ = w;
         loadSensValid_ = ok_;

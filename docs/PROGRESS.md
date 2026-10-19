@@ -907,6 +907,10 @@ Tools: `ampwav --stats` now writes the per-root iteration histograms; `harness.p
   correction is large; measured for time, output vs the current engine and the plugin model check. (A) the linear J4 port
   out of both Newton systems: the preamp's given-current port solved after the 8 triode ports, the power amp's source port
   folded into its Thevenin matrix per sample (results unchanged to rounding); null test vs the current engine.
+- [x] B (D-067): linear load correction below 10 mV (vs the re-solve −115 dB default / −126 dB NAM; larger limits move the
+  output: 30 mV −51.6 dB, unlimited −31 dB). [x] A (D-068): the linear port out of both Newton systems (−128 / −56.9 dB vs
+  before). Plugin (20 s DI, 2x Full): default 20.4 → 18.5 %, NAM 31.0 → 31.1 %, every knob 10 34.4 → 34.5 %: the gain is
+  at default knobs; at high Master the load steps exceed 10 mV.
 Risks: changes to the Newton path move the output within the tolerance (verified end to end); gains unknown until
 measured; any tolerance failure is reported with options, not loosened. No new dependencies without asking.
 
