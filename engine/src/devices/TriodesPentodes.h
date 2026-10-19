@@ -92,6 +92,12 @@ struct TriodesPentodesLoad {
         i[10] = g * (v[10] - vTh);
         d[10][10] = g;
     }
+
+    /// Port 10 is linear, i = g·v − g·vTh: solved outside the Newton (solver::LinearLastPort, D-068).
+    void linearPort(double& gOut, double& c) const noexcept {
+        gOut = g;
+        c = -g * vTh;
+    }
 };
 
 }  // namespace amp2203::devices

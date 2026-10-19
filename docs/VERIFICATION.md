@@ -143,7 +143,7 @@ See `WDF_DESIGN.md` §5.5.
 | Real-time plugin model (any architecture, M6), whole amp vs SPICE | ESR ≤ −20 dB on the held-out DI clips at CRUNCH, DRIVE and HOT, 48 kHz band, first 0.1 s excluded (D-051) |
 | NFB amount | ±0.5 dB at 100 Hz / 1 kHz / 5 kHz |
 | Stability | 60 s silence at max settings: |out| < 1 mV, no growth |
-| Newton | 0 failures on the standard signal set; max iterations ≤ the configured limit (12; 32 for the power amp B56; 64 for the preamp B1234 and the full amp, D-064; was 32, D-052) |
+| Newton | 0 failures on the standard signal set; max iterations ≤ the configured limit (12; 48 for the power amp B56, D-070; 64 for the preamp B1234 and the full amp, D-064; was 32, D-052) |
 
 ESR on heavily clipped signals is sensitive to tiny timing differences at sharp edges. If a check fails
 mainly because of edge timing, also report ESR after a 5 kHz low-pass on both signals and the harmonic

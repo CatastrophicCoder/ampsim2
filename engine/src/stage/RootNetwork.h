@@ -152,24 +152,59 @@ struct RootNetwork {
     }
 
     /// The rest of process() for open-circuit voltages from openCircuit(): Newton, node voltages, incident
-    /// waves.
+    /// waves. `outputs` = false: the root ports only (v, i), for a trial solve that another call replaces (M7).
     template <class Device>
     bool solve(State& s, const solver::MultiportNewton<K>& newton, const Device& device, const std::array<double, N>& u,
-               const RVec& vOc, EVec& wave, const EVec& eOffset) const noexcept {
+               const RVec& vOc, EVec& wave, const EVec& eOffset, bool outputs = true) const noexcept {
         // predictor: linear extrapolation from the two previous solutions (D-029), each port's step
-        // clamped to its Newton step limit; after a failed sample the trend restarts at zero (D-034)
+        // clamped to its Newton step limit; after a failed sample the trend restarts at zero (D-034).
+        // Jacobian predictor (M7): one Newton step from the last solution with the last factored Jacobian,
+        // the residual taken with the last currents (the device's linear last port solved for this sample, D-068)
         RVec v = s.v;
-        for (int r = 0; r < K; ++r)
-            v[r] += std::clamp(s.v[r] - s.vPrev[r], -newton.limitDown(r), newton.maxStep[r]);
+        if (s.jacobianPredictor && s.lu.valid) {
+            constexpr int M = solver::kNewtonPorts<Device, K>;
+            RVec iNow = s.i, vNow = s.v;
+            solver::solveLinearPort<Device, K>(device, vOc, s.Z, vNow, iNow);
+            RVec dv;
+            for (int r = 0; r < M; ++r)
+                dv[r] = vOc[r] - vNow[r] - dot<K>(s.Z[r].data(), iNow.data());
+            solver::solveFactored<K, M>(s.lu, dv);
+            for (int r = 0; r < M; ++r)
+                v[r] += std::clamp(dv[r], -newton.limitDown(r), newton.maxStep[r]);
+        } else {
+            for (int r = 0; r < K; ++r)
+                v[r] += std::clamp(s.v[r] - s.vPrev[r], -newton.limitDown(r), newton.maxStep[r]);
+        }
         RVec i = s.i;
         const auto failures = s.stats.failures;
-        int iterations = newton.solve(device, vOc, s.Z, v, i, s.stats);
+        int iterations = newton.solve(device, vOc, s.Z, v, i, s.stats, &s.lu, &s.didv);
         bool failed = s.stats.failures != failures;
         if (failed)
             iterations += rescue(s, newton, device, vOc, v, i, failed);
         s.iterations = iterations;
         s.vOcPrev = vOc;
 
+        if (!outputs) {
+            bool finiteV = true;
+            for (int r = 0; r < K; ++r)
+                finiteV = finiteV && std::isfinite(v[r]) && std::isfinite(i[r]);
+            if (!finiteV) {
+                ++s.sanitized;
+                return false;
+            }
+            s.vPrev = failed ? v : s.v;
+            s.v = v;
+            s.i = i;
+            return true;
+        }
+        return commit(s, v, i, failed, u, wave, eOffset);
+    }
+
+    /// Takes root port voltages v and currents i as this sample's solution: node voltages, incident waves
+    /// (`wave` holds the reflected waves on entry). Used by solve() and for a solution corrected without Newton
+    /// (the preamp's J4 load correction, M7). Returns false (state unchanged) if a node voltage is not finite.
+    bool commit(State& s, const RVec& v, const RVec& i, bool failed, const std::array<double, N>& u, EVec& wave,
+                const EVec& eOffset) const noexcept {
         std::array<double, N> node;
         bool finite = true;
         for (int n = 0; n < N; ++n) {
@@ -207,7 +242,7 @@ struct RootNetwork {
                 for (int r = 0; r < K; ++r)
                     vk[r] = s.vOcPrev[r] + (vOc[r] - s.vOcPrev[r]) * (static_cast<double>(k) / m);
                 detail::NewtonStats sub;
-                iterations += newton.solve(device, vk, s.Z, vs, is, sub);
+                iterations += newton.solve(device, vk, s.Z, vs, is, sub, &s.lu, &s.didv);
                 ok = sub.failures == 0;
             }
             if (ok) {
@@ -241,6 +276,7 @@ struct RootNetwork {
         std::array<std::array<double, K>, K> Z{};
         resistanceMatrix(Xr, Z);
         s.v = guess;
+        s.lu.valid = false;
         detail::NewtonStats dcStats;
         newton.solve(device, vOc, Z, s.v, s.i, dcStats);
         for (int n = 0; n < N; ++n) {

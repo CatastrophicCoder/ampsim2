@@ -557,12 +557,13 @@ Notes:
   first-solve Newton failures at 768 kHz, all rescued (D-042, D-045). 2x / 4x have no SPICE pass (D-047).
 
 ## M6 — Performance (owner scope 2026-10-14: performance work only; the other SPEC §7 M6 items stay open)
+Closed by the owner on 2026-10-19 (report accepted). Steps 2–4 were not finished; the CPU work continues in M7.
 - [x] Step 0: baseline at the 8x default (384 kHz)
 - [x] Step 1: build settings (no change adopted)
-- [~] Step 2: device equations
-- [~] Step 3: dense linear algebra / SIMD
-- [ ] Step 4: linear parts at a lower rate (analysis first)
-- [x] Step 5: re-verification, M6 report (`harness/reports/M6/20261018_M6_report.md`, 2026-10-18; for owner review)
+- [x] Step 2: device equations (studied; inline polynomials slower than libm, not adopted; rest moved to M7)
+- [x] Step 3: dense linear algebra / SIMD (unrolled elimination adopted; rest moved to M7)
+- [x] Step 4: linear parts at a lower rate (moved to M7)
+- [x] Step 5: re-verification, M6 report (`harness/reports/M6/20261018_M6_report.md`, accepted 2026-10-19)
 - 2026-10-18: owner-supplied measured 4x12 impedance curves (T1511, T1281, G12K-85) compared with D-059: match above ≈ 200 Hz,
   resonance within their range; D-059 kept (D-063).
 - Owner 2026-10-18: handle the remaining Newton first-solve failures (HOT DI RR at 384 kHz: 2; plugin model check at 2x:
@@ -857,6 +858,74 @@ Notes:
   (engine headers + block DC fixtures). Then: b12 DEFAULT / VOL0.2 / VOL1.0 105 / 106 / 106 PASS, b1234 119 PASS, b3 87 PASS,
   b34 94 PASS (0 FAIL each); knob jumps b12 −55.9 dB, b1234 −39.1 … −55.1 dB, b34 −53.1 … −67.6 dB; M4 full acceptance 107
   PASS (768 kHz and 384 kHz exact J4); HOT 20 PASS / 1 FAIL (2 rescued first-solves, as after D-061); null test 26 / 26.
+
+## M7 — CPU optimisation (owner 2026-10-19: "close M6 and start on the CPU optimisation")
+Goal: lower the plugin's CPU at its defaults (2x, Power Amp Rate Full, exact J4, Newton tol 1e-4 V, half-steps on;
+D-054 – D-060, D-064), above all at high Master, toward the 20 % working budget, without loosening any tolerance and
+without audible change. Owner criteria: no added latency, authentic at all knobs, CPU headroom.
+
+Baseline (2026-10-19, main 0e70f81; `amp2203_render plugin --factor 2`, DI GTR L, FIR oversampling):
+- CPU: default knobs 26.6 % (60 s), NAM settings (Preamp 10, Treble 8, Middle 7, Bass 4, Master 10, Presence 8)
+  42.7 % (20 s), every knob 10 54.0 % (60 s). Master 10 alone 33.6 %, Presence 10 alone 26.4 %.
+- Engine at 96 kHz (ampwav, plugin settings, 20 s): default 2491 ns / sample, NAM 4236 ns.
+- Profile at NAM (macOS `sample`, audio thread): power amp ≈ 62 %, preamp (two solves per sample) ≈ 30 %. By kind:
+  libm (pow, log1p, exp, log, atan) + Wright omega ≈ 29 %, LU elimination ≈ 23 %, Newton loop (J build, residual,
+  inlined devices) ≈ 26 %, open-circuit products ≈ 7 %.
+- Newton at NAM (temporary counters): power amp 1.15 solves per sample (half-steps), 3.46 iterations per solve
+  (default knobs 1.36), 1.03 M step halvings on 7.65 M iterations, step limits rarely active (0.6 %); preamp 2 solves
+  per sample, 1.41 iterations per solve. The power amp's iteration count is what grows with Master.
+
+Plan (each step measured alone; adopted only if it pays):
+1. Newton iterations in the power amp: initial guess (a predictor from the last Jacobian instead of linear
+   extrapolation), the step-halving rule, Jacobian reuse within a solve. Gate: 0 Newton failures (HOT, every knob 1.0,
+   plugin model check), output within the Newton tolerance of the current engine.
+2. Fewer solves per sample: the half-step trigger at 2x Full; the preamp's second solve (exact J4) replaced by a
+   linear correction from its last Jacobian. Gate: plugin model check vs SPICE and 16x, HOT acceptance.
+3. Code level, results unchanged to rounding: memory layout / padding for NEON, the linear rY port folded out of
+   the LU, derivatives only where used, vectorised device maths across tubes. Gate: null test vs the previous build.
+4. Re-verification as M6 (full acceptance 768 / 384 kHz, HOT, block tests, knob jumps, automation, plugin model
+   check, null test, pluginval / auval), plugin CPU, M7 report.
+Tools: `ampwav --stats` now writes the per-root iteration histograms; `harness.plugin_cpu`; `amp2203_render`.
+
+- [x] Step 1 (D-065): Jacobian predictor from the kept LU factors, preamp J4 Thevenin resistance from them. Plugin 2x Full
+  (20 s DI): default 26.6 → 21.6 %, NAM 42.7 → 33.4 %, every knob 10 49.7 → 37.3 %; plugin model check unchanged
+  (`M6/20261019_x2_rates_m7_step1_full2x.md`). Tried without gain: step-halving rule, EL34 step limits, chord iterations.
+- Profile after step 1 (NAM, inclusive): half-steps 21 % (15 % of samples at 2x cross the 100 V trigger), LU 17 %,
+  triode maths 17 %, pentode maths 14 %, open-circuit products 6 %.
+- Half-step trigger at 2x Full (plugin model check): off: HOT −22.7 dB, unseen worst −19.8 dB, HOT cost 31.7 → 29.6 %;
+  300 V: HOT −23.4 dB, unseen −20.2 dB, 30.3 % (`M6/20261019_x2_rates_m7_hst0_full2x.md`, `…_hst300_…`). Kept at 100 V
+  (2 points of CPU for 1.3 dB of HOT margin and the unseen check).
+- [x] Step 3a (D-066): fast Wright omega (series below z = −10, cubic Hermite table start + one Fritsch–Shafer–Crowley step,
+  ≤ 1e-14 relative to the reference, 4.3× faster), E1^ex as exp(ex·ln E1) (≤ 1.2e-15 relative), no node voltages / waves
+  for the preamp's trial J4 solve. Engine NAM 3464 → 3175 ns. Tried without gain: float LU for the Newton direction
+  (3175 → 3163 ns: K = 9 / 11 is latency-bound; the double rule stays).
+- After steps 1 + 3a: plugin (20 s DI, 2x Full) default 26.6 → 20.4 %, NAM 42.7 → 31.0 %, every knob 10 49.7 → 34.4 %
+  (60 s DI: every knob 10 54.0 → 42.1 %); plugin model check unchanged (CRUNCH / DRIVE / HOT −45.3 / −48.5 / −24.0 dB,
+  unseen −20.8 / −39.0 dB, 0 failures, `M6/20261019_x2_rates_m7_step3a_full2x.md`).
+- Owner 2026-10-19: "do A and B". Plan: (B) the preamp's second J4 solve replaced by a linear correction from the first
+  (dv = −J⁻¹·Z[:, y]·Δi_y, currents moved by the device conductances at the first solution), with a full re-solve when the
+  correction is large; measured for time, output vs the current engine and the plugin model check. (A) the linear J4 port
+  out of both Newton systems: the preamp's given-current port solved after the 8 triode ports, the power amp's source port
+  folded into its Thevenin matrix per sample (results unchanged to rounding); null test vs the current engine.
+- [x] B (D-067): linear load correction below 10 mV (vs the re-solve −115 dB default / −126 dB NAM; larger limits move the
+  output: 30 mV −51.6 dB, unlimited −31 dB). [x] A (D-068): the linear port out of both Newton systems (−128 / −56.9 dB vs
+  before). Plugin (20 s DI, 2x Full): default 20.4 → 18.5 %, NAM 31.0 → 31.1 %, every knob 10 34.4 → 34.5 %: the gain is
+  at default knobs; at high Master the load steps exceed 10 mV.
+- Options C / D measured (owner: "how much ... could affect CPU", then "re-run the Half model check"). C (half-step trigger
+  300 V, engine): NAM −5 %, every knob 1.0 −8 %, default 0 %. D (Power Amp Rate Half, plugin 20 s): default 18.5 → 12.8 %,
+  NAM 31.1 → 21.6 %, every knob 10 34.5 → 23.7 %. Half model check after M7 (`M6/20261019_x2_rates_m7_AB_half2x.md`):
+  CRUNCH / DRIVE / HOT −37.7 / −37.2 / −18.9 dB (FAIL: HOT ≤ −20), unseen worst / median −16.6 / −28.0 dB, 0 failures
+  (before M7: 12, 1 unrescued); non-harmonic power on 5 / 9 kHz sines −7.0 … −12.6 dB (Full −14.9 … −20.5 dB). Accuracy as
+  before M7 (−18.9 / −16.7 dB).
+- Owner 2026-10-19: Half becomes the plugin default, Full selectable (D-069; HOT −18.9 dB accepted). Latency 49 → 58 samples
+  at 48 kHz.
+- M7 verification (2026-10-19): M4 full acceptance 768 kHz 0 FAIL; 384 kHz exact J4 0 FAIL; HOT 0 FAIL; b1234, b56, b6, b5open
+  0 FAIL (b6's 5 kHz 20 V Newton median now 3, D-043 item passes); knob jumps b1234 −39.1 … −55.1 dB, b56 −62.9 dB;
+  automation Full 0 failures, Half 3 rescued first-solve failures → D-070 (power-amp maxIter 48), then Half and Full 0.
+- Null tests 2x Half / Full 0 FAIL; pluginval (VST3, AU) SUCCESS, auval SUCCEEDED; plugin CPU at the Half default: default 13.1 %,
+  every knob 10 24.0 %, worst automation 24.6 %. M7 report: `harness/reports/M7/20261019_M7_report.md` (for owner review).
+Risks: changes to the Newton path move the output within the tolerance (verified end to end); gains unknown until
+measured; any tolerance failure is reported with options, not loosened. No new dependencies without asking.
 
 ## Questions for the owner
 _(Claude Code: add questions here and also ask them in the session.)_

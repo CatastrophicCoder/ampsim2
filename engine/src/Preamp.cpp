@@ -207,7 +207,7 @@ void Preamp::beginSample(double vIn) noexcept {
     savedNode_ = root_.node;
 }
 
-bool Preamp::solveLoaded(double iY) noexcept {
+bool Preamp::solveLoaded(double iY, bool final) noexcept {
     // the first call of a sample predicts from the last samples; a repeated call (corrected load current)
     // starts at the first call's solution with no trend, and the trend is then restored to the last sample's
     const bool repeat = solvedOnce_ && ok_;
@@ -226,17 +226,40 @@ bool Preamp::solveLoaded(double iY) noexcept {
     const auto& newton = residualTol_ == kRootSolver.config.residualTol ? kRootSolver : tuned;
     root_.i[rY] = iY;
     incident_ = reflected_;
-    ok_ = kNet.solve(root_, newton, FourTriodesLoad{iY}, u_, vOc_, incident_, eOff_);
+    ok_ = kNet.solve(root_, newton, FourTriodesLoad{iY}, u_, vOc_, incident_, eOff_, final);
     if (repeat && root_.stats.failures == failures)
         root_.vPrev = saved_[0];  // the trend for the next sample: this sample's solution vs the last one
     solvedOnce_ = true;
     return ok_;
 }
 
-void Preamp::theveninAtY(double iY, double& vTh, double& rTh) const noexcept {
+void Preamp::theveninAtY(double iY, double& vTh, double& rTh) noexcept {
     // linearised at the solution: v = vOc − Z·i, i_p = i_p(v_p), i_y given. A change of i_y moves the triode
     // ports by dv_p = −(I + Z_pp·D)⁻¹·Z_py·di_y, so v_y = vTh − rTh·i_y with
     // rTh = Z_yy − Z_yp·D·(I + Z_pp·D)⁻¹·Z_py
+    //
+    // With a Jacobian factored by this sample's solve (M7): the Newton factors I + Z_pp·D over the 8 triode
+    // ports (D-068), so x = (I + Z_pp·D)⁻¹·Z_py from them, with the D they were built from (the last Newton
+    // iteration's, not the converged point's). Otherwise from the devices at the solution.
+    if (root_.lu.valid && root_.iterations > 0) {
+        constexpr int P = kNumRootPorts - 1;
+        solver::Vec<kNumRootPorts> w;
+        for (int r = 0; r < kNumRootPorts; ++r)
+            w[r] = root_.Z[r][rY];
+        solver::solveFactored<kNumRootPorts, P>(root_.lu, w);
+        rTh = root_.Z[rY][rY];
+        for (int r = 0; r < P; ++r) {
+            double dx = 0.0;
+            for (int m = FourTriodes::kBlockBegin[r]; m < FourTriodes::kBlockEnd[r]; ++m)
+                dx += root_.lu.d[r][m] * w[m];
+            rTh -= root_.Z[rY][r] * dx;
+        }
+        w[rY] = rTh;
+        vTh = root_.v[rY] + rTh * iY;
+        loadSens_ = w;
+        loadSensValid_ = ok_;
+        return;
+    }
     constexpr int P = 8;
     solver::Vec<kNumRootPorts> i;
     solver::Mat<kNumRootPorts> d9;
@@ -253,7 +276,8 @@ void Preamp::theveninAtY(double iY, double& vTh, double& rTh) const noexcept {
         x[r] = root_.Z[r][rY];
     }
     rTh = root_.Z[rY][rY];
-    if (solver::solveLinear<P>(A, x)) {
+    const bool solved = solver::solveLinear<P>(A, x);
+    if (solved) {
         for (int r = 0; r < P; ++r) {
             double dx = 0.0;
             for (int m = FourTriodes::kBlockBegin[r]; m < FourTriodes::kBlockEnd[r]; ++m)
@@ -262,6 +286,41 @@ void Preamp::theveninAtY(double iY, double& vTh, double& rTh) const noexcept {
         }
     }
     vTh = root_.v[rY] + rTh * iY;
+    // the same direction for correctLoad: triode block x, y entry rTh; the conductances at the solution
+    for (int r = 0; r < P; ++r)
+        loadSens_[r] = x[r];
+    loadSens_[rY] = rTh;
+    for (int r = 0; r < P; ++r)
+        for (int m = FourTriodes::kBlockBegin[r]; m < FourTriodes::kBlockEnd[r]; ++m)
+            root_.didv[r][m] = d9[r][m];
+    loadSensValid_ = ok_ && solved;
+}
+
+bool Preamp::correctLoad(double iY, double maxCorrection) noexcept {
+    if (!(solvedOnce_ && ok_ && loadSensValid_))
+        return solveLoaded(iY);
+    const double di = iY - root_.i[rY];
+    solver::Vec<kNumRootPorts> dv;
+    double big = 0.0;
+    for (int r = 0; r < kNumRootPorts; ++r) {
+        dv[r] = -loadSens_[r] * di;
+        big = std::fmax(big, std::fabs(dv[r]));
+    }
+    if (!(big <= maxCorrection))
+        return solveLoaded(iY);
+    solver::Vec<kNumRootPorts> v = root_.v, i = root_.i;
+    for (int r = 0; r < kNumRootPorts; ++r)
+        v[r] += dv[r];
+    // triode currents to first order: the block-diagonal ∂i/∂v of the solution (FourTriodes blocks)
+    for (int r = 0; r < rY; ++r)
+        for (int m = FourTriodes::kBlockBegin[r]; m < FourTriodes::kBlockEnd[r]; ++m)
+            i[r] += root_.didv[r][m] * dv[m];
+    i[rY] = iY;
+    incident_ = reflected_;
+    ok_ = kNet.commit(root_, v, i, false, u_, incident_, eOff_);
+    root_.vPrev = saved_[0];  // the trend for the next sample: this sample's solution vs the last one
+    loadSensValid_ = false;
+    return ok_;
 }
 
 void Preamp::finishSample() noexcept {

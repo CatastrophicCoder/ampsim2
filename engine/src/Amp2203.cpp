@@ -16,6 +16,9 @@ namespace {
 constexpr int kDcIterations = 50;
 constexpr double kDcTolerance = 1e-9;  // V, supply node change between fixed-point rounds
 constexpr double kOpenLoopR22 = 1e12;  // Ω: "R22 → 1 TΩ" (SPEC §7 M4 NFB check)
+/// Largest port move of the preamp's linear J4 load correction (D-067): beyond it a full re-solve. At 10 mV the
+/// correction matches the re-solve to −115 dB (default knobs) / −126 dB (NAM); at 0.1 V the grid diodes make it −36 dB.
+constexpr double kMaxLoadCorrection = 0.01;  // V
 constexpr double kOpenJ4 = 1e12;       // Ω: the J4 element source in the exact-J4 mode (M6 X1)
 
 /// Appends `src` to `dst`, skipping `skip` and renaming per `rename` ({from, to} pairs).
@@ -141,8 +144,8 @@ double Amp2203::processSample(double x) noexcept {
         // the samples where it runs (the Thevenin source taken directly, no decimation filter in the loop),
         // the preamp alone with the held load current in between; the output through the interpolator.
         preamp_->beginSample(vIn_);
-        preamp_->solveLoaded(iY_);
         const bool runPower = cfg_.powerAmpRateDivisor == 1 || powerPhase_;
+        preamp_->solveLoaded(iY_, !runPower);  // a trial solve when the power amp runs: re-solved below
         double u = 0.0;
         if (runPower) {
             double vTh = 0.0, rTh = 0.0;
@@ -150,7 +153,7 @@ double Amp2203::processSample(double x) noexcept {
             power_->setPreampPort(vTh, 1.0 / rTh);
             u = power_->process(0.0);
             iY_ = power_->preampPortCurrent();
-            preamp_->solveLoaded(iY_);
+            preamp_->correctLoad(iY_, kMaxLoadCorrection);  // linear when small, else re-solved (D-067)
         }
         preamp_->finishSample();
         if (cfg_.powerAmpRateDivisor == 1) {

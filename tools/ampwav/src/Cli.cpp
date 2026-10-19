@@ -41,6 +41,17 @@ bool splitPair(const std::string& s, std::string& key, std::string& value) {
     return true;
 }
 
+/// Iteration histogram as a JSON array, trailing empty bins dropped.
+std::string histogramJson(const amp2203::detail::NewtonStats& st) {
+    size_t n = st.histogram.size();
+    while (n > 1 && st.histogram[n - 1] == 0)
+        --n;
+    std::string s = "[";
+    for (size_t k = 0; k < n; ++k)
+        s += (k ? ", " : "") + std::to_string(st.histogram[k]);
+    return s + "]";
+}
+
 void writeStats(const std::string& path, const Options& o, double rate, size_t samples, double seconds,
                 const amp2203::Amp2203::Stats& st) {
     std::ofstream f(path);
@@ -61,6 +72,8 @@ void writeStats(const std::string& path, const Options& o, double rate, size_t s
       << "  \"newton_failures_power\": " << st.powerAmp.failures << ",\n"
       << "  \"max_iterations_preamp\": " << st.preamp.maxIterations << ",\n"
       << "  \"max_iterations_power\": " << st.powerAmp.maxIterations << ",\n"
+      << "  \"histogram_preamp\": " << histogramJson(st.preamp) << ",\n"
+      << "  \"histogram_power\": " << histogramJson(st.powerAmp) << ",\n"
       << "  \"power_rate_divisor\": " << o.powerRateDivisor << ",\n"
       << "  \"newton_residual_tol\": " << o.newtonTol.value_or(1e-9) << ",\n"
       << "  \"exact_j4\": " << (o.exactJ4 ? "true" : "false") << "\n"

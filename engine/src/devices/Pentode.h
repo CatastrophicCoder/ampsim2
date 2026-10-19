@@ -42,7 +42,7 @@ struct Pentode {
         softplusSigmoid(u, sp, sg);
         const double e1 = vs * sp / kp;
         if (e1 > 0.0) {
-            const double f = 2.0 * std::pow(e1, ex);
+            const double f = 2.0 * std::exp(ex * std::log(e1));
             const double df_de1 = ex * f / e1;
             const double df_dvgk = df_de1 * sg;
             const double df_dvsk = clamped ? 0.0 : df_de1 * (sp / kp - sg * vgk / vs);

@@ -136,3 +136,31 @@ TEST_CASE("Newton statistics median", "[newton][m2]") {
     REQUIRE(s.failures == 1);
     REQUIRE(s.maxIterations == 12);
 }
+
+TEST_CASE("Kept LU factors solve a new right-hand side like a fresh elimination", "[newton][m7]") {
+    // a fixed, well-conditioned 6×6 matrix that needs row swaps (small leading entries)
+    Mat<6> A{};
+    for (int r = 0; r < 6; ++r)
+        for (int c = 0; c < 6; ++c)
+            A[r][c] = std::sin(1.0 + 3.0 * r + 7.0 * c) + (r == (c + 2) % 6 ? 4.0 : 0.0);
+    amp2203::detail::LuFactors<6> lu;
+    lu.m = A;
+    Vec<6> r1{1.0, -2.0, 0.5, 3.0, -1.0, 2.0};
+    REQUIRE(amp2203::solver::solveLinear<6>(lu.m, r1, lu.piv));
+    lu.valid = true;
+    const Vec<6> b{0.3, 1.7, -2.2, 0.9, 4.1, -0.6};
+    Vec<6> x = b;
+    amp2203::solver::solveFactored<6>(lu, x);
+    Mat<6> J = A;
+    Vec<6> y = b;
+    REQUIRE(amp2203::solver::solveLinear<6>(J, y));
+    for (int k = 0; k < 6; ++k)
+        CHECK(std::fabs(x[k] - y[k]) <= 1e-13 * (1.0 + std::fabs(y[k])));
+    // and A·x = b
+    for (int r = 0; r < 6; ++r) {
+        double s = 0.0;
+        for (int c = 0; c < 6; ++c)
+            s += A[r][c] * x[c];
+        CHECK(std::fabs(s - b[r]) <= 1e-12);
+    }
+}

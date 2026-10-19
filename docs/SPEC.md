@@ -152,9 +152,10 @@ DECISIONS D-033), `PhaseInverter`, `PowerStage` (verified sub-blocks of `PowerAm
 ### 3.4 Sample rate and oversampling
 - The engine runs at whatever rate `prepare()` receives. The JUCE plugin layer wraps it with
   `juce::dsp::Oversampling` and passes the oversampled rate.
-- Plugin oversampling: a parameter with 2x / 4x / 8x / 16x, default 2x with the power amp at full rate (D-060) and the
-  exact J4 coupling (DECISIONS D-054, owner listening result; was 8x, D-048), the same factor at every host rate.
-  2x is 96 kHz inside at 48 kHz, verified against SPICE with the D-051 tolerances (M6 X2 / A1).
+- Plugin oversampling: a parameter with 2x / 4x / 8x / 16x, default 2x with the power amp at half rate (D-069; was full
+  rate, D-060) and the exact J4 coupling (DECISIONS D-054, owner listening result; was 8x, D-048), the same factor at
+  every host rate. 2x is 96 kHz inside at 48 kHz, verified against SPICE with the D-051 tolerances (M6 X2 / A1); at
+  half rate the HOT preset is −18.9 dB (≤ −20 dB not met; deviation accepted by the owner, D-069).
 - Verification runs the engine directly at 768 kHz (16 x 48 kHz) on signals generated at that rate, so
   no resampler sits between SPICE and the engine. See `VERIFICATION.md`. (At 384 kHz the preamp's
   fastest cutoff transitions were not resolved: D-034, D-035.)
@@ -320,7 +321,7 @@ Must reproduce `reference/spice/tubes.lib` exactly (same equations and parameter
 Preamp Volume, Treble, Middle, Bass, Master, Presence (0–10 display, rotation internally),
 Interface Level (dBu at 0 dBFS, 0..+24 dBu, default +12.0 dBu; sets `inputVoltsPerFullScale`),
 Input Trim (−24..+24 dB, default 0 dB), Output Level (−48..+12 dB), Oversampling (2x/4x/8x/16x, default 2x), Power Amp Rate (Full / Half, default
-Full; D-049, D-054, D-060),
+Half; D-049, D-054, D-069, was Full, D-060),
 optional Cabinet IR on/off with file chooser (only if implemented in this repo; see 1.3).
 
 ---
@@ -441,6 +442,10 @@ Reactive speaker load; OT saturation/hysteresis; rectifier and mains ripple; Low
 work (lookup tables for device equations, XSIMD for R-type matrix multiplies, linear blocks at base
 rate); tube parameter fitting; unmatched power tube pairs; integration into the existing amp-sim
 plugin project.
+
+### M7 — CPU optimisation (owner 2026-10-19)
+Lower the plugin's CPU at its defaults (M6 configuration), above all at high Master, toward a 20 % working budget of
+one core at 48 kHz; no tolerance loosened, no added latency. Plan and results in `docs/PROGRESS.md` (M7).
 
 ---
 

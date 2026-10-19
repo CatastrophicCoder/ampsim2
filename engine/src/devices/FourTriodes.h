@@ -67,6 +67,12 @@ struct FourTriodesLoad {
         i[8] = iY;
         d[8][8] = 0.0;
     }
+
+    /// Port 8 is linear, i = g·v + c with g = 0, c = iY: solved outside the Newton (solver::LinearLastPort, D-068).
+    void linearPort(double& g, double& c) const noexcept {
+        g = 0.0;
+        c = iY;
+    }
 };
 
 }  // namespace amp2203::devices

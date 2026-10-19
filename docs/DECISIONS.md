@@ -1081,3 +1081,93 @@ step halvings (was 2, D-042). The "max iterations ≤ configured limit" check fo
 Consequences: 0 first-solve failures (0 unrescued) at HOT, every knob 1.0 and CRUNCH at 2x, 8x and 16x, and in the 2x plugin
 model check (28 runs, max 56 iterations); accuracy and CPU unchanged (27.1 / 42.2 % in the check's timing). The budget is a
 cap; ordinary samples still converge in a few iterations.
+
+## D-065 Jacobian predictor from the kept LU factors; preamp J4 Thevenin resistance from them
+Date: 2026-10-19 · Status: accepted (M7 step 1; owner: "start on the CPU optimisation")
+Context: at the NAM settings (Preamp 10, Treble 8, Middle 7, Bass 4, Master 10, Presence 8) the power amp needed 3.46
+Newton iterations per solve and the preamp 1.41 (the preamp's second J4 solve 1.18, almost never 0); the J4 Thevenin
+re-evaluated the four triodes and solved an 8×8 system every sample. Tried and not adopted (ampwav, 96 kHz, 20 s DI):
+relaxed step halving (accept growth ×2 … ×1e6: up to 150 k failures, more iterations), tighter or looser EL34 grid / plate
+step limits (2 … 100 V: more iterations or failures), chord iterations with the kept factors (no gain, output moved),
+half-step LU invalidation (slower).
+Decision: the Newton keeps the LU factors of its last iteration (multipliers below the diagonal, pivot rows;
+`detail::LuFactors`, `solver::solveFactored`). Every root predicts with one Newton step from the last solution using them
+(`RootNetworkState::jacobianPredictor`, default on), with the device's linear source ports updated (`sourceCurrents`:
+the preamp's given load current, the power amp's J4 source); extrapolation (D-029) when no factors exist. The preamp's
+J4 Thevenin resistance is (J⁻¹·Z[:, y])_y from the factors when this sample's solve factored (else as before).
+Consequences: iterations per solve at NAM 3.46 → 2.34 (power amp), 1.41 → 0.66 (preamp), 0 failures; engine 96 kHz
+4398 → 3464 ns (NAM), 2552 → 2221 ns (default), 4920 → 3850 ns (every knob 1.0). Plugin (20 s DI, 2x Full) default
+26.6 → 21.6 %, NAM 42.7 → 33.4 %, every knob 10 49.7 → 37.3 %. Output vs before: −105 dB default, −50.5 dB NAM (the
+same order as a Newton tolerance change 1e-4 → 1e-6 V, −53 dB). Plugin model check unchanged (CRUNCH / DRIVE / HOT
+−45.3 / −48.5 / −24.0 dB, unseen −20.8 / −39.0 dB, 0 failures, max iterations 56 → 38;
+`M6/20261019_x2_rates_m7_step1_full2x.md`). The exact solution is unchanged; only the starting point moves.
+Found on the way: at every knob 1.0 the engine is sensitive to any perturbation after ≈ 11 s of the 20 s clip (tolerance
+1e-8 vs 1e-10 V: −180 dB, then −16 … −18 dB per second, spread around the 100 Hz harmonics, no discrete tone): sample-wise
+comparisons are meaningless at that setting; it is compared by Newton failures and spectra.
+
+## D-066 Device maths: fast Wright omega, E1^ex via exp / log; no outputs for the preamp's trial J4 solve
+Date: 2026-10-19 · Status: accepted (M7 step 3a; results unchanged to rounding)
+Context: after D-065 the device maths was ≈ 37 % of the engine at the NAM settings; the grid diode's Wright omega took an
+exp / log1p start and 2 – 3 Fritsch–Shafer–Crowley steps (one log each) plus a confirming step whenever z ≥ −40 (one in
+three calls at NAM), and pow was 10 %.
+Decision: `wrightOmega` = the series e^z·(1 − y + 3/2·y² − 8/3·y³), y = e^z, below z = −10; on [−10, 40) a cubic Hermite
+start from a 401-point table of the reference (`wrightOmegaReference`, kept) and one step; from 40 the asymptotic start and
+one step. ≤ 1e-14 relative to the reference everywhere (the series is more accurate than the reference's iteration below
+z ≈ −30), residual ≤ 8e-16·max(1, |z|) from z = −10; 5.4 vs 23 ns per call. Triode / pentode E1^ex as exp(ex·ln E1)
+(≤ 1.2e-15 relative to pow, 26 % faster in a loop). The preamp's first J4 solve (re-solved after the power amp) skips its
+node voltages and waves (`RootNetwork::solve(..., outputs = false)`).
+Consequences: engine at 96 kHz, NAM 3464 → 3175 ns, default 2221 → 2139 ns; output unchanged at the comparison's
+resolution; unit tests (device curves vs SPICE, finite-difference Jacobians) unchanged. A float LU for the Newton direction
+was tried (no gain: 3163 ns) and not adopted.
+
+## D-067 Preamp J4: the second solve replaced by a linear load correction when small
+Date: 2026-10-19 · Status: accepted (M7, owner: "do A and B", option B)
+Context: with exact J4 the preamp is solved, the power amp solved against its linearised Thevenin source, and the preamp
+solved again with the power amp's load current. That second solve costs at least one evaluation of the four triodes.
+Decision: `Preamp::correctLoad`: from the first solution, dv = −J⁻¹·Z[:, y]·Δi_y (the direction theveninAtY already has),
+triode currents moved by their conductances at the solution, committed without Newton (`RootNetwork::commit`); a full
+re-solve when any port would move by more than 10 mV (`kMaxLoadCorrection`).
+Consequences: measured against the full re-solve (96 kHz, 20 s DI): 10 mV −115 dB (default knobs) / −126 dB (NAM), 30 mV
+−51.6 dB at NAM, 0.1 V −36 dB, unlimited −31 dB with the error present from the first second (the grid diodes:
+0.1 V ≈ 4 n·Vt). At 10 mV the engine is 11 % faster at default knobs and unchanged at NAM, where the load steps are
+larger. Not a model change at the chosen limit.
+
+## D-068 The linear J4 port out of both Newton systems
+Date: 2026-10-19 · Status: accepted (M7, owner: "do A and B", option A)
+Context: the preamp root's load port (given current) and the power amp's J4 source port (i = g·(v − vTh)) are linear but
+were Newton ports: 9 and 11 ports instead of 8 and 10.
+Decision: a device with a linear last port declares `linearPort(g, c)` (i = g·v + c; `solver::LinearLastPort`). The Newton
+solves the other ports with Z' = Z_pp − Z_py·g·Z_yp / (1 + g·Z_yy) and computes the linear port exactly from them at every
+evaluation (`solver::solveLinearPort`); its residual is zero by construction. The predictor and the kept factors use the
+reduced system; the factors keep the conductances they were built from (`LuFactors::d`), which the preamp's Thevenin
+resistance uses (rTh = Z_yy − Z_yp·D·(I + Z_pp·D)⁻¹·Z_py). Using the last iterate's conductances with the previous
+iterate's factors instead was tried by mistake first and moved the NAM output by −31.5 dB.
+Consequences: output vs before −128 dB (default knobs) / −56.9 dB (NAM: the convergence test no longer includes the
+linear port's residual, a Newton-tolerance-level change). Engine 2–3 % faster.
+
+## D-069 Plugin default Power Amp Rate Half (Full selectable)
+Date: 2026-10-19 · Status: accepted (owner: "Make half the default while keeping full selectable"; revises D-060)
+Context: after M7 steps 1, 3a, A and B (D-065 – D-068) the plugin at 2x Full needs 18.5 / 31.1 / 34.5 % of one core (default
+knobs / NAM settings / every knob 10, 20 s DI); at Half 12.8 / 21.6 / 23.7 %. The Half plugin model check after M7
+(`M6/20261019_x2_rates_m7_AB_half2x.md`): CRUNCH / DRIVE / HOT −37.7 / −37.2 / −18.9 dB, unseen settings worst −16.6 dB
+(median −28.0), 0 Newton failures, non-harmonic power on 5 / 9 kHz sines −7.0 … −12.6 dB (Full: −45.3 / −48.5 / −24.0 dB,
+−20.8 dB, −14.9 … −20.5 dB). The owner heard no Full / Half difference in M6 (before D-058 / D-059).
+Decision: the Power Amp Rate parameter defaults to Half; Full stays selectable and remains the verified configuration.
+Consequences: the default fails the plugin model check's −20 dB at HOT (−18.9 dB) and at the worst unseen setting
+(−16.6 dB); deviation accepted by the owner, tolerances unchanged (VERIFICATION). Saved projects keep their stored
+setting. `harness.plugin_null` and `harness.plugin_cpu` measure the new default. Reported latency at 48 kHz (FIR
+oversampling) 49 → 58 samples (1.02 → 1.21 ms; the half-rate interpolator, D-053).
+
+## D-070 Power-amp root: maxIter 48
+Date: 2026-10-19 · Status: accepted (M7 verification; the owner's "do A and B" and D-069)
+Context: the M7 automation check at Half (96 kHz, exact J4, 1e-4 V) showed 3 first-solve failures (all rescued) at every
+knob 1.0 with Middle or Presence moving; Full: 0. Bisection over the M7 commits: 0 failures up to D-067 (max 24 – 26
+iterations, pre-M7 23 – 24), 3 from D-068 (the reduced Newton takes another path through the same hard samples). The Jacobian
+predictor contributes (with it off: 0 failures, max 31 – 32); guards that fall back to the trend when the prediction is far
+from it remove the failures but cost 8 – 18 % at the NAM settings (trend difference 100 / 30 / 10 V); falling back only when
+the prediction hits a step limit costs nothing but leaves 2 of 3 (both fail from the trend as well and converge from the
+last solution in 21 iterations).
+Decision: the power-amp root (`PowerAmp`, b56 and the full amp) allows 48 iterations (was 32, D-052); the check's limit
+follows (b56 48; full amp 64 from D-064).
+Consequences: the three samples converge in 33 – 34 iterations; automation 56 runs at Half and at Full: 0 non-finite, 0
+failures; HOT acceptance (384 kHz exact J4) 0 FAIL; b56 0 FAIL. No effect on samples that converged within 32.
