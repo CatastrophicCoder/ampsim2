@@ -22,3 +22,4 @@ reference/di/*.wav
 reference/schematics/
 reference/speaker/*.jpg
 reference/speaker/*.png   # third-party impedance plots: local only (as the drawings, D-021)
+build-xp/

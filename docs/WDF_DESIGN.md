@@ -138,6 +138,10 @@ Algorithm (per sample):
 1. Initial guess: linear extrapolation from the two previous solutions, v = v[n−1] + (v[n−1] − v[n−2]),
    with each port's extrapolated step clamped to its step limit; after a sample whose solve failed, the
    trend restarts at zero (v[n−2] := v[n−1]) (DECISIONS D-029, D-034).
+   Since M7 (D-065) the roots use a Jacobian predictor instead: one Newton step from v[n−1] with the LU factors
+   the last Newton iteration left (no new device evaluation, no new factorisation), the residual taken with the
+   last currents and the device's linear source ports (J4 load ports) updated; extrapolation remains when no
+   factors exist (first sample, after a DC solve).
 2. Up to `maxIter` (default 12; in the full amp 64 for the preamp root and 32 for the power-amp root, DECISIONS D-052, D-064) iterations; per-port step limits, upward and downward separately
    (triode blocks: grid ports +50 V / −1000 V, plate ports ±50 V, D-034, D-037). Steps into cutoff are harmless
    and the device equations cannot overflow (closed-form ω, stable softplus), so the limits only shape
@@ -148,7 +152,8 @@ Algorithm (per sample):
    before accepting it.
 5. If not converged after `maxIter`: keep the best iterate (lowest ‖f‖), increment the failure counter.
 6. Linear solve: fixed-size Gaussian elimination with partial pivoting (template on N; no heap, no
-   Eigen in the audio path).
+   Eigen in the audio path). The factors of the last iteration are kept (`detail::LuFactors`, D-065) for the
+   predictor and, in the preamp, for the J4 Thevenin resistance.
 
 Statistics (median/max iterations, failure count) are exposed for the harness.
 

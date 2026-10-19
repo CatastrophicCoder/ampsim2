@@ -1081,3 +1081,26 @@ step halvings (was 2, D-042). The "max iterations ≤ configured limit" check fo
 Consequences: 0 first-solve failures (0 unrescued) at HOT, every knob 1.0 and CRUNCH at 2x, 8x and 16x, and in the 2x plugin
 model check (28 runs, max 56 iterations); accuracy and CPU unchanged (27.1 / 42.2 % in the check's timing). The budget is a
 cap; ordinary samples still converge in a few iterations.
+
+## D-065 Jacobian predictor from the kept LU factors; preamp J4 Thevenin resistance from them
+Date: 2026-10-19 · Status: accepted (M7 step 1; owner: "start on the CPU optimisation")
+Context: at the NAM settings (Preamp 10, Treble 8, Middle 7, Bass 4, Master 10, Presence 8) the power amp needed 3.46
+Newton iterations per solve and the preamp 1.41 (the preamp's second J4 solve 1.18, almost never 0); the J4 Thevenin
+re-evaluated the four triodes and solved an 8×8 system every sample. Tried and not adopted (ampwav, 96 kHz, 20 s DI):
+relaxed step halving (accept growth ×2 … ×1e6: up to 150 k failures, more iterations), tighter or looser EL34 grid / plate
+step limits (2 … 100 V: more iterations or failures), chord iterations with the kept factors (no gain, output moved),
+half-step LU invalidation (slower).
+Decision: the Newton keeps the LU factors of its last iteration (multipliers below the diagonal, pivot rows;
+`detail::LuFactors`, `solver::solveFactored`). Every root predicts with one Newton step from the last solution using them
+(`RootNetworkState::jacobianPredictor`, default on), with the device's linear source ports updated (`sourceCurrents`:
+the preamp's given load current, the power amp's J4 source); extrapolation (D-029) when no factors exist. The preamp's
+J4 Thevenin resistance is (J⁻¹·Z[:, y])_y from the factors when this sample's solve factored (else as before).
+Consequences: iterations per solve at NAM 3.46 → 2.34 (power amp), 1.41 → 0.66 (preamp), 0 failures; engine 96 kHz
+4398 → 3464 ns (NAM), 2552 → 2221 ns (default), 4920 → 3850 ns (every knob 1.0). Plugin (20 s DI, 2x Full) default
+26.6 → 21.6 %, NAM 42.7 → 33.4 %, every knob 10 49.7 → 37.3 %. Output vs before: −105 dB default, −50.5 dB NAM (the
+same order as a Newton tolerance change 1e-4 → 1e-6 V, −53 dB). Plugin model check unchanged (CRUNCH / DRIVE / HOT
+−45.3 / −48.5 / −24.0 dB, unseen −20.8 / −39.0 dB, 0 failures, max iterations 56 → 38;
+`M6/20261019_x2_rates_m7_step1_full2x.md`). The exact solution is unchanged; only the starting point moves.
+Found on the way: at every knob 1.0 the engine is sensitive to any perturbation after ≈ 11 s of the 20 s clip (tolerance
+1e-8 vs 1e-10 V: −180 dB, then −16 … −18 dB per second, spread around the 100 Hz harmonics, no discrete tone): sample-wise
+comparisons are meaningless at that setting; it is compared by Newton failures and spectra.

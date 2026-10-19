@@ -886,6 +886,12 @@ Plan (each step measured alone; adopted only if it pays):
 4. Re-verification as M6 (full acceptance 768 / 384 kHz, HOT, block tests, knob jumps, automation, plugin model
    check, null test, pluginval / auval), plugin CPU, M7 report.
 Tools: `ampwav --stats` now writes the per-root iteration histograms; `harness.plugin_cpu`; `amp2203_render`.
+
+- [x] Step 1 (D-065): Jacobian predictor from the kept LU factors, preamp J4 Thevenin resistance from them. Plugin 2x Full
+  (20 s DI): default 26.6 → 21.6 %, NAM 42.7 → 33.4 %, every knob 10 49.7 → 37.3 %; plugin model check unchanged
+  (`M6/20261019_x2_rates_m7_step1_full2x.md`). Tried without gain: step-halving rule, EL34 step limits, chord iterations.
+- Profile after step 1 (NAM, inclusive): half-steps 21 % (15 % of samples at 2x cross the 100 V trigger), LU 17 %,
+  triode maths 17 %, pentode maths 14 %, open-circuit products 6 %.
 Risks: changes to the Newton path move the output within the tolerance (verified end to end); gains unknown until
 measured; any tolerance failure is reported with options, not loosened. No new dependencies without asking.
 
